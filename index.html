@@ -1823,6 +1823,13 @@ const PRESETS = [
              c: 'X-xx-xX-X-xx', g: 'D-DU-UD-D-DU', b: '1-----1-1---' },
     '6/8': { k: 'X-----x-----', s: '------X-----', h: 'x-o-o-x-o-o-', cr: 'x-----------',
              c: 'X-xx-xX-xx-x', g: 'D-DU-UD-DU-U', b: '1-----1-----' } },
+  // The very first backing track this app grew from: each chord struck once on a soft triangle-wave
+  // synth and left to fade, 8th-note hi-hats (louder on the beat) and a gentle kick on 1 and 3. No bass.
+  // sk and sh are that track's own kick and hat, kept as they were.
+  { id: 'simple', name: 'Simple (the original)', chord: 'soft',
+    '4/4': { sk: 'X-------X-------', sh: 'X-o-X-o-X-o-X-o-', c: 'X---------------' },
+    '3/4': { sk: 'X-----------', sh: 'X-o-X-o-X-o-', c: 'X-----------' },
+    '6/8': { sk: 'X-----X-----', sh: 'X-o-o-X-o-o-', c: 'X-----------' } },
   { id: 'ballad', name: 'Ballad', chord: 'pad',
     '4/4': { k: 'X---------x-----', r: '----x-------x---', h: 'o---o---o---o---', c: 'X---------------', b: '1-------5-------' },
     '3/4': { k: 'X-----------', r: '----o---o---', h: 'o---o---o---', c: 'X-----------', b: '1-------5---' },
@@ -2813,7 +2820,7 @@ function compilePattern(preset, meter) {
 
   function presetHas(p, part) {
     const tr = p[state.meter] || {};
-    if (part === 'drums') return ['k', 's', 'h', 'oh', 'cr', 'r', 'p'].some((k) => tr[k] && /[^-]/.test(tr[k]));
+    if (part === 'drums') return ['k', 's', 'h', 'oh', 'cr', 'r', 'p', 'sk', 'sh'].some((k) => tr[k] && /[^-]/.test(tr[k]));
     if (part === 'bass') return !!tr.b && /[^-]/.test(tr.b);
     return true;
   }
@@ -3197,10 +3204,26 @@ function compilePattern(preset, meter) {
     cr: (t, v, d) => { metal(t, 0.16 * v, 1.7, 4200, d); noiseHit(t, 0.16 * v, 'highpass', 4800, 0.5, 0.002, 1.5, d); },
     r: (t, v, d) => { blip(t, 'triangle', 1250, 0, 0.24 * v, 0.05, d); noiseHit(t, 0.08 * v, 'bandpass', 3200, 1.5, 0.001, 0.02, d); },
     p: (t, v, d) => noiseHit(t, 0.11 * v, 'bandpass', 6200, 1.1, 0.008, 0.06, d),
+    // The original track's kick and hat: a plain sine thump and a short tick of high noise.
+    sk: (t, v, d) => {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(120, t);
+      o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.5 * SOFT_DRUM_TRIM * v, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      o.connect(g); g.connect(d);
+      o.start(t); o.stop(t + 0.18);
+    },
+    sh: (t, v, d) => noiseHit(t, 0.35 * SOFT_DRUM_TRIM * v, 'highpass', 6000, 1, 0.001, 0.04, d),
   };
 
   // Level trims per sound, set by rendering every preset and measuring it, so chords sit at about
   // the same loudness as the drums instead of hiding behind the bass.
+  // Levels for the Simple preset, set so it sits near the other beats with the original track's
+  // balance of chord against kick and hat (the mix bus squeezes the kick, so the drums get a bit more).
+  const SOFT_TRIM = 1.8, SOFT_DRUM_TRIM = 2.6;
   const STYLE_TRIM = { strum: 2.5, pad: 2.0, thick: 2.0, stab: 5.5, pluck: 2.5, keys: 1.8, arp: 2.2 };
   function synthVoice(style, midi, t, v, dur, dest) {
     v *= STYLE_TRIM[style] || 1;
@@ -3846,11 +3869,33 @@ function compilePattern(preset, meter) {
     });
   }
 
+  // The original track's chord: the root low (D2 to C♯3), the rest of the chord stacked right above it
+  // (plus the root an octave up for a three-note chord), each a triangle wave that swells in over
+  // 30 ms and fades away across the time the chord is held. The root is a little louder.
+  function softChord(chord, t, v, dur, dest) {
+    const R = placeRoot(chord.rootPc, 38);
+    const notes = [R].concat(chord.ivs.slice(1).map((iv) => R + iv), chord.ivs.length === 3 ? [R + 12] : []);
+    const len = Math.max(dur, 0.4);
+    notes.forEach((m, i) => {
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.value = mtof(octNote(m, chord));
+      const g = ctx.createGain();
+      const vol = (i === 0 ? 0.16 : 0.09) * SOFT_TRIM * v;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(vol * 0.006, t + len * 0.95);
+      o.connect(g); g.connect(dest);
+      o.start(t); o.stop(t + len);
+    });
+  }
+
   // src is the preset that owns this chord part (the main beat, or the preset a layer borrows from).
   function playChordHit(chord, src, P, step, t, v, dur, dest) {
     const style = src.chord;
     if (style === 'acoustic') { playAcoustic(chord, P, step, t, v, dest); return; }
     if (style === 'grunge') { playGrunge(chord, P, step, t, v, dest); return; }
+    if (style === 'soft') { softChord(chord, t, v, dur, dest); return; }
     const real = sReady(STYLE_SET[style]);
     if (style === 'arp') {
       // Thumb on the root, fingers climb and fall: p i m a m i
@@ -3928,7 +3973,7 @@ function compilePattern(preset, meter) {
   // loopPos counts 16th-note steps through the whole progression. Bars restart when the loop does.
   let loopPos = 0, nextTime = 0, timer = null;
   const uiQueue = [];
-  const SUSTAIN = { pad: true, thick: true };
+  const SUSTAIN = { pad: true, thick: true, soft: true };
 
   function timeline() {
     const spb = stepsPerBar();

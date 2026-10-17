@@ -706,8 +706,35 @@
   .stem-quick .toggle { padding: 6px 11px; }
   .stem-rows { padding: 0; }
   .stem-rows .mixrow { grid-template-columns: 96px minmax(0, 1fr); }
-  .stem-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-  .stem-foot .toggle { padding: 6px 12px; }
+  .stem-count { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+  .stem-count .toggle { padding: 7px 12px; }
+  .stem-count .seg { flex: 1 1 120px; }
+  .stem-count .seg button { padding: 7px 2px; }
+  .tempo-adj, .zoomgrp, .nudge2 { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--well); overflow: hidden; }
+  .tempo-adj button, .zoomgrp button, .nudge2 button {
+    font-family: var(--sans); font-size: 14px; min-width: 34px; padding: 7px 8px; background: none; border: none;
+    color: var(--parchment); cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tempo-adj > * + *, .zoomgrp > * + *, .nudge2 > * + * { border-left: 1px solid var(--line); }
+  @media (hover: hover) { .tempo-adj button:hover, .zoomgrp button:hover, .nudge2 button:hover { color: var(--brass-bright); } }
+  .tempo-adj button:active, .zoomgrp button:active, .nudge2 button:active { background: rgba(232, 180, 92, 0.18); }
+  .tempo-adj output, .nudge2 output { font-family: var(--sans); font-size: 13px; padding: 0 8px; min-width: 64px; text-align: center; color: var(--parchment); font-variant-numeric: tabular-nums; }
+  .nudge2 output { min-width: 70px; }
+  .loopbtn { width: 100%; justify-content: flex-start; padding: 11px 16px; }
+  .loopbtn svg { width: 16px; height: 16px; color: var(--brass-bright); }
+  .loopbtn[aria-expanded="true"] { border-color: var(--brass); color: var(--brass-bright); }
+  .loopbtn-range { margin-left: auto; font-size: 12.5px; color: var(--parchment-dim); font-variant-numeric: tabular-nums; }
+  .loopcard { display: flex; flex-direction: column; gap: 10px; }
+  .trim { display: block; width: 100%; height: 84px; border-radius: 8px; touch-action: none; cursor: ew-resize; }
+  .trim-scale { display: flex; justify-content: space-between; font-family: var(--sans); font-size: 11.5px; color: var(--parchment-faint); font-variant-numeric: tabular-nums; margin-top: -4px; }
+  .trim-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+  .trim-tools .toggle { padding: 7px 12px; }
+  .trim-ends { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .trim-end { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .trim-end .nudge2 { width: 100%; }
+  .trim-end .nudge2 output { flex: 1; min-width: 0; padding: 0 4px; }
+  .loopcard .caption { margin: 0; }
   .stem-help { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 6px; }
   .stem-help .intro b { color: var(--parchment); font-weight: 600; }
   .credit { margin: 10px 0 0; font-family: var(--sans); font-size: 11px; line-height: 1.45; color: rgba(237, 226, 208, 0.4); }
@@ -1012,7 +1039,7 @@
     <button type="button" class="tab" role="tab" id="tab-lab" data-tab="lab" aria-controls="panel-lab" aria-selected="false" tabindex="-1">Chord Lab</button>
     <button type="button" class="tab" role="tab" id="tab-drills" data-tab="drills" aria-controls="panel-drills" aria-selected="false" tabindex="-1">Drills</button>
     <button type="button" class="tab" role="tab" id="tab-saved" data-tab="saved" aria-controls="panel-saved" aria-selected="false" tabindex="-1">Saved</button>
-    <button type="button" class="tab" role="tab" id="tab-stems" data-tab="stems" aria-controls="panel-stems" aria-selected="false" tabindex="-1">Stems</button>
+    <button type="button" class="tab" role="tab" id="tab-stems" data-tab="stems" aria-controls="panel-stems" aria-selected="false" tabindex="-1">Splitter</button>
   </div>
 
   <div class="head">
@@ -1294,12 +1321,55 @@
           <div class="stem-time"><span id="stemNow">0:00</span><span id="stemDur">0:00</span></div>
         </div>
       </div>
-      <div class="stem-quick" id="stemQuick" role="group" aria-label="Quick mixes"></div>
-      <div class="mixrows stem-rows" id="stemRows"></div>
-      <div class="stem-foot">
-        <button type="button" class="toggle" id="stemLoop" aria-pressed="true">Loop the song</button>
-        <span class="stem-note">Tap a part's name to mute it.</span>
+      <div class="stem-count">
+        <button type="button" class="toggle" id="countBtn" aria-pressed="false">Count-in</button>
+        <div class="tempo-adj" role="group" aria-label="The song's tempo">
+          <button type="button" id="bpmHalf" aria-label="Half the tempo">½</button>
+          <button type="button" id="bpmDown" aria-label="1 bpm slower">−</button>
+          <output id="stemBpm">♩ = 120</output>
+          <button type="button" id="bpmUp" aria-label="1 bpm faster">+</button>
+          <button type="button" id="bpmDouble" aria-label="Double the tempo">×2</button>
+        </div>
+        <div class="seg small" role="group" aria-label="The song's time signature" id="stemMeterSeg">
+          <button type="button" data-m="4/4" aria-pressed="true">4/4</button>
+          <button type="button" data-m="3/4" aria-pressed="false">3/4</button>
+          <button type="button" data-m="6/8" aria-pressed="false">6/8</button>
+        </div>
       </div>
+      <p class="stem-note" id="tempoNote"></p>
+      <div class="stem-quick" id="stemQuick" role="group" aria-label="Quick mixes"></div>
+
+      <button type="button" class="btn loopbtn" id="loopBtn" aria-expanded="false" aria-controls="loopCard">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3.5l3 3-3 3M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5l-3-3 3-3M20 12.5v1a4 4 0 0 1-4 4H4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Loop</span>
+        <span class="loopbtn-range" id="loopRange"></span>
+      </button>
+      <div class="loopcard" id="loopCard" hidden>
+        <canvas class="trim" id="trimCanvas" role="img" aria-label="The loop on the song's waveform. Drag either gold end to change it."></canvas>
+        <div class="trim-scale"><span id="trimL"></span><span id="trimSpan"></span><span id="trimR"></span></div>
+        <div class="trim-tools">
+          <div class="zoomgrp" role="group" aria-label="Zoom">
+            <button type="button" id="zoomOut" aria-label="Zoom out">−</button>
+            <button type="button" id="zoomFit">Fit loop</button>
+            <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+          </div>
+          <button type="button" class="toggle" id="snapBtn" aria-pressed="true">Snap to beat</button>
+        </div>
+        <div class="trim-ends">
+          <div class="trim-end">
+            <span class="sublbl">Start</span>
+            <div class="nudge2"><button type="button" data-e="a" data-d="-1" aria-label="Move the start earlier">‹</button><output id="loopA"></output><button type="button" data-e="a" data-d="1" aria-label="Move the start later">›</button></div>
+          </div>
+          <div class="trim-end">
+            <span class="sublbl">End</span>
+            <div class="nudge2"><button type="button" data-e="b" data-d="-1" aria-label="Move the end earlier">‹</button><output id="loopB"></output><button type="button" data-e="b" data-d="1" aria-label="Move the end later">›</button></div>
+          </div>
+        </div>
+        <p class="caption">Drag the gold ends to pick the part to loop. Pinch or tap + to zoom in for finer control, and drag the waveform to scroll. Tap Loop again to play the whole song.</p>
+      </div>
+
+      <div class="mixrows stem-rows" id="stemRows"></div>
+      <span class="stem-note">Tap a part's name to mute it.</span>
     </div>
 
     <details class="mix" id="stemHelp">
@@ -3792,7 +3862,7 @@ function compilePattern(preset, meter) {
     ctx = null;
     try { old.close(); } catch (e) { /* already closed */ }
     if (!ensureCtx()) return;
-    if (wasStems) stemPlay();
+    if (wasStems) stemPlay({ count: false });
     if (wasLive) {
       start();
     } else if (playing && bgActive && bgRender && bgAudio && !bgAudio.paused && !bgSwapping && !document.hidden) {
@@ -5561,7 +5631,230 @@ function compilePattern(preset, meter) {
     }
   }
 
-  /* ---------- Stems tab: choosing a song, splitting it, and the four-part mixer ---------- */
+  /* ---------- Finding the beat ----------
+     Tempo and beat positions come from the drums part (or the whole song when there are hardly
+     any drums): an onset curve that jumps wherever something is struck, its repeating period
+     (autocorrelation, leaning toward 120 bpm when two tempos fit), then the classic dynamic-
+     programming beat tracker (Ellis 2007) that picks beats sitting on strong onsets while keeping
+     the spacing steady. The time signature is a 3-or-4 guess from where the low end hits hardest. */
+  // The beat is found at a quarter of the sample rate (11 kHz), which is plenty for drum hits
+  // and keeps memory low: 256-point frames every 10 ms.
+  const BEAT_DS = 4, BEAT_SR = 44100 / BEAT_DS, BEAT_N = 256, BEAT_FPS = 100, BEAT_HOP = BEAT_SR / BEAT_FPS;
+  function beatFFT() {
+    const n = BEAT_N, bits = 8, rev = new Uint16Array(n), cos = new Float64Array(n / 2), sin = new Float64Array(n / 2);
+    for (let i = 0; i < n; i++) { let r = 0; for (let b = 0; b < bits; b++) r |= ((i >> b) & 1) << (bits - 1 - b); rev[i] = r; }
+    for (let i = 0; i < n / 2; i++) { cos[i] = Math.cos((2 * Math.PI * i) / n); sin[i] = -Math.sin((2 * Math.PI * i) / n); }
+    return (re, im) => {
+      for (let i = 0; i < n; i++) { const j = rev[i]; if (j > i) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+      for (let size = 2; size <= n; size <<= 1) {
+        const half = size >> 1, step = n / size;
+        for (let s = 0; s < n; s += size) {
+          for (let k = 0, t = 0; k < half; k++, t += step) {
+            const a = s + k, b = a + half, wr = cos[t], wi = sin[t];
+            const xr = re[b] * wr - im[b] * wi, xi = re[b] * wi + im[b] * wr;
+            re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
+          }
+        }
+      }
+    };
+  }
+  // Two onset curves at 100 frames a second: all frequencies (sig) and the low end only (low).
+  function onsetCurves(sig, low) {
+    const n = BEAT_N, frames = Math.floor(sig.length / BEAT_HOP) + 1, fft = beatFFT();
+    const win = new Float64Array(n);
+    for (let i = 0; i < n; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / n);
+    const re = new Float64Array(n), im = new Float64Array(n);
+    const bins = 116; // up to 5 kHz
+    const lowBins = 6; // up to about 260 Hz
+    let prevA = new Float32Array(bins), curA = new Float32Array(bins);
+    let prevB = new Float32Array(lowBins), curB = new Float32Array(lowBins);
+    const env = new Float32Array(frames), envLow = new Float32Array(frames);
+    for (let f = 0; f < frames; f++) {
+      const c = Math.round(f * BEAT_HOP) - n / 2;
+      // Signal and low-end mix share one FFT: one as the real part, one as the imaginary.
+      for (let i = 0; i < n; i++) {
+        const j = c + i;
+        const ok = j >= 0 && j < sig.length;
+        re[i] = ok ? sig[j] * win[i] : 0;
+        im[i] = ok ? low[j] * win[i] : 0;
+      }
+      fft(re, im);
+      let flux = 0, fluxLow = 0;
+      for (let k = 1; k <= bins; k++) {
+        const nk = n - k, a = re[k], b = im[k], cc = re[nk], d = im[nk];
+        const sr = 0.5 * (a + cc), si = 0.5 * (b - d); // the signal's spectrum
+        const m = Math.log1p(100 * Math.hypot(sr, si));
+        curA[k - 1] = m;
+        const dlt = m - prevA[k - 1];
+        if (dlt > 0) flux += dlt;
+        if (k <= lowBins) {
+          const lr = 0.5 * (b + d), li = 0.5 * (cc - a); // the low-end mix's spectrum
+          const ml = Math.log1p(100 * Math.hypot(lr, li));
+          curB[k - 1] = ml;
+          const dl = ml - prevB[k - 1];
+          if (dl > 0) fluxLow += dl;
+        }
+      }
+      env[f] = flux;
+      envLow[f] = fluxLow;
+      let t = prevA; prevA = curA; curA = t;
+      t = prevB; prevB = curB; curB = t;
+    }
+    env[0] = 0; envLow[0] = 0;
+    // Take away the slow-moving level so only the jumps remain, then scale to unit spread.
+    const tidy = (e) => {
+      const w = 40, N = e.length, out = new Float32Array(N), cs = new Float64Array(N + 1);
+      for (let i = 0; i < N; i++) cs[i + 1] = cs[i] + e[i];
+      for (let i = 0; i < N; i++) {
+        const lo = Math.max(0, i - w), hi = Math.min(N, i + w + 1);
+        out[i] = Math.max(0, e[i] - (cs[hi] - cs[lo]) / (hi - lo));
+      }
+      let s2 = 0;
+      for (let i = 0; i < N; i++) s2 += out[i] * out[i];
+      const sd = Math.sqrt(s2 / Math.max(1, N)) || 1;
+      for (let i = 0; i < N; i++) out[i] /= sd;
+      return out;
+    };
+    return { env: tidy(env), envLow: tidy(envLow) };
+  }
+  function estimatePeriod(env) {
+    const minLag = Math.floor((60 / 220) * BEAT_FPS), maxLag = Math.ceil((60 / 50) * BEAT_FPS);
+    const ac = new Float64Array(maxLag + 2);
+    const N = env.length;
+    for (let L = minLag - 1; L <= maxLag + 1; L++) {
+      let s = 0;
+      for (let i = 0; i + L < N; i++) s += env[i] * env[i + L];
+      ac[L] = s / (N - L);
+    }
+    let best = -1, bestL = 0;
+    for (let L = minLag; L <= maxLag; L++) {
+      const bpm = (60 * BEAT_FPS) / L;
+      const prior = Math.exp(-0.5 * Math.pow(Math.log2(bpm / 120) / 1.0, 2));
+      const v = ac[L] * prior;
+      if (v > best) { best = v; bestL = L; }
+    }
+    const y0 = ac[bestL - 1], y1 = ac[bestL], y2 = ac[bestL + 1];
+    const den = y0 - 2 * y1 + y2;
+    const shift = den < 0 ? Math.max(-0.5, Math.min(0.5, (0.5 * (y0 - y2)) / den)) : 0;
+    return bestL + shift;
+  }
+  function trackBeats(env, period) {
+    const N = env.length, tight = 100;
+    const half = Math.round(period);
+    const win = [];
+    for (let i = -half; i <= half; i++) win.push(Math.exp(-0.5 * Math.pow((i * 32) / period, 2)));
+    const local = new Float32Array(N);
+    for (let t = 0; t < N; t++) {
+      let s = 0;
+      for (let k = 0; k < win.length; k++) { const j = t + k - half; if (j >= 0 && j < N) s += env[j] * win[k]; }
+      local[t] = s;
+    }
+    const score = new Float32Array(N), back = new Int32Array(N).fill(-1);
+    const lo = Math.round(2 * period), hi = Math.round(period / 2);
+    for (let t = 0; t < N; t++) {
+      let best = -Infinity, arg = -1;
+      for (let p = t - lo; p <= t - hi; p++) {
+        if (p < 0) continue;
+        const gap = Math.log((t - p) / period);
+        const v = score[p] - tight * gap * gap;
+        if (v > best) { best = v; arg = p; }
+      }
+      score[t] = local[t] + (arg >= 0 && best > 0 ? best : 0);
+      back[t] = arg >= 0 && best > 0 ? arg : -1;
+    }
+    // Last beat: the strongest-scoring local peak near the end.
+    const peaks = [];
+    for (let t = 1; t < N - 1; t++) if (score[t] > score[t - 1] && score[t] >= score[t + 1]) peaks.push(score[t]);
+    peaks.sort((a, b) => a - b);
+    const med = peaks.length ? peaks[peaks.length >> 1] : 0;
+    let last = N - 1;
+    for (let t = N - 2; t > 0; t--) if (score[t] > score[t - 1] && score[t] >= score[t + 1] && score[t] > 0.5 * med) { last = t; break; }
+    const beats = [];
+    for (let t = last; t >= 0; t = back[t]) { beats.push(t); if (back[t] < 0) break; }
+    beats.reverse();
+    // Trim weak beats at the very start and end (silence or fade).
+    let rms = 0;
+    for (let i = 0; i < beats.length; i++) rms += local[beats[i]] * local[beats[i]];
+    rms = Math.sqrt(rms / Math.max(1, beats.length));
+    let a = 0, b = beats.length - 1;
+    while (a < b && local[beats[a]] < 0.5 * rms) a++;
+    while (b > a && local[beats[b]] < 0.5 * rms) b--;
+    return beats.slice(a, b + 1);
+  }
+  // Main entry: stems are [drums, bass, other, vocals], each [left, right].
+  function analyzeBeat(stems) {
+    const n = stems[0][0].length, m = Math.floor(n / BEAT_DS);
+    const [dL, dR] = stems[0], [bL, bR] = stems[1], [oL, oR] = stems[2];
+    let ed = 0, em = 0;
+    for (let i = 0; i < n; i += 7) { // a quick look at how much of the song is drums
+      const d = dL[i] + dR[i], x = d + bL[i] + bR[i] + oL[i] + oR[i];
+      ed += d * d; em += x * x;
+    }
+    const useDrums = ed > 0.04 * em; // songs with real drums: follow them
+    const sig = new Float32Array(m), low = new Float32Array(m);
+    for (let j = 0, i = 0; j < m; j++) {
+      let a = 0, l = 0;
+      for (let k = 0; k < BEAT_DS; k++, i++) {
+        const d = dL[i] + dR[i], bb = bL[i] + bR[i];
+        a += useDrums ? d : d + bb + oL[i] + oR[i];
+        l += d + bb;
+      }
+      sig[j] = a; low[j] = l;
+    }
+    const { env, envLow } = onsetCurves(sig, low);
+    const period = estimatePeriod(env);
+    const beatFrames = trackBeats(env, period);
+    if (beatFrames.length < 8) return null;
+    const beats = beatFrames.map((f) => f / BEAT_FPS);
+    const gaps = [];
+    for (let i = 1; i < beats.length; i++) gaps.push(beats[i] - beats[i - 1]);
+    gaps.sort((a, b) => a - b);
+    const med = gaps[gaps.length >> 1];
+    // Straight lines through each steady run of beats pin the tempo (and each beat) down finer
+    // than one 10 ms frame. Onsets register about 13 ms after the hit, so that comes off too.
+    let wSum = 0, slopeSum = 0, run = [0];
+    const flush = () => {
+      const k = run.length;
+      if (k >= 4) {
+        let sx = 0, sy = 0, sxx = 0, sxy = 0;
+        run.forEach((bi, x) => { const y = beats[bi]; sx += x; sy += y; sxx += x * x; sxy += x * y; });
+        const slope = (k * sxy - sx * sy) / (k * sxx - sx * sx), icpt = (sy - slope * sx) / k;
+        run.forEach((bi, x) => { beats[bi] = icpt + slope * x; });
+        slopeSum += slope * k;
+        wSum += k;
+      }
+    };
+    for (let i = 1; i < beats.length; i++) {
+      const g = beats[i] - beats[i - 1];
+      if (Math.abs(g / med - 1) < 0.1) run.push(i);
+      else { flush(); run = [i]; }
+    }
+    flush();
+    for (let i = 0; i < beats.length; i++) beats[i] = Math.max(0, beats[i] - 0.013);
+    const bpm = wSum ? 60 / (slopeSum / wSum) : 60 / med;
+    // How strongly the beats sit on onsets compared with the song overall.
+    let onB = 0, all = 0;
+    beatFrames.forEach((f) => { onB += env[f]; });
+    for (let i = 0; i < env.length; i++) all += env[i];
+    const confidence = onB / beatFrames.length / (all / env.length + 1e-9);
+    // 3 or 4 beats to a bar, and which beat is "1": where the low end is heaviest.
+    const acc = beatFrames.map((f) => { let m = 0; for (let k = -3; k <= 3; k++) m = Math.max(m, envLow[Math.max(0, Math.min(envLow.length - 1, f + k))] || 0); return m; });
+    const meterFit = (m) => {
+      let best = -Infinity, phase = 0;
+      for (let p = 0; p < m; p++) {
+        let on = 0, nOn = 0, off = 0, nOff = 0;
+        acc.forEach((v, i) => { if (i % m === p) { on += v; nOn++; } else { off += v; nOff++; } });
+        const c = on / Math.max(1, nOn) - off / Math.max(1, nOff);
+        if (c > best) { best = c; phase = p; }
+      }
+      return { best, phase };
+    };
+    const m4 = meterFit(4), m3 = meterFit(3);
+    const three = m3.best > m4.best * 1.25 && m3.best > 0;
+    return { bpm, beats, meter: three ? '3/4' : '4/4', downbeat: three ? m3.phase : m4.phase, confidence };
+  }
+
+  /* ---------- Splitter tab: choosing a song, splitting it, the four-part mixer, count-in and loop ---------- */
   const ORT_BASE = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/';
   // The same model file, from two places, tried in order.
   const MODEL_URLS = [
@@ -5591,15 +5884,31 @@ function compilePattern(preset, meter) {
   const stemEngineNote = $('stemEngineNote'), stemWork = $('stemWork'), stemMsg = $('stemMsg'), stemBar = $('stemBar');
   const stemSub = $('stemSub'), stemCancel = $('stemCancel'), stemFb = $('stemFb'), stemPlayer = $('stemPlayer');
   const stemPlayBtn = $('stemPlay'), stemTitle = $('stemTitle'), stemSeek = $('stemSeek'), stemNow = $('stemNow');
-  const stemDur = $('stemDur'), stemQuick = $('stemQuick'), stemRows = $('stemRows'), stemLoopBtn = $('stemLoop');
+  const stemDur = $('stemDur'), stemQuick = $('stemQuick'), stemRows = $('stemRows');
+  const countBtn = $('countBtn'), stemBpmOut = $('stemBpm'), tempoNote = $('tempoNote');
+  const meterBtns = Array.from(document.querySelectorAll('#stemMeterSeg button'));
+  const loopBtn = $('loopBtn'), loopRange = $('loopRange'), loopCard = $('loopCard'), trimCanvas = $('trimCanvas');
+  const trimL = $('trimL'), trimR = $('trimR'), trimSpan = $('trimSpan'), snapBtn = $('snapBtn');
+  const loopAOut = $('loopA'), loopBOut = $('loopB');
 
-  const stemMix = { on: { vocals: true, drums: true, bass: true, other: true }, vol: { vocals: 100, drums: 100, bass: 100, other: 100 }, loop: true };
-  // The split song and its playback.
-  const sp = { bufs: null, name: '', dur: 0, playing: false, at0: 0, offset: 0, nodes: [], master: null, seeking: false };
+  const stemMix = { on: { vocals: true, drums: true, bass: true, other: true }, vol: { vocals: 100, drums: 100, bass: 100, other: 100 }, countIn: false, snap: true };
+  // The split song and its playback. Playback position = anchorPos + time since anchorT, wrapped
+  // into the loop when one is set.
+  const sp = {
+    bufs: null, name: '', dur: 0, playing: false, offset: 0, nodes: [], clicks: [], clickTimes: [], master: null, seeking: false,
+    anchorPos: 0, anchorT: 0,
+    beat: null, bpm: 120, meter: '4/4', bpmTouched: false, // found in the song, or set by hand
+    loopOn: false, A: 0, B: 0, focus: null, view: { s: 0, e: 0 }, peaks: null, cols: null, colsKey: '',
+  };
   // The splitter: ONNX Runtime, the loaded model, and the job in progress.
   const sx = { ort: null, session: null, ep: '', busy: false, cancel: false };
 
   const fmtTime = (s) => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  const fmtFine = (s) => { // 1:23.45
+    s = Math.max(0, s);
+    const m = Math.floor(s / 60), r = s - m * 60;
+    return m + ':' + (r < 10 ? '0' : '') + r.toFixed(2);
+  };
   const hasGpu = () => !!navigator.gpu;
   // Inside the Claude app the page can't download the splitter, so say so up front.
   const inClaude = /claude/i.test(location.hostname);
@@ -5613,47 +5922,55 @@ function compilePattern(preset, meter) {
     stemChooseTxt.textContent = sp.bufs ? 'Choose another song' : 'Choose a song';
     stemChoose.disabled = sx.busy;
     stemPlayer.hidden = !sp.bufs;
-    if (sp.bufs) renderStemPlayer();
+    if (sp.bufs) { renderStemPlayer(); renderCount(); renderLoopUI(); }
   }
 
-  /* Playback: the four parts start together on the same clock, so they stay locked in time. */
+  /* ---------- Playback: the four parts start together on one clock, so they stay locked ---------- */
   const stemLevel = (key) => (stemMix.on[key] ? Math.pow(stemMix.vol[key] / 100, 2) : 0);
   function stemPos() {
     if (!sp.playing) return sp.offset;
-    let p = ctx.currentTime - sp.at0;
-    if (p < 0) p = 0;
-    return stemMix.loop ? p % sp.dur : Math.min(p, sp.dur);
+    let p = sp.anchorPos + Math.max(0, ctx.currentTime - sp.anchorT);
+    if (sp.loopOn && sp.B > sp.A) { if (p >= sp.B) p = sp.A + ((p - sp.B) % (sp.B - sp.A)); }
+    else p = Math.min(p, sp.dur);
+    return p;
   }
-  function stemPlay() {
+  const countingIn = () => sp.playing && ctx && ctx.currentTime < sp.anchorT;
+  // opts.count === false skips the count-in (used when the loop is moved while playing).
+  function stemPlay(opts) {
     if (!sp.bufs || !ensureCtx()) return;
     if (playing) stop();
     stopRun();
     stopScaleRun();
     if (sp.playing) stemHalt();
-    if (sp.offset >= sp.dur - 0.05) sp.offset = 0;
-    const at = ctx.currentTime + 0.05;
+    let from = sp.offset;
+    if (sp.loopOn) { if (from < sp.A || from >= sp.B - 0.02) from = sp.A; }
+    else if (from >= sp.dur - 0.05) from = 0;
     sp.master = ctx.createGain();
     sp.master.connect(ctx.destination);
+    const now = ctx.currentTime + 0.06;
+    const S = stemMix.countIn && !(opts && opts.count === false) ? scheduleCountIn(now, from) : now;
     sp.nodes = STEM_PARTS.map((p) => {
       const src = ctx.createBufferSource();
       src.buffer = sp.bufs[p.i];
-      src.loop = stemMix.loop;
+      src.loop = sp.loopOn;
+      if (sp.loopOn) { src.loopStart = sp.A; src.loopEnd = sp.B; }
       const g = ctx.createGain();
       g.gain.value = stemLevel(p.key);
       src.connect(g);
       g.connect(sp.master);
-      src.start(at, sp.offset);
+      src.start(S, from);
       return { src, g, key: p.key };
     });
     const first = sp.nodes[0].src;
     first.onended = () => {
-      if (!sp.playing || sp.nodes[0].src !== first) return;
-      sp.playing = false;
+      if (!sp.playing || !sp.nodes.length || sp.nodes[0].src !== first) return;
+      sp.playing = false; // reached the end of the song
       sp.offset = 0;
       sp.nodes = [];
       renderStemPlayer();
     };
-    sp.at0 = at - sp.offset;
+    sp.anchorPos = from;
+    sp.anchorT = S;
     sp.playing = true;
     renderStemPlayer();
     requestAnimationFrame(stemFrame);
@@ -5661,25 +5978,391 @@ function compilePattern(preset, meter) {
   // Stops the split song where it is. Returns whether it was playing.
   function stemHalt() {
     if (!sp.playing) return false;
-    sp.offset = stemPos();
+    sp.offset = countingIn() ? sp.anchorPos : stemPos();
     sp.playing = false;
     sp.nodes.forEach((n) => { try { n.src.onended = null; n.src.stop(); } catch (e) { /* already stopped */ } });
+    sp.clicks.forEach((o) => { try { o.stop(); } catch (e) { /* already stopped */ } });
+    sp.clicks = [];
     try { sp.master.disconnect(); } catch (e) { /* gone */ }
     sp.nodes = [];
     renderStemPlayer();
+    drawTrim();
     return true;
   }
   function stemFrame() {
     if (!sp.playing) return;
-    const p = stemPos();
-    stemNow.textContent = fmtTime(p);
-    if (!sp.seeking) stemSeek.value = String(Math.round((p / sp.dur) * 1000));
+    if (countingIn()) {
+      const now = ctx.currentTime;
+      const k = sp.clickTimes.filter((t) => t <= now).length;
+      stemNow.textContent = k ? 'Count ' + k : 'Count';
+    } else {
+      const p = stemPos();
+      stemNow.textContent = fmtTime(p);
+      if (!sp.seeking) stemSeek.value = String(Math.round((p / sp.dur) * 1000));
+    }
+    if (!loopCard.hidden) drawTrim();
     requestAnimationFrame(stemFrame);
   }
   function stemApplyLevels() {
     if (!sp.playing) return;
     sp.nodes.forEach((n) => n.g.gain.setTargetAtTime(stemLevel(n.key), ctx.currentTime, 0.02));
   }
+
+  /* ---------- Count-in: one bar of clicks at the song's tempo, landing on its beat ---------- */
+  const countClicks = () => (sp.meter === '6/8' ? 6 : sp.meter === '3/4' ? 3 : 4);
+  // 6/8 counts eighth notes, with the tempo given in dotted-quarter beats like the backing track.
+  const countStep = () => (sp.meter === '6/8' ? 60 / sp.bpm / 3 : 60 / sp.bpm);
+  function firstBeatFrom(t) {
+    const b = sp.beat && sp.beat.beats;
+    if (!b) return null;
+    let lo = 0, hi = b.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (b[m] < t - 0.03) lo = m + 1; else hi = m; }
+    return lo < b.length ? b[lo] : null;
+  }
+  function clickAt(t, accent) {
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = accent ? 1760 : 1320;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(accent ? 0.5 : 0.32, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    o.connect(g);
+    g.connect(sp.master);
+    o.start(t);
+    o.stop(t + 0.09);
+    sp.clicks.push(o);
+  }
+  // Returns when the song should start. If the song's next beat is a moment after the start
+  // point (a pickup), the song starts that much early so its beat lands right after the count.
+  function scheduleCountIn(now, from) {
+    const clicks = countClicks(), step = countStep(), beatSec = 60 / sp.bpm;
+    let lead = 0;
+    if (sp.beat && Math.abs(sp.bpm / sp.beat.bpm - 1) < 0.02) {
+      const b1 = firstBeatFrom(from);
+      if (b1 != null && b1 - from <= beatSec) lead = Math.max(0, b1 - from);
+    }
+    const S = now + clicks * step - lead;
+    sp.clickTimes = [];
+    for (let i = 0; i < clicks; i++) {
+      const t = S + lead - (clicks - i) * step;
+      sp.clickTimes.push(t);
+      clickAt(t, i === 0 || (clicks === 6 && i === 3));
+    }
+    return S;
+  }
+  function renderCount() {
+    countBtn.setAttribute('aria-pressed', String(stemMix.countIn));
+    stemBpmOut.textContent = '♩ = ' + Math.round(sp.bpm);
+    meterBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === sp.meter)));
+    if (!sp.beat) tempoNote.textContent = 'Couldn\'t find a steady beat in this song. Set the tempo and time by hand.';
+    else if (sp.bpmTouched) tempoNote.textContent = 'Set by you. The song measured ' + Math.round(sp.beat.bpm) + ' bpm, ' + sp.beat.meter + '.';
+    else tempoNote.textContent = 'Measured from the song. If the count feels off, try ½ or ×2, or change the time.';
+  }
+  countBtn.addEventListener('click', () => { stemMix.countIn = !stemMix.countIn; renderCount(); });
+  function setStemBpm(v) {
+    sp.bpm = Math.max(30, Math.min(300, v));
+    sp.bpmTouched = !(sp.beat && Math.abs(sp.bpm - sp.beat.bpm) < 0.01) || sp.meter !== (sp.beat && sp.beat.meter);
+    renderCount();
+  }
+  $('bpmHalf').addEventListener('click', () => setStemBpm(sp.bpm / 2));
+  $('bpmDouble').addEventListener('click', () => setStemBpm(sp.bpm * 2));
+  $('bpmDown').addEventListener('click', () => setStemBpm(Math.round(sp.bpm) - 1));
+  $('bpmUp').addEventListener('click', () => setStemBpm(Math.round(sp.bpm) + 1));
+  meterBtns.forEach((b) => b.addEventListener('click', () => { sp.meter = b.dataset.m; setStemBpm(sp.bpm); }));
+
+  /* ---------- Loop: a trimmer over the song's waveform ---------- */
+  const PEAK_BIN = 256;
+  // Loudest and quietest sample in every 256-sample stretch of the whole mix, for drawing.
+  function buildPeaks() {
+    const n = sp.bufs[0].length, bins = Math.ceil(n / PEAK_BIN);
+    const mn = new Float32Array(bins), mx = new Float32Array(bins);
+    let top = 1e-4;
+    const ch = sp.bufs.map((b) => [b.getChannelData(0), b.getChannelData(1)]);
+    for (let k = 0; k < bins; k++) {
+      let lo = 0, hi = 0;
+      const end = Math.min(n, (k + 1) * PEAK_BIN);
+      for (let i = k * PEAK_BIN; i < end; i++) {
+        const v = 0.5 * (ch[0][0][i] + ch[0][1][i] + ch[1][0][i] + ch[1][1][i] + ch[2][0][i] + ch[2][1][i] + ch[3][0][i] + ch[3][1][i]);
+        if (v < lo) lo = v; else if (v > hi) hi = v;
+      }
+      mn[k] = lo; mx[k] = hi;
+      if (-lo > top) top = -lo;
+      if (hi > top) top = hi;
+    }
+    sp.peaks = { mn, mx, top };
+  }
+  // One min/max pair per pixel column of the current view (cached until the view changes).
+  function viewColumns(W) {
+    const key = sp.view.s.toFixed(4) + '|' + sp.view.e.toFixed(4) + '|' + W;
+    if (sp.colsKey === key) return sp.cols;
+    const cols = new Float32Array(W * 2);
+    const n = sp.bufs[0].length, spanS = (sp.view.e - sp.view.s) * STEM_SR, per = spanS / W;
+    const ch = per < PEAK_BIN ? sp.bufs.map((b) => [b.getChannelData(0), b.getChannelData(1)]) : null;
+    for (let x = 0; x < W; x++) {
+      const a = Math.max(0, Math.floor(sp.view.s * STEM_SR + x * per)), b = Math.min(n, Math.max(a + 1, Math.floor(sp.view.s * STEM_SR + (x + 1) * per)));
+      let lo = 0, hi = 0;
+      if (ch) {
+        for (let i = a; i < b; i++) {
+          const v = 0.5 * (ch[0][0][i] + ch[0][1][i] + ch[1][0][i] + ch[1][1][i] + ch[2][0][i] + ch[2][1][i] + ch[3][0][i] + ch[3][1][i]);
+          if (v < lo) lo = v; else if (v > hi) hi = v;
+        }
+      } else {
+        for (let k = Math.floor(a / PEAK_BIN), kEnd = Math.ceil(b / PEAK_BIN); k < kEnd && k < sp.peaks.mn.length; k++) {
+          if (sp.peaks.mn[k] < lo) lo = sp.peaks.mn[k];
+          if (sp.peaks.mx[k] > hi) hi = sp.peaks.mx[k];
+        }
+      }
+      cols[2 * x] = lo; cols[2 * x + 1] = hi;
+    }
+    let peak = 1e-4;
+    for (let i = 0; i < cols.length; i++) peak = Math.max(peak, Math.abs(cols[i]));
+    sp.cols = { cols, peak: Math.max(peak, sp.peaks.top * 0.25) };
+    sp.colsKey = key;
+    return sp.cols;
+  }
+  const MIN_SPAN = 0.3, MIN_LOOP = 0.1;
+  function setView(s, e) {
+    let span = Math.max(MIN_SPAN, Math.min(sp.dur, e - s));
+    s = Math.max(0, Math.min(sp.dur - span, s));
+    sp.view = { s, e: s + span };
+  }
+  function fitView() {
+    const len = sp.B - sp.A, pad = Math.max(len * 0.35, 0.5);
+    setView(sp.A - pad, sp.B + pad);
+  }
+  function snapTime(t) {
+    const b = sp.beat && sp.beat.beats;
+    if (!stemMix.snap || !b) return t;
+    let lo = 0, hi = b.length - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (b[m] < t) lo = m + 1; else hi = m; }
+    const c = b[lo], p = lo > 0 ? b[lo - 1] : c;
+    return Math.abs(p - t) < Math.abs(c - t) ? p : c;
+  }
+  const colorOf = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  let trimColors = null;
+  function drawTrim() {
+    if (!sp.bufs || loopCard.hidden) return;
+    const cssW = trimCanvas.clientWidth, cssH = trimCanvas.clientHeight;
+    if (!cssW) return;
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    const W = Math.round(cssW * dpr), H = Math.round(cssH * dpr);
+    if (trimCanvas.width !== W || trimCanvas.height !== H) { trimCanvas.width = W; trimCanvas.height = H; }
+    if (!trimColors) trimColors = { brass: colorOf('--brass-bright') || '#e8b45c', ink: colorOf('--ink') || '#2b1c14' };
+    const g = trimCanvas.getContext('2d');
+    const { s, e } = sp.view, span = e - s;
+    const X = (t) => ((t - s) / span) * W;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = 'rgba(0, 0, 0, 0.32)';
+    g.fillRect(0, 0, W, H);
+    // Beat lines, once they're far enough apart to read.
+    const b = sp.beat && sp.beat.beats;
+    if (b && b.length > 1 && (W / span) * (60 / sp.beat.bpm) > 7 * dpr) {
+      g.fillStyle = 'rgba(237, 226, 208, 0.10)';
+      for (let i = 0; i < b.length; i++) if (b[i] >= s && b[i] <= e) g.fillRect(Math.round(X(b[i])), 0, Math.max(1, dpr), H);
+    }
+    // Waveform: bright inside the loop, faint outside it.
+    const { cols, peak } = viewColumns(W);
+    const mid = H / 2, amp = (H / 2 - 7 * dpr) / peak;
+    const xa = X(sp.A), xb = X(sp.B);
+    for (let x = 0; x < W; x++) {
+      const inside = x >= xa && x <= xb;
+      g.fillStyle = inside ? 'rgba(237, 226, 208, 0.78)' : 'rgba(237, 226, 208, 0.28)';
+      const y1 = mid - cols[2 * x + 1] * amp, y2 = mid - cols[2 * x] * amp;
+      g.fillRect(x, y1, 1, Math.max(1, y2 - y1));
+    }
+    // Shade outside the loop, then the gold frame and its two handles.
+    g.fillStyle = 'rgba(0, 0, 0, 0.38)';
+    if (xa > 0) g.fillRect(0, 0, Math.min(W, xa), H);
+    if (xb < W) g.fillRect(Math.max(0, xb), 0, W - Math.max(0, xb), H);
+    const hw = 13 * dpr, bar = 3 * dpr;
+    g.fillStyle = trimColors.brass;
+    const fx1 = Math.max(-hw, xa), fx2 = Math.min(W + hw, xb);
+    if (fx2 > fx1) { g.fillRect(fx1, 0, fx2 - fx1, bar); g.fillRect(fx1, H - bar, fx2 - fx1, bar); }
+    const handle = (x0, left) => {
+      if (x0 + hw < 0 || x0 - hw > W) return;
+      const hx = left ? x0 : x0 - hw;
+      g.fillStyle = trimColors.brass;
+      g.beginPath();
+      if (g.roundRect) g.roundRect(hx, 0, hw, H, left ? [5 * dpr, 0, 0, 5 * dpr] : [0, 5 * dpr, 5 * dpr, 0]);
+      else g.rect(hx, 0, hw, H);
+      g.fill();
+      g.strokeStyle = trimColors.ink;
+      g.lineWidth = 2 * dpr;
+      g.lineCap = 'round';
+      g.beginPath(); // a chevron pointing outward, like the phone's own trimmer
+      const cx = hx + hw / 2, d = 3 * dpr;
+      g.moveTo(cx + (left ? d : -d), mid - 6 * dpr);
+      g.lineTo(cx + (left ? -d : d), mid);
+      g.lineTo(cx + (left ? d : -d), mid + 6 * dpr);
+      g.stroke();
+    };
+    handle(xa, true);
+    handle(xb, false);
+    // Where the song is now.
+    const pos = sp.playing && !countingIn() ? stemPos() : sp.offset;
+    if (pos >= s && pos <= e) {
+      g.fillStyle = '#fff';
+      g.fillRect(Math.round(X(pos)) - dpr, 0, 2 * dpr, H);
+    }
+  }
+  function renderLoopUI() {
+    loopBtn.setAttribute('aria-expanded', String(sp.loopOn));
+    loopCard.hidden = !sp.loopOn;
+    loopRange.textContent = sp.loopOn ? fmtFine(sp.A) + ' – ' + fmtFine(sp.B) : '';
+    if (!sp.loopOn) return;
+    loopAOut.textContent = fmtFine(sp.A);
+    loopBOut.textContent = fmtFine(sp.B);
+    trimL.textContent = fmtFine(sp.view.s);
+    trimR.textContent = fmtFine(sp.view.e);
+    const sp1 = sp.view.e - sp.view.s;
+    trimSpan.textContent = sp1 >= sp.dur - 0.01 ? 'Whole song' : sp1 >= 10 ? Math.round(sp1) + ' s shown' : sp1.toFixed(1) + ' s shown';
+    snapBtn.hidden = !sp.beat;
+    snapBtn.setAttribute('aria-pressed', String(stemMix.snap));
+    drawTrim();
+  }
+  // Changes the loop (or turns it on or off) without a hiccup when the playhead is already inside it.
+  function changeLoop(a, b, on) {
+    const pos = sp.playing && !countingIn() ? stemPos() : sp.offset;
+    sp.A = Math.max(0, Math.min(a, sp.dur - MIN_LOOP));
+    sp.B = Math.min(sp.dur, Math.max(b, sp.A + MIN_LOOP));
+    sp.loopOn = on;
+    if (!sp.playing) {
+      if (on && (sp.offset < sp.A || sp.offset >= sp.B)) sp.offset = sp.A;
+    } else if (countingIn() || (on && (pos < sp.A || pos >= sp.B - 0.01))) {
+      stemHalt();
+      sp.offset = on ? sp.A : pos;
+      stemPlay({ count: false });
+    } else {
+      sp.anchorPos = pos;
+      sp.anchorT = ctx.currentTime;
+      sp.nodes.forEach((n) => {
+        n.src.loop = on;
+        n.src.loopStart = on ? sp.A : 0;
+        n.src.loopEnd = on ? sp.B : 0;
+      });
+    }
+    renderLoopUI();
+  }
+  loopBtn.addEventListener('click', () => {
+    if (sp.loopOn) { changeLoop(sp.A, sp.B, false); return; }
+    if (sp.B <= sp.A) { // first time: two bars (or 8 seconds) from where the song is now
+      const here = snapTime(sp.playing && !countingIn() ? stemPos() : sp.offset);
+      const len = sp.beat ? (60 / sp.beat.bpm) * countClicks() * (sp.meter === '6/8' ? 1 / 3 : 1) * 2 : 8;
+      sp.A = here;
+      sp.B = Math.min(sp.dur, here + len);
+      if (sp.B - sp.A < 1) sp.A = Math.max(0, sp.B - len);
+    }
+    loopCard.hidden = false;
+    fitView();
+    changeLoop(sp.A, sp.B, true);
+    drawTrim();
+  });
+  // Zooming centres on the end you last moved, so you can home in on it.
+  function zoomCentre() {
+    const t = sp.focus === 'b' ? sp.B : sp.focus === 'a' ? sp.A : null;
+    return t != null && t >= sp.view.s && t <= sp.view.e ? t : (sp.view.s + sp.view.e) / 2;
+  }
+  $('zoomIn').addEventListener('click', () => { const c = zoomCentre(), h = (sp.view.e - sp.view.s) / 4; setView(c - h, c + h); renderLoopUI(); });
+  $('zoomOut').addEventListener('click', () => { const c = zoomCentre(), h = sp.view.e - sp.view.s; setView(c - h, c + h); renderLoopUI(); });
+  $('zoomFit').addEventListener('click', () => { fitView(); renderLoopUI(); });
+  snapBtn.addEventListener('click', () => { stemMix.snap = !stemMix.snap; renderLoopUI(); });
+  // Fine nudges: one beat with snapping on, otherwise a small step that shrinks as you zoom in.
+  document.querySelectorAll('#loopCard .nudge2 button').forEach((btn) => btn.addEventListener('click', () => {
+    const end = btn.dataset.e, dir = Number(btn.dataset.d);
+    sp.focus = end;
+    const cur = end === 'a' ? sp.A : sp.B;
+    let t;
+    const b = sp.beat && sp.beat.beats;
+    if (stemMix.snap && b) {
+      let i = 0;
+      while (i < b.length && b[i] < cur - 0.001) i++;
+      const at = Math.abs((b[i] || Infinity) - cur) < 0.002 ? i : -1;
+      t = dir > 0 ? (at >= 0 ? b[at + 1] : b[i]) : (at >= 0 ? b[at - 1] : b[i - 1]);
+      if (t == null) return;
+    } else {
+      const span = sp.view.e - sp.view.s;
+      const step = span <= 2 ? 0.005 : span <= 10 ? 0.02 : span <= 60 ? 0.1 : 0.5;
+      t = cur + dir * step;
+    }
+    if (end === 'a') changeLoop(Math.min(t, sp.B - MIN_LOOP), sp.B, true);
+    else changeLoop(sp.A, Math.max(t, sp.A + MIN_LOOP), true);
+    // Keep the moved end in view.
+    const moved = end === 'a' ? sp.A : sp.B, span = sp.view.e - sp.view.s;
+    if (moved < sp.view.s || moved > sp.view.e) { setView(moved - span / 2, moved + span / 2); renderLoopUI(); }
+  }));
+
+  // Touch and mouse on the trimmer: drag an end, drag the waveform to scroll, pinch to zoom, tap to jump.
+  const ptrs = new Map();
+  let drag = null; // { kind: 'a' | 'b' | 'pan' | 'pinch', ... }
+  const tAt = (clientX) => {
+    const r = trimCanvas.getBoundingClientRect();
+    return sp.view.s + ((clientX - r.left) / r.width) * (sp.view.e - sp.view.s);
+  };
+  trimCanvas.addEventListener('pointerdown', (ev) => {
+    if (!sp.bufs) return;
+    trimCanvas.setPointerCapture(ev.pointerId);
+    ptrs.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (ptrs.size === 2) {
+      const [p1, p2] = Array.from(ptrs.values());
+      drag = { kind: 'pinch', d0: Math.abs(p1.x - p2.x) || 1, s: sp.view.s, e: sp.view.e, c: tAt((p1.x + p2.x) / 2) };
+      return;
+    }
+    const r = trimCanvas.getBoundingClientRect(), x = ev.clientX - r.left;
+    const span = sp.view.e - sp.view.s;
+    const xa = ((sp.A - sp.view.s) / span) * r.width, xb = ((sp.B - sp.view.s) / span) * r.width;
+    const da = x - xa, db = xb - x; // distance into each handle (handles sit just inside the loop)
+    const nearA = da > -14 && da < 30, nearB = db > -14 && db < 30;
+    if (nearA && (!nearB || Math.abs(da) <= Math.abs(db))) drag = { kind: 'a' };
+    else if (nearB) drag = { kind: 'b' };
+    if (drag && drag.kind !== 'pan') sp.focus = drag.kind;
+    else drag = { kind: 'pan', x0: ev.clientX, s: sp.view.s, moved: false };
+  });
+  trimCanvas.addEventListener('pointermove', (ev) => {
+    if (!drag || !ptrs.has(ev.pointerId)) return;
+    ptrs.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (drag.kind === 'pinch' && ptrs.size >= 2) {
+      const [p1, p2] = Array.from(ptrs.values());
+      const d = Math.abs(p1.x - p2.x) || 1;
+      const span = (drag.e - drag.s) * (drag.d0 / d);
+      const r = trimCanvas.getBoundingClientRect(), f = ((p1.x + p2.x) / 2 - r.left) / r.width;
+      setView(drag.c - f * span, drag.c - f * span + span);
+    } else if (drag.kind === 'pan') {
+      const r = trimCanvas.getBoundingClientRect(), dx = ev.clientX - drag.x0;
+      if (Math.abs(dx) > 6) drag.moved = true;
+      if (drag.moved) setView(drag.s - (dx / r.width) * (sp.view.e - sp.view.s), drag.s - (dx / r.width) * (sp.view.e - sp.view.s) + (sp.view.e - sp.view.s));
+    } else if (drag.kind === 'a' || drag.kind === 'b') {
+      // While dragging, only the picture moves; the sound follows when you let go.
+      const t = snapTime(Math.max(sp.view.s, Math.min(sp.view.e, tAt(ev.clientX))));
+      if (drag.kind === 'a') sp.A = Math.max(0, Math.min(t, sp.B - MIN_LOOP));
+      else sp.B = Math.min(sp.dur, Math.max(t, sp.A + MIN_LOOP));
+    }
+    renderLoopUI();
+  });
+  const endDrag = (ev) => {
+    if (!ptrs.has(ev.pointerId)) return;
+    ptrs.delete(ev.pointerId);
+    if (!drag) return;
+    if (drag.kind === 'pinch') {
+      if (ptrs.size === 0) { drag = null; changeLoop(sp.A, sp.B, true); } // in case an end moved before the pinch
+      return;
+    }
+    if (drag.kind === 'a' || drag.kind === 'b') {
+      changeLoop(sp.A, sp.B, true);
+    } else if (drag.kind === 'pan' && !drag.moved && ev.type === 'pointerup') {
+      // A tap jumps there (inside the loop).
+      const t = Math.max(sp.A, Math.min(sp.B - 0.02, tAt(ev.clientX)));
+      const was = stemHalt();
+      sp.offset = t;
+      if (was) stemPlay({ count: false }); else renderStemPlayer();
+    }
+    drag = null;
+    renderLoopUI();
+  };
+  trimCanvas.addEventListener('pointerup', endDrag);
+  trimCanvas.addEventListener('pointercancel', endDrag);
+  window.addEventListener('resize', () => { sp.colsKey = ''; drawTrim(); });
+
   function renderStemPlayer() {
     if (!sp.bufs) return;
     stemPlayBtn.innerHTML = sp.playing ? ICON_PAUSE : ICON_PLAY;
@@ -5690,7 +6373,6 @@ function compilePattern(preset, meter) {
       stemNow.textContent = fmtTime(sp.offset);
       stemSeek.value = String(Math.round((sp.offset / sp.dur) * 1000));
     }
-    stemLoopBtn.setAttribute('aria-pressed', String(stemMix.loop));
     // Quick mixes: the one matching what's on now is lit.
     stemQuick.innerHTML = '';
     STEM_MIXES.forEach(([name, on]) => {
@@ -5751,13 +6433,12 @@ function compilePattern(preset, meter) {
   stemSeek.addEventListener('change', () => {
     sp.seeking = false;
     const was = stemHalt();
-    sp.offset = (Number(stemSeek.value) / 1000) * sp.dur;
-    if (was) stemPlay(); else renderStemPlayer();
-  });
-  stemLoopBtn.addEventListener('click', () => {
-    const was = stemHalt();
-    stemMix.loop = !stemMix.loop;
-    if (was) stemPlay(); else renderStemPlayer();
+    const t = (Number(stemSeek.value) / 1000) * sp.dur;
+    sp.offset = t;
+    // Seeking outside the loop turns the loop off, since that's clearly where you want to be.
+    if (sp.loopOn && (t < sp.A || t >= sp.B)) { sp.loopOn = false; renderLoopUI(); }
+    if (was) stemPlay({ count: false }); else renderStemPlayer();
+    drawTrim();
   });
 
   /* Splitting */
@@ -5937,11 +6618,25 @@ function compilePattern(preset, meter) {
         await stemSplit(left, right, modelRunner(sx.ort, sx.session), outArr(), onStep);
       }
 
+      stemProgress('Finding the beat', 1, 'Almost done');
+      await new Promise((r) => setTimeout(r, 30));
+      let beat = null;
+      try { beat = analyzeBeat(outArr()); } catch (e) { beat = null; }
       stemHalt();
       sp.bufs = out;
       sp.name = name;
       sp.dur = n / STEM_SR;
       sp.offset = 0;
+      sp.beat = beat;
+      sp.bpm = beat ? beat.bpm : 120;
+      sp.meter = beat ? beat.meter : '4/4';
+      sp.bpmTouched = false;
+      sp.loopOn = false;
+      sp.A = 0;
+      sp.B = 0;
+      sp.focus = null;
+      buildPeaks();
+      sp.colsKey = '';
       stemWork.hidden = true;
       stemFb.textContent = 'Split in ' + fmtTime((performance.now() - t0) / 1000) + '. Tap play, then turn parts on and off.';
     } catch (e) {

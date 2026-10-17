@@ -1,0 +1,17 @@
+Instrument samples for the Backing Track Builder
+================================================
+
+These five sound files are built from tonejs-instruments by Nicholaus P. Brosowsky:
+https://github.com/nbrosowsky/tonejs-instruments
+
+The samples are licensed under Creative Commons Attribution 3.0 (CC BY 3.0):
+https://creativecommons.org/licenses/by/3.0/
+
+Changes made: a selection of notes was trimmed to 2.5-3 seconds, faded out,
+level-matched, converted to mono and joined into one file per instrument.
+
+Original recordings, as credited by tonejs-instruments:
+- acoustic-guitar.mp3: University of Iowa Electronic Music Studios, http://theremin.music.uiowa.edu/
+- electric-guitar.mp3 and bass.mp3: Karoryfer Samples, https://www.karoryfer.com/karoryfer-samples
+- nylon-guitar.mp3: "classicalguitar-multisampled" by quartertone on Freesound, https://freesound.org
+- piano.mp3: Versilian Studios VSCO 2 Community Edition, http://vis.versilstudios.net/vsco-community.html

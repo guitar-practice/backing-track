@@ -1497,16 +1497,18 @@ const PRESETS = [
     '4/4': { k: 'X-------X-x-----', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-', c: 'X---x---X---x-o-', b: '1-------1-5-----' },
     '3/4': { k: 'X-----------', s: '----x---x---', h: 'x-o-x-o-x-o-', c: 'X---x---x-o-', b: '1-------5---' },
     '6/8': { k: 'X-----------', s: '------X-----', h: 'x-o-o-x-o-o-', c: 'X---o-x---o-', b: '1-----5-----' } },
-  // 90s alt-rock rhythm guitar: a ringing power chord on 1, palm-muted chugs, a pushed chord on
-  // the "and" of 2, a dead-string scratch on the snare, crash on every downbeat, bass on 8ths.
-  // g strokes: D ringing chord, P palm mute, x scratch.
+  // 90s alt-rock rhythm guitar, strummed like Bush's "Glycerine": the hand swings down on every
+  // 8th and up on every 16th in between, but only some swings hit the strings. Per two beats:
+  // D - D U - U D - (accents on 1, the "and" of 2, 3 and the "and" of 4). The misses let the
+  // chord ring. Kick and bass push on the same accents; crash on every downbeat.
+  // g strokes: D down through the whole power chord, U up across its top strings, P palm mute, x scratch.
   { id: 'rock', name: 'Grunge rock', chord: 'grunge',
-    '4/4': { k: 'X-----x-X-x-----', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-', oh: '--------------x-', cr: 'x---------------',
-             c: 'X-o-o-X-o-X-x-x-', g: 'D-P-P-D-P-D-x-D-', b: '1-1-1-1-1-1-1-1-' },
-    '3/4': { k: 'X-------x---', s: '----X-------', h: 'x-o-x-o-x-o-', cr: 'x-----------',
-             c: 'X-o-o-X-o-x-', g: 'D-P-P-D-P-x-', b: '1-1-1-1-1-1-' },
+    '4/4': { k: 'X-----x-X-----x-', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-', oh: '--------------x-', cr: 'x---------------',
+             c: 'X-xx-xX-X-xx-xX-', g: 'D-DU-UD-D-DU-UD-', b: '1-----1-1-----1-' },
+    '3/4': { k: 'X-----x-X---', s: '----X-------', h: 'x-o-x-o-x-o-', cr: 'x-----------',
+             c: 'X-xx-xX-X-xx', g: 'D-DU-UD-D-DU', b: '1-----1-1---' },
     '6/8': { k: 'X-----x-----', s: '------X-----', h: 'x-o-o-x-o-o-', cr: 'x-----------',
-             c: 'X-o-o-X-o-x-', g: 'D-P-P-D-P-x-', b: '1-1-1-1-1-1-' } },
+             c: 'X-xx-xX-xx-x', g: 'D-DU-UD-DU-U', b: '1-----1-----' } },
   { id: 'ballad', name: 'Ballad', chord: 'pad',
     '4/4': { k: 'X---------x-----', r: '----x-------x---', h: 'o---o---o---o---', c: 'X---------------', b: '1-------5-------' },
     '3/4': { k: 'X-----------', r: '----o---o---', h: 'o---o---o---', c: 'X-----------', b: '1-------5---' },
@@ -3125,8 +3127,8 @@ function compilePattern(preset, meter) {
 
   /* ---------- Distorted electric guitar ----------
      The same plucked strings, played as power chords (root, 5th, octave) into an overdrive
-     and a 4x12-style speaker cabinet. Strokes: D ringing power chord, P palm-muted chug,
-     x muted scratch. */
+     and a 4x12-style speaker cabinet. Strokes: D downstroke through the whole power chord,
+     U upstroke across its top two strings, P palm-muted chug, x muted scratch. */
   let distCurveArr = null;
   function distCurve() {
     if (distCurveArr) return distCurveArr;
@@ -3163,7 +3165,7 @@ function compilePattern(preset, meter) {
       const cabHigh = filt('lowpass', 4300, 0.8);   // speakers roll off the fizz
       const cabHigh2 = filt('lowpass', 6500, 0.7);
       const out = ctx.createGain();
-      out.gain.value = 0.1;
+      out.gain.value = 0.08; // strummed chords ring between strokes, so they sit a touch lower
       input.connect(tight); tight.connect(drive); drive.connect(shaper); shaper.connect(cabLow);
       cabLow.connect(thump); thump.connect(scoop); scoop.connect(bite); bite.connect(cabHigh);
       cabHigh.connect(cabHigh2); cabHigh2.connect(out); out.connect(dest);
@@ -3188,7 +3190,8 @@ function compilePattern(preset, meter) {
     let type = g && g !== '-' ? g : 'D';
     const st = elState(dest);
     const pc = powerChord(chord);
-    if (st.chord !== chord.name && type === 'x') type = 'D';
+    // A new chord always starts with a full downstroke, so the old chord's low string stops.
+    if (st.chord !== chord.name && (type === 'x' || type === 'U')) type = 'D';
     st.chord = chord.name;
     const hum = () => (Math.random() - 0.5) * 0.004;
     const killAll = () => { st.v.forEach((o) => gtrMute(o, t)); st.v = []; };
@@ -3208,11 +3211,19 @@ function compilePattern(preset, meter) {
       pc.slice(0, 2).forEach((n, i) => deadNote('electric', GTR[n.s] + n.f, t + i * 0.004 + hum(), 0.55 * v, damp, 0.14));
       return;
     }
-    // Open power chord: rings until the next palm mute, scratch or chord.
-    killAll();
     const bright = ctx.createBiquadFilter();
-    bright.type = 'lowpass'; bright.frequency.value = 2800 + 3000 * v;
+    bright.type = 'lowpass';
     bright.connect(sReady('electric') ? st.sIn : st.input);
+    if (type === 'U') {
+      // Upstroke: the pick catches the octave and the 5th on the way back up, a little softer and
+      // darker. The low root keeps ringing from the last downstroke.
+      bright.frequency.value = 2200 + 2600 * v;
+      [pc[2], pc[1]].forEach((n, i) => gtrPluck(st, bright, n.s, GTR[n.s] + n.f, t + i * 0.008 + hum(), 0.36 * v));
+      return;
+    }
+    // Downstroke: the whole power chord, ringing through the missed strums until the next stroke.
+    killAll();
+    bright.frequency.value = 2800 + 3000 * v;
     pc.forEach((n, i) => gtrPluck(st, bright, n.s, GTR[n.s] + n.f, t + i * 0.006 + hum(), (i === 0 ? 0.62 : 0.5) * v));
   }
 

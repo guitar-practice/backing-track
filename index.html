@@ -686,6 +686,8 @@
     color: rgba(237, 226, 208, 0.5);
   }
   .intro { margin: 0; font-family: var(--sans); font-size: 13px; line-height: 1.5; color: var(--parchment-dim); }
+  .credit { margin: 10px 0 0; font-family: var(--sans); font-size: 11px; line-height: 1.45; color: rgba(237, 226, 208, 0.4); }
+  .credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
   /* Pill buttons */
   .actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1100,8 +1102,13 @@
       <button type="button" class="toggle" id="bgToggle" aria-pressed="true" aria-describedby="bgNote">Background play</button>
       <span class="bgnote" id="bgNote"></span>
     </div>
+    <div class="bgrow">
+      <button type="button" class="toggle" id="realToggle" aria-pressed="true" aria-describedby="realNote">Real instruments</button>
+      <span class="bgnote" id="realNote"></span>
+    </div>
 
     <p class="note" id="tip"></p>
+    <p class="credit">Instrument recordings from <a href="https://github.com/nbrosowsky/tonejs-instruments" target="_blank" rel="noopener">tonejs-instruments</a> by Nicholaus Brosowsky, <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>, trimmed and combined.</p>
   </section>
 
   <!-- Key map -->
@@ -1490,10 +1497,16 @@ const PRESETS = [
     '4/4': { k: 'X-------X-x-----', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-', c: 'X---x---X---x-o-', b: '1-------1-5-----' },
     '3/4': { k: 'X-----------', s: '----x---x---', h: 'x-o-x-o-x-o-', c: 'X---x---x-o-', b: '1-------5---' },
     '6/8': { k: 'X-----------', s: '------X-----', h: 'x-o-o-x-o-o-', c: 'X---o-x---o-', b: '1-----5-----' } },
-  { id: 'rock', name: 'Rock', chord: 'strum', allDown: true,
-    '4/4': { k: 'X-----x-X-------', s: '----X-------X---', h: 'X-x-X-x-X-x-X---', oh: '--------------x-', c: 'x-o-x-o-x-o-x-o-', b: '1-1-1-1-1-1-1-1-' },
-    '3/4': { k: 'X-----x-----', s: '--------X---', h: 'X-x-X-x-X-x-', c: 'x-o-x-o-x-o-', b: '1-1-1-1-1-1-' },
-    '6/8': { k: 'X---x-------', s: '------X-----', h: 'X-x-x-X-x-x-', c: 'x-o-o-x-o-o-', b: '1-1-1-1-1-1-' } },
+  // 90s alt-rock rhythm guitar: a ringing power chord on 1, palm-muted chugs, a pushed chord on
+  // the "and" of 2, a dead-string scratch on the snare, crash on every downbeat, bass on 8ths.
+  // g strokes: D ringing chord, P palm mute, x scratch.
+  { id: 'rock', name: 'Grunge rock', chord: 'grunge',
+    '4/4': { k: 'X-----x-X-x-----', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-', oh: '--------------x-', cr: 'x---------------',
+             c: 'X-o-o-X-o-X-x-x-', g: 'D-P-P-D-P-D-x-D-', b: '1-1-1-1-1-1-1-1-' },
+    '3/4': { k: 'X-------x---', s: '----X-------', h: 'x-o-x-o-x-o-', cr: 'x-----------',
+             c: 'X-o-o-X-o-x-', g: 'D-P-P-D-P-x-', b: '1-1-1-1-1-1-' },
+    '6/8': { k: 'X-----x-----', s: '------X-----', h: 'x-o-o-x-o-o-', cr: 'x-----------',
+             c: 'X-o-o-X-o-x-', g: 'D-P-P-D-P-x-', b: '1-1-1-1-1-1-' } },
   { id: 'ballad', name: 'Ballad', chord: 'pad',
     '4/4': { k: 'X---------x-----', r: '----x-------x---', h: 'o---o---o---o---', c: 'X---------------', b: '1-------5-------' },
     '3/4': { k: 'X-----------', r: '----o---o---', h: 'o---o---o---', c: 'X-----------', b: '1-------5---' },
@@ -1546,10 +1559,15 @@ const LAYERS = [
   { id: 'keys', name: 'Keys', from: 'Lo-fi', src: 'lofi' },
   { id: 'strum', name: 'Strum', from: 'Folk', src: 'folk' },
   { id: 'acoustic', name: 'Acoustic', from: 'Acoustic', src: 'acoustic' },
+  { id: 'electric', name: 'Electric', from: 'Grunge', src: 'rock' },
   { id: 'drums', name: 'Drums', drums: true },
 ];
 // Beats for the Drums layer.
 const DRUM_KITS = [
+  { id: 'grunge', name: 'Grunge',
+    '4/4': { k: 'X-----x-X-x-----', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-', oh: '--------------x-', cr: 'x---------------' },
+    '3/4': { k: 'X-------x---', s: '----X-------', h: 'x-o-x-o-x-o-', cr: 'x-----------' },
+    '6/8': { k: 'X-----x-----', s: '------X-----', h: 'x-o-o-x-o-o-', cr: 'x-----------' } },
   { id: 'rock', name: 'Rock',
     '4/4': { k: 'X-------X-x-----', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-' },
     '3/4': { k: 'X-------x---', s: '----X---X---', h: 'x-o-x-o-x-o-' },
@@ -1655,6 +1673,7 @@ function compilePattern(preset, meter) {
     root: 9, scale: 'harmonic', slots: defaultSlots('harmonic'), preset: 'pop', meter: '4/4', bpm: 92,
     tab: 'track',
     bgPlay: true,
+    realInst: true,
     mix: {
       drums: { on: true, vol: 80 }, chords: { on: true, vol: 80 }, bass: { on: true, vol: 80 },
       layers: { vol: 70 }, layer: [], drumKit: 'rock', open: false,
@@ -1685,6 +1704,8 @@ function compilePattern(preset, meter) {
   // iPhone can leave the audio engine silently dead after the page goes to the background.
   // When that may have happened, the next tap builds a fresh one.
   let ctxDirty = false;
+  // Set once the page has finished building, so saving can start loading instrument recordings.
+  let booted = false;
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   function load() {
@@ -1703,6 +1724,7 @@ function compilePattern(preset, meter) {
       if (Number.isFinite(s.bpm)) state.bpm = Math.max(40, Math.min(250, Math.round(s.bpm)));
       if (TABS.includes(s.tab)) state.tab = s.tab;
       if (typeof s.bgPlay === 'boolean') state.bgPlay = s.bgPlay;
+      if (typeof s.realInst === 'boolean') state.realInst = s.realInst;
       if (s.mix && typeof s.mix === 'object') {
         const vol = (v, d) => (Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : d);
         ['drums', 'chords', 'bass'].forEach((p) => {
@@ -1747,11 +1769,13 @@ function compilePattern(preset, meter) {
   }
   function save() {
     try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
+    if (booted) { loadNeeded(); renderRealToggle(); }
     if (playing && bgActive) queueBgRefresh();
   }
   // Everything that changes what the backing track sounds like.
   const audioSig = () => JSON.stringify([state.root, state.scale, state.slots, state.preset, state.meter, state.bpm,
-    state.mix.drums, state.mix.chords, state.mix.bass, state.mix.layers, state.mix.layer, state.mix.drumKit]);
+    state.mix.drums, state.mix.chords, state.mix.bass, state.mix.layers, state.mix.layer, state.mix.drumKit,
+    state.realInst, booted && state.realInst ? readySets() : '']);
   function queueBgRefresh() {
     if (audioSig() === bgWantSig) return;
     clearTimeout(bgTimer);
@@ -2205,7 +2229,7 @@ function compilePattern(preset, meter) {
 
   function presetHas(p, part) {
     const tr = p[state.meter] || {};
-    if (part === 'drums') return ['k', 's', 'h', 'oh', 'r', 'p'].some((k) => tr[k] && /[^-]/.test(tr[k]));
+    if (part === 'drums') return ['k', 's', 'h', 'oh', 'cr', 'r', 'p'].some((k) => tr[k] && /[^-]/.test(tr[k]));
     if (part === 'bass') return !!tr.b && /[^-]/.test(tr.b);
     return true;
   }
@@ -2410,7 +2434,7 @@ function compilePattern(preset, meter) {
       previewBus = null;
       earBus = null;
       if (!noiseBuf) {
-        noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); // 2 s, long enough for a crash
         const data = noiseBuf.getChannelData(0);
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
       }
@@ -2426,6 +2450,37 @@ function compilePattern(preset, meter) {
   });
   window.addEventListener('pageshow', (e) => { if (e.persisted && ctx) ctxDirty = true; });
 
+  // Straight line up to 0.75, then a smooth knee that never goes past 1. (A wave shaper's curve
+  // spans inputs from -1 to 1; anything louder is held at the curve's end.)
+  let softClipArr = null;
+  function softClipCurve() {
+    if (softClipArr) return softClipArr;
+    const n = 4096;
+    softClipArr = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 2 - 1, a = Math.abs(x);
+      softClipArr[i] = Math.sign(x) * (a < 0.75 ? a : 0.75 + 0.25 * Math.tanh((a - 0.75) / 0.25));
+    }
+    return softClipArr;
+  }
+
+  // A small room: about a second of decaying noise used as a reverb impulse.
+  let roomBuf = null;
+  function roomIR() {
+    if (roomBuf) return roomBuf;
+    const sr = 44100, len = Math.round(1.1 * sr);
+    try { roomBuf = new AudioBuffer({ length: len, numberOfChannels: 2, sampleRate: sr }); } catch (e) { roomBuf = ctx.createBuffer(2, len, sr); }
+    for (let c = 0; c < 2; c++) {
+      const data = roomBuf.getChannelData(c);
+      let lp = 0;
+      for (let i = 0; i < len; i++) {
+        lp += 0.35 * ((Math.random() * 2 - 1) - lp); // darker tail, like a carpeted room
+        data[i] = lp * Math.exp(-i / (sr * 0.22));
+      }
+    }
+    return roomBuf;
+  }
+
   function makeBus() {
     const input = ctx.createGain();
     input.gain.value = 0.9;
@@ -2436,7 +2491,27 @@ function compilePattern(preset, meter) {
     comp.attack.value = 0.004;
     comp.release.value = 0.2;
     input.connect(comp);
-    comp.connect(ctx.destination);
+    try {
+      const room = ctx.createConvolver();
+      room.buffer = roomIR();
+      const wet = ctx.createGain();
+      wet.gain.value = 0.2;
+      input.connect(room); room.connect(wet); wet.connect(comp);
+    } catch (e) { /* plays dry */ }
+    // Brick-wall limiter last, so loud drum hits can never clip the speaker.
+    const limit = ctx.createDynamicsCompressor();
+    limit.threshold.value = -4;
+    limit.knee.value = 0;
+    limit.ratio.value = 20;
+    limit.attack.value = 0.001;
+    limit.release.value = 0.08;
+    const out = ctx.createGain();
+    out.gain.value = 0.9;
+    // Last line of defence: anything that still gets past the limiter is rounded off gently
+    // instead of hard-clipping into a crackle.
+    const soft = ctx.createWaveShaper();
+    soft.curve = softClipCurve();
+    comp.connect(limit); limit.connect(out); out.connect(soft); soft.connect(ctx.destination);
     return { input, comp };
   }
   function getPreviewBus() {
@@ -2490,16 +2565,60 @@ function compilePattern(preset, meter) {
     o.stop(t + decay + 0.05);
   }
 
+  /* A rock kit rather than a drum machine: a short punchy kick with a beater click (not an
+     808 boom), a snare with a tuned shell and loud wires, and cymbals built from clashing
+     square waves the way real metal rings, all sitting in a small room (see makeBus). */
+  const METAL = [263, 400, 421, 474, 587, 845].map((f) => f * 1.45);
+  function metal(t, vol, decay, hp, d) {
+    const sum = ctx.createGain();
+    sum.gain.value = 0.35;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 9000; bp.Q.value = 0.7;
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = 'highpass'; hpf.frequency.value = hp;
+    const g = ctx.createGain();
+    envelope(g.gain, t, vol, 0.001, t + decay);
+    METAL.forEach((f) => {
+      const o = ctx.createOscillator();
+      o.type = 'square';
+      o.frequency.value = f;
+      o.connect(sum);
+      o.start(t);
+      o.stop(t + decay + 0.05);
+    });
+    sum.connect(bp); bp.connect(hpf); hpf.connect(g); g.connect(d);
+  }
   const DRUMS = {
-    k: (t, v, d) => blip(t, 'sine', 150, 46, 0.9 * v, 0.34, d),
-    s: (t, v, d) => { noiseHit(t, 0.4 * v, 'bandpass', 1900, 0.7, 0.002, 0.17, d); blip(t, 'triangle', 190, 150, 0.28 * v, 0.1, d); },
-    h: (t, v, d) => noiseHit(t, 0.17 * v, 'highpass', 7600, 0.7, 0.001, 0.045, d),
-    oh: (t, v, d) => noiseHit(t, 0.14 * v, 'highpass', 7000, 0.7, 0.002, 0.32, d),
+    k: (t, v, d) => {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(128, t);
+      o.frequency.exponentialRampToValueAtTime(54, t + 0.055);
+      const g = ctx.createGain();
+      envelope(g.gain, t, 0.7 * v, 0.002, t + 0.26);
+      o.connect(g); g.connect(d);
+      o.start(t); o.stop(t + 0.3);
+      blip(t, 'triangle', 95, 62, 0.22 * v, 0.07, d);
+      noiseHit(t, 0.16 * v, 'highpass', 2600, 0.7, 0.0005, 0.012, d); // beater
+    },
+    s: (t, v, d) => {
+      blip(t, 'triangle', 190, 165, 0.32 * v, 0.12, d);
+      blip(t, 'sine', 335, 300, 0.15 * v, 0.07, d);
+      noiseHit(t, 0.38 * v, 'highpass', 1500, 0.6, 0.001, 0.22, d); // wires
+      noiseHit(t, 0.22 * v, 'bandpass', 3800, 0.8, 0.001, 0.07, d); // stick crack
+    },
+    h: (t, v, d) => { metal(t, 0.2 * v, 0.06, 7200, d); noiseHit(t, 0.1 * v, 'highpass', 8200, 0.7, 0.001, 0.04, d); },
+    oh: (t, v, d) => { metal(t, 0.18 * v, 0.42, 6500, d); noiseHit(t, 0.09 * v, 'highpass', 7600, 0.7, 0.002, 0.36, d); },
+    cr: (t, v, d) => { metal(t, 0.16 * v, 1.7, 4200, d); noiseHit(t, 0.16 * v, 'highpass', 4800, 0.5, 0.002, 1.5, d); },
     r: (t, v, d) => { blip(t, 'triangle', 1250, 0, 0.24 * v, 0.05, d); noiseHit(t, 0.08 * v, 'bandpass', 3200, 1.5, 0.001, 0.02, d); },
     p: (t, v, d) => noiseHit(t, 0.11 * v, 'bandpass', 6200, 1.1, 0.008, 0.06, d),
   };
 
+  // Level trims per sound, set by rendering every preset and measuring it, so chords sit at about
+  // the same loudness as the drums instead of hiding behind the bass.
+  const STYLE_TRIM = { strum: 2.5, pad: 2.0, thick: 2.0, stab: 5.5, pluck: 2.5, keys: 1.8, arp: 2.2 };
   function synthVoice(style, midi, t, v, dur, dest) {
+    v *= STYLE_TRIM[style] || 1;
     const f = mtof(midi);
     const out = ctx.createGain();
     const lp = ctx.createBiquadFilter();
@@ -2603,17 +2722,150 @@ function compilePattern(preset, meter) {
     o2.connect(g2); g2.connect(lp);
     const hold = Math.max(0.09, Math.min(dur * 0.9, 1.6));
     out.gain.setValueAtTime(0.0001, t);
-    out.gain.exponentialRampToValueAtTime(0.32, t + 0.008);
-    out.gain.exponentialRampToValueAtTime(0.17, t + hold);
+    out.gain.exponentialRampToValueAtTime(0.11, t + 0.008);
+    out.gain.exponentialRampToValueAtTime(0.06, t + hold);
     out.gain.exponentialRampToValueAtTime(0.0001, t + hold + 0.07);
     [o1, o2].forEach((o) => { o.start(t); o.stop(t + hold + 0.12); });
   }
 
+  /* ---------- Recorded instruments ----------
+     Real notes from tonejs-instruments (CC BY 3.0). Each instrument is one file in a samples/
+     folder next to this page (or right beside it), holding a run of notes `slot` seconds apart.
+     A note between two recordings plays the nearest one slightly sped up or slowed down.
+     If a file is missing, that instrument keeps its built-in synth sound. */
+  const SAMPLE_SETS = {
+    acoustic: { file: 'acoustic-guitar.mp3', slot: 3, notes: 'E2 Fs2 Gs2 As2 C3 D3 E3 Fs3 Gs3 As3 C4 D4 E4 Fs4 Gs4 As4 C5 D5' },
+    electric: { file: 'electric-guitar.mp3', slot: 3, notes: 'E2 Fs2 A2 C3 Ds3 Fs3 A3 C4 Ds4 Fs4 A4 C5 Ds5 Fs5 A5' },
+    nylon: { file: 'nylon-guitar.mp3', slot: 3, notes: 'E2 Fs2 Gs2 B2 Cs3 E3 Fs3 A3 B3 Cs4 Ds4 Fs4 Gs4 B4 Cs5 E5 Fs5 A5' },
+    bass: { file: 'bass.mp3', slot: 2.5, notes: 'E1 G1 As1 Cs2 E2 G2 As2 Cs3 E3 G3 As3 Cs4' },
+    piano: { file: 'piano.mp3', slot: 3, notes: 'C2 Ds2 Fs2 A2 C3 Ds3 Fs3 A3 C4 Ds4 Fs4 A4 C5 Ds5 Fs5 A5 C6' },
+  };
+  // Which recording each chord style plays.
+  const STYLE_SET = { acoustic: 'acoustic', strum: 'acoustic', grunge: 'electric', stab: 'electric', pluck: 'nylon', arp: 'nylon', keys: 'piano' };
+  // Levels, set by rendering every preset both ways so the recordings sit where the synth sounds did.
+  const SAMPLE_TRIM = { acoustic: 2.5, electric: 1, strum: 0.15, stab: 0.26, pluck: 0.18, arp: 0.25, keys: 0.18, bass: 0.25, note: 0.2, chordNote: 0.2, bassNote: 0.25 };
+  const BASS_LOW = 28; // E1, the bass guitar's open low string
+  const smp = {}; // id -> { st: 'loading' | 'ready' | 'missing', buf, notes, p }
+  const NOTE_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const noteMidi = (n) => 12 * (Number(n.slice(-1)) + 1) + NOTE_PC[n[0]] + (n[1] === 's' ? 1 : 0);
+  let decoder = null;
+
+  function decodeMp3(ab) {
+    return new Promise((res, rej) => {
+      try {
+        let dc = ctx && ctx.state !== 'closed' ? ctx : decoder;
+        if (!dc) {
+          // Decoding needs no sound output, so it can start before the first tap.
+          const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+          dc = decoder = new OAC(1, 1, 44100);
+        }
+        const p = dc.decodeAudioData(ab, res, rej);
+        if (p && p.then) p.then(res, rej);
+      } catch (e) { rej(e); }
+    });
+  }
+  async function fetchSample(file) {
+    for (const path of ['samples/' + file, file]) {
+      try {
+        const r = await fetch(path);
+        if (r.ok) return await r.arrayBuffer();
+      } catch (e) { /* try the next place */ }
+    }
+    throw new Error('missing ' + file);
+  }
+  // Finds where each note starts in the file (players add a little silence to the front of an
+  // mp3, more on some phones than others) and how loud it is, so every note plays on time and even.
+  function indexNotes(buf, S) {
+    const x = buf.getChannelData(0), sr = buf.sampleRate, slot = Math.round(S.slot * sr);
+    return S.notes.split(' ').map((n, i) => {
+      const a = i * slot, b = Math.min(x.length, a + slot);
+      let peak = 1e-6;
+      for (let j = a; j < b; j++) { const v = Math.abs(x[j]); if (v > peak) peak = v; }
+      const lim = Math.min(b, a + Math.round(0.3 * sr));
+      let on = a;
+      while (on < lim && Math.abs(x[on]) < 0.05 * peak) on++;
+      if (on >= lim) on = a;
+      on = Math.max(a, on - Math.round(0.003 * sr));
+      return { midi: noteMidi(n), off: on / sr, len: Math.max(0.2, (b - on) / sr - 0.16), gain: 1 / peak };
+    });
+  }
+  function loadSet(id) {
+    if (smp[id]) return smp[id].p;
+    const S = SAMPLE_SETS[id];
+    const rec = smp[id] = { st: 'loading', buf: null, notes: null };
+    rec.p = fetchSample(S.file).then(decodeMp3).then((buf) => {
+      rec.notes = indexNotes(buf, S);
+      rec.buf = buf;
+      rec.st = 'ready';
+    }).catch(() => { rec.st = 'missing'; }).then(onSamplesChanged);
+    return rec.p;
+  }
+  function setsNeeded() {
+    const need = new Set(['acoustic', 'bass']); // note previews, drills and every bass line
+    const styles = [currentPreset().chord];
+    state.mix.layer.forEach((id) => { const L = layerById(id); if (L && L.src) styles.push(presetById(L.src).chord); });
+    styles.forEach((s) => { if (STYLE_SET[s]) need.add(STYLE_SET[s]); });
+    return need;
+  }
+  function loadNeeded() {
+    if (!state.realInst || typeof fetch !== 'function') return Promise.resolve();
+    return Promise.all(Array.from(setsNeeded()).map(loadSet));
+  }
+  // Waits for the recordings this track needs, but never longer than `ms`.
+  function samplesSettled(ms) {
+    return Promise.race([loadNeeded(), new Promise((r) => setTimeout(r, ms))]);
+  }
+  function readySets() { return Object.keys(smp).filter((k) => smp[k].st === 'ready').sort().join(','); }
+  function sReady(id) { return !!id && state.realInst && !!smp[id] && smp[id].st === 'ready'; }
+  function onSamplesChanged() {
+    renderRealToggle();
+    if (playing && bgActive) queueBgRefresh();
+  }
+
+  // One recorded note. Rings out on its own, or for `hold` seconds then fades over `rel`.
+  // Returns a voice that gtrMute can stop, or null when that recording isn't loaded.
+  function sNote(id, midi, t, amp, dest, hold, rel) {
+    if (!sReady(id)) return null;
+    const S = smp[id];
+    let n = S.notes[0];
+    for (const x of S.notes) if (Math.abs(x.midi - midi) < Math.abs(n.midi - midi)) n = x;
+    t = Math.max(0, t);
+    const rate = Math.pow(2, (midi - n.midi) / 12);
+    const room = n.len / rate; // seconds of recording left at this speed
+    const src = ctx.createBufferSource();
+    src.buffer = S.buf;
+    src.playbackRate.value = rate;
+    const g = ctx.createGain();
+    const a = amp * n.gain;
+    g.gain.setValueAtTime(a, t);
+    let end = t + room;
+    if (hold != null) {
+      const r = Math.max(0.01, rel || 0.08);
+      const h = Math.max(0.005, Math.min(hold, room - r));
+      g.gain.setValueAtTime(a, t + h);
+      g.gain.linearRampToValueAtTime(0, t + h + r);
+      end = t + h + r;
+    }
+    src.connect(g);
+    g.connect(dest);
+    src.start(t, n.off);
+    src.stop(end + 0.02);
+    return { src, g, amp: a, done: false };
+  }
+
   // Single plucked note and a strummed chord, used outside the backing track.
-  function pluck(midi, t, dest, dur, v) { synthVoice('arp', midi, t, v || 1.3, dur || 0.9, dest); }
+  function pluck(midi, t, dest, dur, v) {
+    if (sNote('acoustic', midi, t, (v || 1.3) * SAMPLE_TRIM.note, dest, (dur || 0.9) + 0.25, 0.25)) return;
+    synthVoice('arp', midi, t, v || 1.3, dur || 0.9, dest);
+  }
   function strumAt(midis, bassMidi, t, dest, dur) {
-    if (bassMidi != null) synthBass(bassMidi, t, dur || 1.2, dest);
-    midis.forEach((m, i) => synthVoice('strum', m, t + i * 0.018, 0.95, dur || 1.2, dest));
+    const d = dur || 1.2;
+    if (bassMidi != null && !sNote('bass', bassMidi, t, SAMPLE_TRIM.bassNote, dest, d * 0.9, 0.12)) synthBass(bassMidi, t, d, dest);
+    midis.forEach((m, i) => {
+      if (!sNote('acoustic', m, t + i * 0.018, 0.95 * SAMPLE_TRIM.chordNote, dest, d + 0.25, 0.25)) {
+        synthVoice('strum', m, t + i * 0.018, 0.95, d, dest);
+      }
+    });
   }
 
   function isUp(step) {
@@ -2779,8 +3031,14 @@ function compilePattern(preset, meter) {
       box.type = 'peaking'; box.frequency.value = 230; box.Q.value = 1.4; box.gain.value = 2.5;
       const top = ctx.createBiquadFilter();
       top.type = 'highshelf'; top.frequency.value = 5500; top.gain.value = -3;
-      input.connect(body); body.connect(box); box.connect(top); top.connect(dest);
-      st = { input, v: [], chord: '' };
+      const out = ctx.createGain();
+      out.gain.value = 4.5; // brings the guitar up to the level of the other presets
+      input.connect(body); body.connect(box); box.connect(top); top.connect(out); out.connect(dest);
+      // Recorded strings already have a real body, so they skip the EQ.
+      const sIn = ctx.createGain();
+      sIn.gain.value = SAMPLE_TRIM.acoustic;
+      sIn.connect(dest);
+      st = { input, sIn, v: [], chord: '', kind: 'acoustic' };
       gtrStates.set(dest, st);
     }
     return st;
@@ -2788,10 +3046,18 @@ function compilePattern(preset, meter) {
   function gtrMute(o, t) {
     if (!o || o.done) return;
     o.done = true;
-    try { o.g.gain.setTargetAtTime(0, t, 0.012); o.src.stop(t + 0.12); } catch (e) { /* already ended */ }
+    // An explicit 30 ms fade from the note's own level (some engines mishandle setTargetAtTime to 0).
+    try {
+      o.g.gain.setValueAtTime(o.amp, t);
+      o.g.gain.linearRampToValueAtTime(0, t + 0.03);
+      o.src.stop(t + 0.05);
+    } catch (e) { /* already ended */ }
   }
   function gtrPluck(st, into, s, midi, t, amp) {
+    t = Math.max(0, t); // timing variation can't push a note before the start of the loop
     gtrMute(st.v[s], t); // a new pick on a string stops what it was ringing
+    const sv = sNote(st.kind, midi, t, amp, into);
+    if (sv) { st.v[s] = sv; return; }
     const src = ctx.createBufferSource();
     src.buffer = ksBuf(midi);
     const g = ctx.createGain();
@@ -2799,14 +3065,26 @@ function compilePattern(preset, meter) {
     src.connect(g);
     g.connect(into);
     src.start(t);
-    st.v[s] = { src, g, done: false };
+    st.v[s] = { src, g, amp, done: false };
   }
   function gtrTone(st, hz) {
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
     lp.frequency.value = hz;
-    lp.connect(st.input);
+    lp.connect(sReady(st.kind) ? st.sIn : st.input);
     return lp;
+  }
+  // A short damped burst of one string (a chuck or a palm mute), recorded when possible.
+  function deadNote(kind, midi, t, amp, dest, len) {
+    t = Math.max(0, t);
+    if (sNote(kind, midi, t, amp, dest, len * 0.35, len * 0.65)) return;
+    const src = ctx.createBufferSource();
+    src.buffer = ksBuf(midi);
+    const gg = ctx.createGain();
+    gg.gain.setValueAtTime(amp, t);
+    gg.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    src.connect(gg); gg.connect(dest);
+    src.start(t); src.stop(t + len + 0.02);
   }
 
   function playAcoustic(chord, P, step, t, v, dest) {
@@ -2826,15 +3104,7 @@ function compilePattern(preset, meter) {
       noiseHit(t, 0.3 * v, 'bandpass', 2200, 0.8, 0.001, 0.045, st.input);
       noiseHit(t, 0.24 * v, 'lowpass', 380, 0.7, 0.001, 0.06, st.input);
       const lp = gtrTone(st, 1100);
-      V.strings.forEach((s, i) => {
-        const src = ctx.createBufferSource();
-        src.buffer = ksBuf(GTR[s] + V.frets[s]);
-        const gg = ctx.createGain(), tt = t + i * 0.006;
-        gg.gain.setValueAtTime(0.08 * v, tt);
-        gg.gain.exponentialRampToValueAtTime(0.0001, tt + 0.05);
-        src.connect(gg); gg.connect(lp);
-        src.start(tt); src.stop(tt + 0.07);
-      });
+      V.strings.forEach((s, i) => deadNote('acoustic', GTR[s] + V.frets[s], t + i * 0.006, 0.08 * v, lp, 0.05));
       return;
     }
     if (type === 'B') {
@@ -2853,10 +3123,119 @@ function compilePattern(preset, meter) {
     });
   }
 
+  /* ---------- Distorted electric guitar ----------
+     The same plucked strings, played as power chords (root, 5th, octave) into an overdrive
+     and a 4x12-style speaker cabinet. Strokes: D ringing power chord, P palm-muted chug,
+     x muted scratch. */
+  let distCurveArr = null;
+  function distCurve() {
+    if (distCurveArr) return distCurveArr;
+    const n = 2048;
+    distCurveArr = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 2 - 1;
+      // Soft clipping with a little asymmetry, like a tube amp pushed hard.
+      distCurveArr[i] = Math.tanh(3.2 * (x + 0.08 * x * x)) / Math.tanh(3.2);
+    }
+    return distCurveArr;
+  }
+  const elStates = new WeakMap();
+  function elState(dest) {
+    let st = elStates.get(dest);
+    if (!st) {
+      const filt = (type, f, q, gain) => {
+        const b = ctx.createBiquadFilter();
+        b.type = type; b.frequency.value = f; b.Q.value = q;
+        if (gain != null) b.gain.value = gain;
+        return b;
+      };
+      const input = ctx.createGain();
+      const tight = filt('highpass', 140, 0.7);      // keeps the low end from turning to mud
+      const drive = ctx.createGain();
+      drive.gain.value = 14;
+      const shaper = ctx.createWaveShaper();
+      shaper.curve = distCurve();
+      shaper.oversample = '4x';
+      const cabLow = filt('highpass', 75, 0.7);
+      const thump = filt('peaking', 130, 1, 1);     // speaker thump
+      const bite = filt('peaking', 1700, 0.9, 3);   // grungy upper-mid bite
+      const scoop = filt('peaking', 450, 1.2, -2);
+      const cabHigh = filt('lowpass', 4300, 0.8);   // speakers roll off the fizz
+      const cabHigh2 = filt('lowpass', 6500, 0.7);
+      const out = ctx.createGain();
+      out.gain.value = 0.1;
+      input.connect(tight); tight.connect(drive); drive.connect(shaper); shaper.connect(cabLow);
+      cabLow.connect(thump); thump.connect(scoop); scoop.connect(bite); bite.connect(cabHigh);
+      cabHigh.connect(cabHigh2); cabHigh2.connect(out); out.connect(dest);
+      // Recorded clean guitar goes through the same amp, at its own level.
+      const sIn = ctx.createGain();
+      sIn.gain.value = SAMPLE_TRIM.electric;
+      sIn.connect(input);
+      st = { input, sIn, v: [], chord: '', kind: 'electric' };
+      elStates.set(dest, st);
+    }
+    return st;
+  }
+  // Root on the low E string up to the 7th fret, otherwise on the A string.
+  function powerChord(chord) {
+    const rE = (chord.rootPc - 4 + 12) % 12;
+    const s = rE <= 7 ? 0 : 1, f = rE <= 7 ? rE : rE - 5;
+    const fifthUp = chord.ivs[2] - 5; // the next string up is a 4th higher
+    return [{ s, f }, { s: s + 1, f: f + fifthUp }, { s: s + 2, f: f + 2 }];
+  }
+  function playGrunge(chord, P, step, t, v, dest) {
+    const g = P.tracks.g ? P.tracks.g[step] : '-';
+    let type = g && g !== '-' ? g : 'D';
+    const st = elState(dest);
+    const pc = powerChord(chord);
+    if (st.chord !== chord.name && type === 'x') type = 'D';
+    st.chord = chord.name;
+    const hum = () => (Math.random() - 0.5) * 0.004;
+    const killAll = () => { st.v.forEach((o) => gtrMute(o, t)); st.v = []; };
+    if (type === 'x') {
+      // Fret hand lifts, pick hits dead strings: a percussive "chk".
+      killAll();
+      noiseHit(t, 0.35 * v, 'bandpass', 1800, 0.9, 0.001, 0.035, st.input);
+      noiseHit(t, 0.25 * v, 'bandpass', 600, 0.9, 0.001, 0.03, st.input);
+      return;
+    }
+    if (type === 'P') {
+      // Palm mute: the side of the hand damps the strings near the bridge. Short, dark, chunky.
+      killAll();
+      const damp = ctx.createBiquadFilter();
+      damp.type = 'lowpass'; damp.frequency.value = 650 + 500 * v; damp.Q.value = 0.9;
+      damp.connect(sReady('electric') ? st.sIn : st.input);
+      pc.slice(0, 2).forEach((n, i) => deadNote('electric', GTR[n.s] + n.f, t + i * 0.004 + hum(), 0.55 * v, damp, 0.14));
+      return;
+    }
+    // Open power chord: rings until the next palm mute, scratch or chord.
+    killAll();
+    const bright = ctx.createBiquadFilter();
+    bright.type = 'lowpass'; bright.frequency.value = 2800 + 3000 * v;
+    bright.connect(sReady('electric') ? st.sIn : st.input);
+    pc.forEach((n, i) => gtrPluck(st, bright, n.s, GTR[n.s] + n.f, t + i * 0.006 + hum(), (i === 0 ? 0.62 : 0.5) * v));
+  }
+
+  // Recorded steel-string strum on a real chord shape: downstrokes sweep every string low to high,
+  // upstrokes catch the top four high to low, a little softer.
+  function strumShape(chord, t, v, dur, dest, up) {
+    const V = guitarVoicing(chord);
+    let strs = V.strings.slice();
+    if (up) strs = strs.filter((s) => s >= 2).reverse();
+    const gap = up ? 0.009 : 0.013;
+    const ring = Math.min(Math.max(dur, 0.18) + 0.3, 2.6);
+    strs.forEach((s, i) => {
+      const a = (up ? 0.7 : s === V.bs ? 1.1 : 1) * v * SAMPLE_TRIM.strum;
+      sNote('acoustic', GTR[s] + V.frets[s], t + i * gap + (Math.random() - 0.5) * 0.003, a, dest, ring - i * gap, 0.15);
+    });
+  }
+
   // src is the preset that owns this chord part (the main beat, or the preset a layer borrows from).
   function playChordHit(chord, src, P, step, t, v, dur, dest) {
     const style = src.chord;
     if (style === 'acoustic') { playAcoustic(chord, P, step, t, v, dest); return; }
+    if (style === 'grunge') { playGrunge(chord, P, step, t, v, dest); return; }
+    const real = sReady(STYLE_SET[style]);
     if (style === 'arp') {
       // Thumb on the root, fingers climb and fall: p i m a m i
       const R = placeRoot(chord.rootPc, 40);
@@ -2864,7 +3243,8 @@ function compilePattern(preset, meter) {
       const ladder = chord.sev ? [0, iv[2], iv[3], 12 + iv[1], 12 + iv[2]] : [0, iv[2], 12, 12 + iv[1], 12 + iv[2]];
       const seq = P.cHits >= 8 ? [0, 1, 2, 3, 4, 3, 2, 1] : [0, 1, 2, 3, 2, 1];
       const ring = Math.min(1.8, Math.max(0.5, 12 * stepDur()));
-      synthVoice('arp', R + ladder[seq[P.cHit[step] % seq.length]], t, v, ring, dest);
+      const m = R + ladder[seq[P.cHit[step] % seq.length]];
+      if (!(real && sNote('nylon', m, t, v * SAMPLE_TRIM.arp, dest, ring, 0.25))) synthVoice('arp', m, t, v, ring, dest);
       return;
     }
     const voices = voicing(chord.tones.map((n) => n.pc), 52);
@@ -2873,7 +3253,18 @@ function compilePattern(preset, meter) {
         .forEach((m) => synthVoice('thick', m, t, v, dur, dest));
       return;
     }
-    if (style === 'strum') {
+    if (style === 'strum' && real) {
+      strumShape(chord, t, v, dur, dest, !src.allDown && isUp(step));
+    } else if (style === 'pluck' && real) {
+      const ring = Math.min(Math.max(dur, 0.2) + 0.3, 2.2);
+      voices.forEach((m, i) => sNote('nylon', m, t + i * 0.004, v * SAMPLE_TRIM.pluck, dest, ring, 0.15));
+    } else if (style === 'stab' && real) {
+      // Clean electric chop on the top strings, cut off short.
+      voicing(chord.tones.map((n) => n.pc), 55).forEach((m, i) => sNote('electric', m, t + i * 0.005, v * SAMPLE_TRIM.stab, dest, 0.12, 0.06));
+    } else if (style === 'keys' && real) {
+      const ring = Math.min(Math.max(dur, 0.3) + 0.5, 2.6);
+      voices.forEach((m) => sNote('piano', m, t, v * SAMPLE_TRIM.keys, dest, ring, 0.3));
+    } else if (style === 'strum') {
       const up = !src.allDown && isUp(step);
       let notes = voices.concat([voices[0] + 12]);
       if (up) notes = notes.slice(1).reverse();
@@ -2887,14 +3278,19 @@ function compilePattern(preset, meter) {
   }
 
   function playBass(chord, ch, t, dur, dest) {
-    const R = placeRoot(chord.rootPc, 40);
+    // A recorded bass sits in its real register, an octave under the guitar's low strings.
+    const real = sReady('bass');
+    const low = real ? BASS_LOW : 40;
+    const R = placeRoot(chord.rootPc, low);
     const iv = chord.ivs;
     let m = R;
     if (ch === '3') m = R + iv[1];
     else if (ch === '5') m = R + iv[2];
-    else if (ch === 'v') { m = R + iv[2] - 12; if (m < 36) m += 12; }
+    else if (ch === 'v') { m = R + iv[2] - 12; if (m < (real ? BASS_LOW : 36)) m += 12; } // a 4-string bass bottoms out at E1
     else if (ch === '6') m = R + iv[2] + 2;
     else if (ch === '8') m = R + 12;
+    const hold = Math.max(0.09, Math.min(dur * 0.9, 1.6));
+    if (real && sNote('bass', m, t, SAMPLE_TRIM.bass, dest, hold, 0.08)) return;
     synthBass(m, t, dur, dest);
   }
 
@@ -2902,6 +3298,12 @@ function compilePattern(preset, meter) {
     if (!ensureCtx()) return;
     const dest = getPreviewBus();
     const t = ctx.currentTime + 0.03;
+    if (sReady('acoustic')) {
+      // The real chord shape, strummed slowly enough to hear each string.
+      const V = guitarVoicing(chord);
+      V.strings.forEach((s, i) => sNote('acoustic', GTR[s] + V.frets[s], t + i * 0.016, SAMPLE_TRIM.chordNote, dest, 1.6, 0.3));
+      return;
+    }
     const voices = voicing(chord.tones.map((n) => n.pc), 52);
     strumAt(voices.concat([voices[0] + 12]), placeRoot(chord.rootPc, 40), t, dest, 1.2);
   }
@@ -3176,7 +3578,7 @@ function compilePattern(preset, meter) {
     const loopSec = tl.total * sd;
     const sr = loopSec > 60 ? 32000 : 44100;
     const L = Math.max(1, Math.round(loopSec * sr));
-    const off = new OAC(1, L + Math.round(2.5 * sr), sr);
+    const off = new OAC(1, L + Math.round(3 * sr), sr); // room for the longest ringing note
     const saved = [ctx, bus, partGains];
     try {
       ctx = off;
@@ -3332,9 +3734,13 @@ function compilePattern(preset, meter) {
 
   async function swapBg(fromStart) {
     const token = ++bgToken;
+    bgWantSig = audioSig();
+    const slow = setTimeout(() => { if (token === bgToken && fromStart) toast('Getting the track ready'); }, 450);
+    // The recording should have the real instruments in it, so give them a moment to arrive.
+    await samplesSettled(6000);
+    if (token !== bgToken || !playing) { clearTimeout(slow); return; }
     const sig = audioSig();
     bgWantSig = sig;
-    const slow = setTimeout(() => { if (token === bgToken && fromStart) toast('Getting the track ready'); }, 450);
     let r;
     try {
       r = await renderLoop();
@@ -3409,6 +3815,40 @@ function compilePattern(preset, meter) {
       ? 'Plays as a recording, so it works with the silent switch on and keeps going when you leave the page. Changes take a moment to kick in.'
       : 'Live mode: changes are instant, but iPhone may mute it on silent and pause it when you leave the page.';
   }
+  const realToggle = $('realToggle'), realNote = $('realNote');
+  const SET_NAMES = { acoustic: 'acoustic guitar', electric: 'electric guitar', nylon: 'nylon guitar', bass: 'bass', piano: 'piano' };
+  const andList = (a) => (a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]);
+  function renderRealToggle() {
+    realToggle.setAttribute('aria-pressed', String(!!state.realInst));
+    if (!state.realInst) {
+      realNote.textContent = 'Off: every part uses the built-in synth sounds.';
+      return;
+    }
+    if (typeof fetch !== 'function') {
+      realNote.textContent = 'This browser can\'t load the recordings, so the synth sounds are playing.';
+      return;
+    }
+    const need = Array.from(setsNeeded());
+    const stOf = (id) => (smp[id] ? smp[id].st : 'loading');
+    if (need.some((id) => stOf(id) === 'loading')) {
+      realNote.textContent = 'Loading the recorded instruments…';
+      return;
+    }
+    const ready = need.filter((id) => stOf(id) === 'ready').map((id) => SET_NAMES[id]);
+    const missing = need.filter((id) => stOf(id) === 'missing').map((id) => SET_NAMES[id]);
+    if (!ready.length) {
+      realNote.textContent = 'Recordings not found, so the synth sounds are playing. The samples folder needs to sit next to this page.';
+      return;
+    }
+    realNote.textContent = 'Using recorded ' + andList(ready) + '.' +
+      (missing.length ? ' Couldn\'t find the ' + andList(missing) + ' file, so ' + (missing.length > 1 ? 'those use' : 'that uses') + ' the synth.' : '');
+  }
+  realToggle.addEventListener('click', () => {
+    state.realInst = !state.realInst;
+    save();
+    renderRealToggle();
+  });
+
   bgToggle.addEventListener('click', () => {
     state.bgPlay = !state.bgPlay;
     const was = playing;
@@ -4707,6 +5147,9 @@ function compilePattern(preset, meter) {
   renderBgToggle();
   updatePlayBtn();
   setTab(state.tab);
+  booted = true;
+  loadNeeded();
+  renderRealToggle();
 })();
 </script>
 </body>

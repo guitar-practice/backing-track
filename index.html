@@ -700,6 +700,13 @@
 
   /* Layers and mix */
   .layers { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .instrow { margin: -2px 0 16px; }
+  .instrow .bgnote { margin: 6px 0 0; }
+  select:disabled { opacity: 0.6; cursor: default; }
+  .layerinsts { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .layerinst { display: grid; grid-template-columns: minmax(84px, auto) 1fr; align-items: center; gap: 10px; }
+  .layerinst > span { font-family: var(--sans); font-size: 12px; color: var(--parchment-dim); }
+  .layerinst select { padding-top: 7px; padding-bottom: 7px; font-size: 14.5px; }
   .sublbl { font-family: var(--sans); font-size: 12px; color: var(--parchment-dim); }
   .layerchips { display: flex; flex-wrap: wrap; gap: 6px; }
   .layerchip { flex: 1 1 auto; min-width: 64px; padding: 8px 8px 9px; }
@@ -1235,9 +1242,15 @@
       </div>
     </div>
 
+    <div class="instrow">
+      <label class="field"><span>Instrument</span><select id="instSel"></select></label>
+      <p class="bgnote" id="instNote" hidden></p>
+    </div>
+
     <div class="layers">
       <span class="sublbl" id="layerLbl">Layer on top</span>
       <div class="layerchips" id="layerChips" role="group" aria-labelledby="layerLbl"></div>
+      <div class="layerinsts" id="layerInsts" hidden></div>
     </div>
 
     <details class="mix" id="mixBox">
@@ -1805,9 +1818,22 @@ const DEGREE_FEEL = {
   c chord rhythm (same velocity letters).  b bass: 1 root, 3 third, 5 fifth, v fifth below, 6 sixth, 8 octave.
 */
 const VEL = { X: 1, x: 0.78, o: 0.52, g: 0.28 };
+/* Recorded instruments a beat's chords can be played on. Beats marked pick: true let you swap
+   theirs for any of these; the rest keep their own sound. "Distorted" is the electric recording
+   through the grunge amp. */
+const INSTRUMENTS = [
+  { id: 'acoustic', name: 'Acoustic guitar', set: 'acoustic' },
+  { id: 'electric', name: 'Clean electric guitar', set: 'electric' },
+  { id: 'dist', name: 'Distorted electric guitar', set: 'electric' },
+  { id: 'nylon', name: 'Nylon-string guitar', set: 'nylon' },
+  { id: 'piano', name: 'Piano', set: 'piano' },
+];
+const instById = (id) => INSTRUMENTS.find((x) => x.id === id);
+// What the beats that can't switch instruments are played on.
+const FIXED_SOUND = { soft: 'Soft synth', pad: 'Synth pad', thick: 'Sustained synth' };
 const METERS = ['4/4', '3/4', '6/8'];
 const PRESETS = [
-  { id: 'pop', name: 'Pop', chord: 'strum',
+  { id: 'pop', name: 'Pop', chord: 'strum', inst: 'acoustic',
     '4/4': { k: 'X-------X-x-----', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-', c: 'X---x---X---x-o-', b: '1-------1-5-----' },
     '3/4': { k: 'X-----------', s: '----x---x---', h: 'x-o-x-o-x-o-', c: 'X---x---x-o-', b: '1-------5---' },
     '6/8': { k: 'X-----------', s: '------X-----', h: 'x-o-o-x-o-o-', c: 'X---o-x---o-', b: '1-----5-----' } },
@@ -1816,7 +1842,7 @@ const PRESETS = [
   // D - D U - U D - (accents on 1, the "and" of 2, 3 and the "and" of 4). The misses let the
   // chord ring. Kick and bass push on the same accents; crash on every downbeat.
   // g strokes: D down through the whole power chord, U up across its top strings, P palm mute, x scratch.
-  { id: 'rock', name: 'Grunge rock', chord: 'grunge',
+  { id: 'rock', name: 'Grunge rock', chord: 'grunge', inst: 'dist', pick: true,
     '4/4': { k: 'X-----x-X-----x-', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-', oh: '--------------x-', cr: 'x---------------',
              c: 'X-xx-xX-X-xx-xX-', g: 'D-DU-UD-D-DU-UD-', b: '1-----1-1-----1-' },
     '3/4': { k: 'X-----x-X---', s: '----X-------', h: 'x-o-x-o-x-o-', cr: 'x-----------',
@@ -1826,7 +1852,7 @@ const PRESETS = [
   // The very first backing track this app grew from: each chord struck once on a soft triangle-wave
   // synth and left to fade, 8th-note hi-hats (louder on the beat) and a gentle kick on 1 and 3. No bass.
   // sk and sh are that track's own kick and hat, kept as they were.
-  { id: 'simple', name: 'Simple (the original)', chord: 'soft',
+  { id: 'simple', name: 'Simple', chord: 'soft',
     '4/4': { sk: 'X-------X-------', sh: 'X-o-X-o-X-o-X-o-', c: 'X---------------' },
     '3/4': { sk: 'X-----------', sh: 'X-o-X-o-X-o-', c: 'X-----------' },
     '6/8': { sk: 'X-----X-----', sh: 'X-o-o-X-o-o-', c: 'X-----------' } },
@@ -1840,35 +1866,48 @@ const PRESETS = [
     '6/8': { c: 'X-----------' } },
   // Solo steel-string guitar. g = stroke: D down, d soft down, U up (top 4 strings), u up (top 3),
   // X muted chuck, B alternating bass note. c carries the loudness of each stroke.
-  { id: 'acoustic', name: 'Acoustic rhythm', chord: 'acoustic',
+  { id: 'acoustic', name: 'Acoustic rhythm', chord: 'acoustic', inst: 'acoustic', pick: true,
     '4/4': { c: 'X---x-o-o-o-x-o-', g: 'D---X-U-B-u-X-U-' },
     '3/4': { c: 'X---o-o-x-o-', g: 'D---d-u-X-U-' },
     '6/8': { c: 'X---o-x-o-o-', g: 'D---U-X-B-u-' } },
-  { id: 'folk', name: 'Folk strum', chord: 'strum',
+  { id: 'folk', name: 'Folk strum', chord: 'strum', inst: 'acoustic', pick: true,
     '4/4': { k: 'X-------X-------', r: '----o-------o---', p: 'xgogxgogxgogxgog', c: 'X---x-o---o-x-o-', b: '1-------v-------' },
     '3/4': { k: 'X-----------', p: 'xgogxgogxgog', c: '----x-o-x-o-', b: '1-----------' },
     '6/8': { k: 'X-----x-----', p: 'xgogogxgogog', c: 'X-o-o-x-o-o-', b: '1-----v-----' } },
-  { id: 'funk', name: 'Funk', chord: 'stab',
+  { id: 'funk', name: 'Funk', chord: 'stab', inst: 'electric', pick: true,
     '4/4': { k: 'X-x----x--x-----', s: '----X-g--g--X--g', h: 'xgxgxgxgxgxgxgxg', c: '--x--x----x--x-o', b: '1--8--1---5--8--' },
     '3/4': { k: 'X-x----x----', s: '----X-g-X--g', h: 'xgxgxgxgxgxg', c: '--x--x---x-o', b: '1--8--1--5--' },
     '6/8': { k: 'X-x---x--x--', s: '------X--g--', h: 'xgxgxgxgxgxg', c: '--x--x--x--x', b: '1--8--5--8--' } },
-  { id: 'reggae', name: 'Reggae one drop', chord: 'stab',
+  { id: 'reggae', name: 'Reggae one drop', chord: 'stab', inst: 'electric',
     '4/4': { k: '--------X-------', r: '--------X-------', h: 'x-o-x-o-x-o-x-o-', c: '----X-------X---', b: '--1---5-8---5-3-' },
     '3/4': { k: '--------X---', r: '--------X---', h: 'x-o-x-o-x-o-', c: '--x---x---x-', b: '--1---5---8-' },
     '6/8': { k: '------X-----', r: '------X-----', h: 'x-o-o-x-o-o-', c: '--x-x---x-x-', b: '--1-----5---' } },
-  { id: 'bossa', name: 'Bossa nova', chord: 'pluck',
+  { id: 'bossa', name: 'Bossa nova', chord: 'pluck', inst: 'nylon', pick: true,
     '4/4': { k: 'X--x----X--x----', r: 'o--o--o---o--o--', h: 'g-g-g-g-g-g-g-g-', c: 'x--x--x---x--x--', b: '1------v--------' },
     '3/4': { k: 'X--x----X---', r: 'o--o----o---', h: 'g-g-g-g-g-g-', c: 'x--x--x---x-', b: '1-------v---' },
     '6/8': { k: 'X-----X-----', r: 'o--o----o---', h: 'g-g-g-g-g-g-', c: 'x--x----x-x-', b: '1-----v-----' } },
-  { id: 'shuffle', name: 'Blues shuffle', chord: 'strum', swing: { amt: 0.66, unit: 8 },
-    '4/4': { k: 'X-------X-------', s: '----X-------X---', h: 'x-o-x-o-x-o-x-o-', c: '----x-------x---', b: '1-1-5-5-6-6-5-5-' },
-    '3/4': { k: 'X-----------', s: '----x---x---', h: 'x-o-x-o-x-o-', c: '----x---x---', b: '1-1-5-5-6-5-' },
-    '6/8': { k: 'X-----x-----', s: '------X-----', h: 'x-o-o-x-o-o-', c: '----o-----o-', b: '1-5-6-8-6-5-' } },
-  { id: 'lofi', name: 'Lo-fi', chord: 'keys', swing: { amt: 0.22, unit: 16 },
+  // Straight-time slow blues, in the spirit of "The Thrill Is Gone": no swing. Clean electric guitar
+  // slides into each chord from a half step below on the 1, then answers with short stabs; major and
+  // minor chords get their flat 7th added (C becomes C7, Am becomes Am7), which is most of the blues
+  // sound. Bass walks root, root, 5th, flat 7th, 5th back down to the next root. Ghost snare before 4.
+  // (The id stays 'shuffle' so setups saved with the old Blues shuffle still load.)
+  { id: 'shuffle', name: 'Blues', chord: 'blues', inst: 'electric', pick: true,
+    '4/4': { k: 'X-------X-----x-', s: '----X-----g-X---', h: 'x-o-x-o-x-o-x-o-', c: 'X-----x-----x---', b: '1-----1-5---7-5-' },
+    '3/4': { k: 'X-------x---', s: '----X-----g-', h: 'x-o-x-o-x-o-', c: 'X-----x---x-', b: '1-----5---7-' },
+    '6/8': { k: 'X-----x-----', s: '------X---g-', h: 'x-o-o-x-o-o-', c: 'X---o-x---o-', b: '1---5-7---5-' } },
+  // Bluegrass "boom-chuck": the guitar picks the root on 1 and the chord's 5th on 3 (the alternating
+  // bass), and strums down-up on 2 and 4 where a mandolin would chop. Upright bass on 1 and 3 (root,
+  // then the 5th below). No drums, just a soft brush on the backbeat to keep time.
+  // g strokes as in Acoustic rhythm, plus R: the chord's root on its bass string.
+  { id: 'bluegrass', name: 'Bluegrass', chord: 'acoustic', inst: 'acoustic', pick: true,
+    '4/4': { p: '----o-------o---', c: 'X---x-o-x---x-o-', g: 'R---D-U-B---D-U-', b: '1-------v-------' },
+    '3/4': { p: '----o---o---', c: 'X---x---x---', g: 'R---D---D---', b: '1-----------' },
+    '6/8': { p: '------o-----', c: 'X---o-x---o-', g: 'R---D-B---D-', b: '1-----v-----' } },
+  { id: 'lofi', name: 'Lo-fi', chord: 'keys', inst: 'piano', pick: true, swing: { amt: 0.22, unit: 16 },
     '4/4': { k: 'X------x-x------', s: '----X-------X---', h: 'x-oox-o-x-oox-o-', c: 'X------x--------', b: '1------1-5------' },
     '3/4': { k: 'X------x----', s: '--------X---', h: 'x-oox-o-x-o-', c: 'X------x----', b: '1------1----' },
     '6/8': { k: 'X----x------', s: '------X-----', h: 'x-o-o-x-o-o-', c: 'X-------x---', b: '1-------5---' } },
-  { id: 'arp', name: 'Fingerstyle arpeggio', chord: 'arp',
+  { id: 'arp', name: 'Fingerstyle arpeggio', chord: 'arp', inst: 'nylon', pick: true,
     '4/4': { p: 'g---g---g---g---', c: 'x-o-o-o-x-o-o-o-' },
     '3/4': { p: 'g---g---g---', c: 'x-o-o-o-o-o-' },
     '6/8': { p: 'g-----g-----', c: 'x-o-o-x-o-o-' } },
@@ -1883,6 +1922,7 @@ const LAYERS = [
   { id: 'strum', name: 'Strum', from: 'Folk', src: 'folk' },
   { id: 'acoustic', name: 'Acoustic', from: 'Acoustic', src: 'acoustic' },
   { id: 'electric', name: 'Electric', from: 'Grunge', src: 'rock' },
+  { id: 'simple', name: 'Simple', from: 'Simple', src: 'simple' },
   { id: 'drums', name: 'Drums', drums: true },
 ];
 // Beats for the Drums layer.
@@ -2003,6 +2043,16 @@ function compilePattern(preset, meter) {
   const okFreeSlot = (x) => !!x && FREE_ROOTS.includes(x.r) && !!FREE_QUAL[x.q];
   const keySlot = (x) => ({ d: x.d, sev: !!x.sev, bars: HOLDS.includes(x.bars) ? x.bars : 1, oct: cleanOct(x.oct) });
   const freeSlot = (x) => ({ r: x.r, q: x.q, bars: HOLDS.includes(x.bars) ? x.bars : 1, oct: cleanOct(x.oct) });
+  // Layer instrument picks worth keeping: only for layers that are on and can switch, and not the default.
+  function cleanLayerInst(m, layers) {
+    const out = {};
+    if (!m || typeof m !== 'object') return out;
+    LAYERS.forEach((L) => {
+      const p = L.src && PRESETS.find((x) => x.id === L.src);
+      if (p && p.pick && layers.includes(L.id) && instById(m[L.id]) && m[L.id] !== p.inst) out[L.id] = m[L.id];
+    });
+    return out;
+  }
   const state = {
     root: 9, scale: 'harmonic', slots: defaultSlots('harmonic'), preset: 'pop', meter: '4/4', bpm: 92,
     // Freestyle: slots holds the Freestyle chords and otherSlots keeps the key's chords for later,
@@ -2014,6 +2064,9 @@ function compilePattern(preset, meter) {
     mix: {
       drums: { on: true, vol: 80 }, chords: { on: true, vol: 80 }, bass: { on: true, vol: 80 },
       layers: { vol: 70 }, layer: [], drumKit: 'rock', open: false,
+      // Instrument picks: null / missing means the beat's own. Picking a different beat (or turning
+      // a layer off) goes back to the default.
+      inst: null, layerInst: {},
     },
     map: { hl: 'track', sev: false, labels: 'degree', box: false, boxStart: 4 },
     scaleView: { open: false, notes: false, pos: 'main', labels: 'blank' },
@@ -2077,6 +2130,8 @@ function compilePattern(preset, meter) {
         if (Array.isArray(s.mix.layer)) state.mix.layer = LAYERS.map((l) => l.id).filter((id) => s.mix.layer.includes(id));
         state.mix.open = !!s.mix.open;
         if (DRUM_KITS.some((k) => k.id === s.mix.drumKit)) state.mix.drumKit = s.mix.drumKit;
+        if (instById(s.mix.inst)) state.mix.inst = s.mix.inst;
+        state.mix.layerInst = cleanLayerInst(s.mix.layerInst, state.mix.layer);
       }
       if (s.map && typeof s.map === 'object') {
         const m = s.map;
@@ -2117,6 +2172,7 @@ function compilePattern(preset, meter) {
   // Everything that changes what the backing track sounds like.
   const audioSig = () => JSON.stringify([state.root, state.scale, state.slots, state.preset, state.meter, state.bpm,
     state.mix.drums, state.mix.chords, state.mix.bass, state.mix.layers, state.mix.layer, state.mix.drumKit,
+    state.mix.inst, state.mix.layerInst,
     state.realInst, booted && state.realInst ? readySets() : '']);
   function queueBgRefresh() {
     if (audioSig() === bgWantSig) return;
@@ -2147,6 +2203,10 @@ function compilePattern(preset, meter) {
   const pattern = () => patternFor(currentPreset());
   const presetById = (id) => PRESETS.find((p) => p.id === id);
   const layerById = (id) => LAYERS.find((l) => l.id === id);
+  // The instrument a beat plays: your pick when the beat allows one, otherwise its own.
+  const instFor = (p, pick) => (p && p.pick && instById(pick) ? pick : p && p.inst);
+  const mainInst = () => instFor(currentPreset(), state.mix.inst);
+  const layerInstOf = (L) => instFor(presetById(L.src), state.mix.layerInst[L.id]);
   const drumKit = () => {
     const k = DRUM_KITS.find((x) => x.id === state.mix.drumKit) || DRUM_KITS[0];
     return Object.assign({}, k, { id: 'kit-' + k.id }); // separate pattern-cache key from the presets
@@ -2802,6 +2862,8 @@ function compilePattern(preset, meter) {
 
   beatSel.addEventListener('change', () => {
     state.preset = beatSel.value;
+    state.mix.inst = null; // every beat starts on its own instrument
+    renderInst();
     save();
     renderLayers();
     renderMix();
@@ -2828,9 +2890,63 @@ function compilePattern(preset, meter) {
   function setLayer(id, on) {
     const list = state.mix.layer;
     state.mix.layer = LAYERS.map((l) => l.id).filter((x) => (x === id ? on : list.includes(x)));
+    if (!on) delete state.mix.layerInst[id]; // back on later means back to its own instrument
+  }
+
+  // The main beat's instrument. Beats that can't switch show their one sound, greyed out.
+  const instSel = $('instSel'), instNote = $('instNote');
+  function renderInst() {
+    const p = currentPreset();
+    instSel.innerHTML = '';
+    let note = '';
+    if (p.pick) {
+      INSTRUMENTS.forEach((i) => instSel.add(new Option(i.name + (i.id === p.inst ? ' (default)' : ''), i.id)));
+      instSel.value = mainInst();
+      instSel.disabled = false;
+      if (!state.realInst) note = 'Real instruments is off below, so this plays a built-in synth sound until you turn it on.';
+    } else {
+      instSel.add(new Option(p.inst ? instById(p.inst).name : FIXED_SOUND[p.chord], ''));
+      instSel.disabled = true;
+      note = p.name + ' always plays this sound.';
+    }
+    instNote.textContent = note;
+    instNote.hidden = !note;
+  }
+  instSel.addEventListener('change', () => {
+    const p = currentPreset();
+    if (!p.pick) return;
+    state.mix.inst = instSel.value === p.inst ? null : instSel.value;
+    save();
+    renderInst();
+    if (!playing) previewInst(mainInst());
+  });
+
+  // One instrument menu for each layer that is on and can switch.
+  function renderLayerInsts() {
+    const box = $('layerInsts');
+    box.innerHTML = '';
+    const list = activeLayers().filter((L) => L.src && presetById(L.src).pick);
+    box.hidden = !list.length;
+    list.forEach((L) => {
+      const p = presetById(L.src);
+      const row = el('label', 'layerinst');
+      const sel = document.createElement('select');
+      sel.dataset.layer = L.id;
+      INSTRUMENTS.forEach((i) => sel.add(new Option(i.name + (i.id === p.inst ? ' (default)' : ''), i.id)));
+      sel.value = layerInstOf(L);
+      sel.addEventListener('change', () => {
+        if (sel.value === p.inst) delete state.mix.layerInst[L.id];
+        else state.mix.layerInst[L.id] = sel.value;
+        save();
+        if (!playing) previewInst(layerInstOf(L));
+      });
+      row.append(el('span', null, L.name + ' layer'), sel);
+      box.appendChild(row);
+    });
   }
 
   function renderLayers() {
+    renderLayerInsts();
     layerChips.innerHTML = '';
     LAYERS.forEach((L) => {
       const inBeat = !!L.src && L.src === state.preset;
@@ -3349,9 +3465,8 @@ function compilePattern(preset, meter) {
     piano: { file: 'piano.mp3', slot: 3, notes: 'C2 Ds2 Fs2 A2 C3 Ds3 Fs3 A3 C4 Ds4 Fs4 A4 C5 Ds5 Fs5 A5 C6' },
   };
   // Which recording each chord style plays.
-  const STYLE_SET = { acoustic: 'acoustic', strum: 'acoustic', grunge: 'electric', stab: 'electric', pluck: 'nylon', arp: 'nylon', keys: 'piano' };
   // Levels, set by rendering every preset both ways so the recordings sit where the synth sounds did.
-  const SAMPLE_TRIM = { acoustic: 2.5, electric: 1, strum: 0.15, stab: 0.26, pluck: 0.18, arp: 0.25, keys: 0.18, bass: 0.25, note: 0.2, chordNote: 0.2, bassNote: 0.25 };
+  const SAMPLE_TRIM = { blues: 0.3, acoustic: 2.5, electric: 1, strum: 0.15, stab: 0.26, pluck: 0.18, arp: 0.25, keys: 0.18, bass: 0.25, note: 0.2, chordNote: 0.2, bassNote: 0.25 };
   const BASS_LOW = 28; // E1, the bass guitar's open low string
   const smp = {}; // id -> { st: 'loading' | 'ready' | 'missing', buf, notes, p }
   const NOTE_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -3410,9 +3525,9 @@ function compilePattern(preset, meter) {
   }
   function setsNeeded() {
     const need = new Set(['acoustic', 'bass']); // note previews, drills and every bass line
-    const styles = [currentPreset().chord];
-    state.mix.layer.forEach((id) => { const L = layerById(id); if (L && L.src) styles.push(presetById(L.src).chord); });
-    styles.forEach((s) => { if (STYLE_SET[s]) need.add(STYLE_SET[s]); });
+    const add = (inst) => { if (inst) need.add(instById(inst).set); };
+    add(mainInst());
+    activeLayers().forEach((L) => { if (L.src) add(layerInstOf(L)); });
     return need;
   }
   function loadNeeded() {
@@ -3649,8 +3764,11 @@ function compilePattern(preset, meter) {
 
   // Per-output guitar state: which string is ringing, and a body EQ shared by all strings.
   const gtrStates = new WeakMap();
-  function gtrState(dest) {
-    let st = gtrStates.get(dest);
+  function gtrState(dest, inst) {
+    inst = inst || 'acoustic';
+    let all = gtrStates.get(dest);
+    if (!all) { all = {}; gtrStates.set(dest, all); }
+    let st = all[inst];
     if (!st) {
       const input = ctx.createGain();
       const body = ctx.createBiquadFilter();
@@ -3665,11 +3783,43 @@ function compilePattern(preset, meter) {
       // Recorded strings already have a real body, so they skip the EQ.
       const sIn = ctx.createGain();
       sIn.gain.value = SAMPLE_TRIM.acoustic;
-      sIn.connect(dest);
-      st = { input, sIn, v: [], chord: '', kind: 'acoustic' };
-      gtrStates.set(dest, st);
+      sIn.connect(instOut(inst, dest, 'acoustic'));
+      st = { input, sIn, v: [], chord: '', kind: instById(inst).set };
+      all[inst] = st;
     }
     return st;
+  }
+
+  /* Swapped instruments. A chord style keeps its rhythm and voicing whatever it is played on; the
+     instrument picks the recording, and "distorted" sends it through the grunge amp. Each style's
+     notes are pushed into the amp by its own amount so every style comes out about as loud. */
+  const DIST_DRIVE = { strum: 4, stab: 2.2, pluck: 3, keys: 3, arp: 2.4, acoustic: 2.5, blues: 2.8 };
+  const ampIns = new WeakMap();
+  function instOut(inst, dest, style) {
+    if (inst !== 'dist') return dest;
+    let m = ampIns.get(dest);
+    if (!m) { m = {}; ampIns.set(dest, m); }
+    if (!m[style]) {
+      const g = ctx.createGain();
+      g.gain.value = DIST_DRIVE[style] || 2.5;
+      g.connect(elState(dest).sIn);
+      m[style] = g;
+    }
+    return m[style];
+  }
+  // Grunge's power-chord rhythm on a clean instrument: no amp, just a level match.
+  const GRUNGE_CLEAN = 0.28;
+  const cleanStates = new WeakMap();
+  function cleanState(dest, inst) {
+    let all = cleanStates.get(dest);
+    if (!all) { all = {}; cleanStates.set(dest, all); }
+    if (!all[inst]) {
+      const g = ctx.createGain();
+      g.gain.value = GRUNGE_CLEAN;
+      g.connect(dest);
+      all[inst] = { input: g, sIn: g, v: [], chord: '', kind: instById(inst).set };
+    }
+    return all[inst];
   }
   function gtrMute(o, t) {
     if (!o || o.done) return;
@@ -3715,17 +3865,18 @@ function compilePattern(preset, meter) {
     src.start(t); src.stop(t + len + 0.02);
   }
 
-  function playAcoustic(chord, P, step, t, v, dest) {
+  function playAcoustic(chord, P, step, t, v, dest, inst) {
     const g = P.tracks.g ? P.tracks.g[step] : '-';
     let type = g && g !== '-' ? g : 'D';
     const V = guitarVoicing(chord);
-    const st = gtrState(dest);
+    const st = gtrState(dest, inst);
     const changed = st.chord !== chordId(chord);
     st.chord = chordId(chord);
     const note = (s, f) => octNote(GTR[s] + f, chord);
     const hum = () => (Math.random() - 0.5) * 0.004;
     const amp = (x) => x * v * (0.92 + Math.random() * 0.16);
-    if (changed && type !== 'D' && type !== 'd') type = 'D'; // a new chord always starts with a full strum
+    // A new chord always starts with a full strum (or, in bluegrass, its root on the bass string).
+    if (changed && type !== 'D' && type !== 'd' && type !== 'R') type = 'D';
     if (type === 'X') {
       // Chuck: the strumming hand slaps the strings dead. Mostly noise and a thump, with a hint of pitch.
       st.v.forEach((o) => gtrMute(o, t));
@@ -3733,7 +3884,12 @@ function compilePattern(preset, meter) {
       noiseHit(t, 0.3 * v, 'bandpass', 2200, 0.8, 0.001, 0.045, st.input);
       noiseHit(t, 0.24 * v, 'lowpass', 380, 0.7, 0.001, 0.06, st.input);
       const lp = gtrTone(st, 1100);
-      V.strings.forEach((s, i) => deadNote('acoustic', note(s, V.frets[s]), t + i * 0.006, 0.08 * v, lp, 0.05));
+      V.strings.forEach((s, i) => deadNote(st.kind, note(s, V.frets[s]), t + i * 0.006, 0.08 * v, lp, 0.05));
+      return;
+    }
+    if (type === 'R') {
+      if (changed) { st.v.forEach((o) => gtrMute(o, t)); st.v = []; }
+      gtrPluck(st, gtrTone(st, 3200), V.bs, note(V.bs, V.frets[V.bs]), t + hum(), amp(0.13));
       return;
     }
     if (type === 'B') {
@@ -3812,11 +3968,15 @@ function compilePattern(preset, meter) {
     const fifthUp = chord.ivs[2] - 5; // the next string up is a 4th higher
     return [{ s, f }, { s: s + 1, f: f + fifthUp }, { s: s + 2, f: f + 2 }];
   }
-  function playGrunge(chord, P, step, t, v, dest) {
+  function playGrunge(chord, P, step, t, v, dest, inst) {
     const g = P.tracks.g ? P.tracks.g[step] : '-';
     let type = g && g !== '-' ? g : 'D';
-    const st = elState(dest);
-    const pc = powerChord(chord);
+    const dist = !inst || inst === 'dist';
+    const st = dist ? elState(dest) : cleanState(dest, inst);
+    // Distorted: power chords. Clean instruments sound thin and boomy on power chords alone, so they
+    // strum the full chord shape on the same rhythm, the way Glycerine is played acoustic.
+    let pc = powerChord(chord);
+    if (!dist) { const V = guitarVoicing(chord); pc = V.strings.map((s2) => ({ s: s2, f: V.frets[s2] })); }
     const note = (n) => octNote(GTR[n.s] + n.f, chord);
     // A new chord always starts with a full downstroke, so the old chord's low string stops.
     if (st.chord !== chordId(chord) && (type === 'x' || type === 'U')) type = 'D';
@@ -3835,29 +3995,29 @@ function compilePattern(preset, meter) {
       killAll();
       const damp = ctx.createBiquadFilter();
       damp.type = 'lowpass'; damp.frequency.value = 650 + 500 * v; damp.Q.value = 0.9;
-      damp.connect(sReady('electric') ? st.sIn : st.input);
-      pc.slice(0, 2).forEach((n, i) => deadNote('electric', note(n), t + i * 0.004 + hum(), 0.55 * v, damp, 0.14));
+      damp.connect(sReady(st.kind) ? st.sIn : st.input);
+      pc.slice(0, 2).forEach((n, i) => deadNote(st.kind, note(n), t + i * 0.004 + hum(), 0.55 * v, damp, 0.14));
       return;
     }
     const bright = ctx.createBiquadFilter();
     bright.type = 'lowpass';
-    bright.connect(sReady('electric') ? st.sIn : st.input);
+    bright.connect(sReady(st.kind) ? st.sIn : st.input);
     if (type === 'U') {
       // Upstroke: the pick catches the octave and the 5th on the way back up, a little softer and
       // darker. The low root keeps ringing from the last downstroke.
       bright.frequency.value = 2200 + 2600 * v;
-      [pc[2], pc[1]].forEach((n, i) => gtrPluck(st, bright, n.s, note(n), t + i * 0.008 + hum(), 0.36 * v));
+      (dist ? [pc[2], pc[1]] : pc.slice(-3).reverse()).forEach((n, i) => gtrPluck(st, bright, n.s, note(n), t + i * 0.008 + hum(), 0.36 * v));
       return;
     }
     // Downstroke: the whole power chord, ringing through the missed strums until the next stroke.
     killAll();
     bright.frequency.value = 2800 + 3000 * v;
-    pc.forEach((n, i) => gtrPluck(st, bright, n.s, note(n), t + i * 0.006 + hum(), (i === 0 ? 0.62 : 0.5) * v));
+    pc.forEach((n, i) => gtrPluck(st, bright, n.s, note(n), t + i * (dist ? 0.006 : 0.011) + hum(), (i === 0 ? 0.62 : 0.5) * v));
   }
 
   // Recorded steel-string strum on a real chord shape: downstrokes sweep every string low to high,
   // upstrokes catch the top four high to low, a little softer.
-  function strumShape(chord, t, v, dur, dest, up) {
+  function strumShape(chord, t, v, dur, dest, up, set) {
     const V = guitarVoicing(chord);
     let strs = V.strings.slice();
     if (up) strs = strs.filter((s) => s >= 2).reverse();
@@ -3865,7 +4025,7 @@ function compilePattern(preset, meter) {
     const ring = Math.min(Math.max(dur, 0.18) + 0.3, 2.6);
     strs.forEach((s, i) => {
       const a = (up ? 0.7 : s === V.bs ? 1.1 : 1) * v * SAMPLE_TRIM.strum;
-      sNote('acoustic', octNote(GTR[s] + V.frets[s], chord), t + i * gap + (Math.random() - 0.5) * 0.003, a, dest, ring - i * gap, 0.15);
+      sNote(set || 'acoustic', octNote(GTR[s] + V.frets[s], chord), t + i * gap + (Math.random() - 0.5) * 0.003, a, dest, ring - i * gap, 0.15);
     });
   }
 
@@ -3891,12 +4051,17 @@ function compilePattern(preset, meter) {
   }
 
   // src is the preset that owns this chord part (the main beat, or the preset a layer borrows from).
-  function playChordHit(chord, src, P, step, t, v, dur, dest) {
+  // inst: the instrument this part plays on (the beat's own unless you picked another).
+  function playChordHit(chord, src, P, step, t, v, dur, dest, inst) {
     const style = src.chord;
-    if (style === 'acoustic') { playAcoustic(chord, P, step, t, v, dest); return; }
-    if (style === 'grunge') { playGrunge(chord, P, step, t, v, dest); return; }
+    inst = inst || src.inst;
+    if (style === 'acoustic') { playAcoustic(chord, P, step, t, v, dest, inst); return; }
+    if (style === 'grunge') { playGrunge(chord, P, step, t, v, dest, inst); return; }
     if (style === 'soft') { softChord(chord, t, v, dur, dest); return; }
-    const real = sReady(STYLE_SET[style]);
+    if (style === 'blues') { playBlues(chord, step, t, v, dur, dest, inst); return; }
+    const set = inst ? instById(inst).set : null;
+    const out = inst ? instOut(inst, dest, style) : dest;
+    const real = sReady(set);
     if (style === 'arp') {
       // Thumb on the root, fingers climb and fall: p i m a m i
       const R = placeRoot(chord.rootPc, 40);
@@ -3905,7 +4070,7 @@ function compilePattern(preset, meter) {
       const seq = P.cHits >= 8 ? [0, 1, 2, 3, 4, 3, 2, 1] : [0, 1, 2, 3, 2, 1];
       const ring = Math.min(1.8, Math.max(0.5, 12 * stepDur()));
       const m = octNote(R + ladder[seq[P.cHit[step] % seq.length]], chord);
-      if (!(real && sNote('nylon', m, t, v * SAMPLE_TRIM.arp, dest, ring, 0.25))) synthVoice('arp', m, t, v, ring, dest);
+      if (!(real && sNote(set, m, t, v * SAMPLE_TRIM.arp, out, ring, 0.25))) synthVoice('arp', m, t, v, ring, dest);
       return;
     }
     const voices = voicing(chord.tones.map((n) => n.pc), 52).map((m) => octNote(m, chord));
@@ -3915,16 +4080,16 @@ function compilePattern(preset, meter) {
       return;
     }
     if (style === 'strum' && real) {
-      strumShape(chord, t, v, dur, dest, !src.allDown && isUp(step));
+      strumShape(chord, t, v, dur, out, !src.allDown && isUp(step), set);
     } else if (style === 'pluck' && real) {
       const ring = Math.min(Math.max(dur, 0.2) + 0.3, 2.2);
-      voices.forEach((m, i) => sNote('nylon', m, t + i * 0.004, v * SAMPLE_TRIM.pluck, dest, ring, 0.15));
+      voices.forEach((m, i) => sNote(set, m, t + i * 0.004, v * SAMPLE_TRIM.pluck, out, ring, 0.15));
     } else if (style === 'stab' && real) {
       // Clean electric chop on the top strings, cut off short.
-      voicing(chord.tones.map((n) => n.pc), 55).forEach((m, i) => sNote('electric', octNote(m, chord), t + i * 0.005, v * SAMPLE_TRIM.stab, dest, 0.12, 0.06));
+      voicing(chord.tones.map((n) => n.pc), 55).forEach((m, i) => sNote(set, octNote(m, chord), t + i * 0.005, v * SAMPLE_TRIM.stab, out, 0.12, 0.06));
     } else if (style === 'keys' && real) {
       const ring = Math.min(Math.max(dur, 0.3) + 0.5, 2.6);
-      voices.forEach((m) => sNote('piano', m, t, v * SAMPLE_TRIM.keys, dest, ring, 0.3));
+      voices.forEach((m) => sNote(set, m, t, v * SAMPLE_TRIM.keys, out, ring, 0.3));
     } else if (style === 'strum') {
       const up = !src.allDown && isUp(step);
       let notes = voices.concat([foldNote(voices[0] + 12)]);
@@ -3935,6 +4100,34 @@ function compilePattern(preset, meter) {
       voices.forEach((m, i) => synthVoice('pluck', m, t + i * 0.004, v, dur, dest));
     } else {
       voices.forEach((m) => synthVoice(style, m, t, v, dur, dest));
+    }
+  }
+
+  /* Blues comping. Major and minor chords get their flat 7th (the dominant-7th sound is most of what
+     makes it blues), played as a real guitar shape on the middle and top strings, leaving the low
+     end to the bass. A full hit (the 1) slides in from a half step below and rings until the next
+     hit; the others are short stabs, choked right after they sound. */
+  function bluesChord(chord) {
+    if (chord.ivs.length !== 3 || (chord.q !== 'maj' && chord.q !== 'min')) return chord;
+    return Object.assign({}, chord, { ivs: chord.ivs.concat([10]), q: chord.q === 'maj' ? 'dom7' : 'min7' });
+  }
+  function playBlues(chord, step, t, v, dur, dest, inst) {
+    inst = inst || 'electric';
+    const set = instById(inst).set, out = instOut(inst, dest, 'blues');
+    const V = guitarVoicing(bluesChord(chord));
+    let strs = V.strings.filter((s) => s >= 2);
+    if (strs.length < 3) strs = V.strings.slice(-4);
+    const notes = strs.map((s) => octNote(GTR[s] + V.frets[s], chord));
+    const real = sReady(set);
+    const strum = (shift, at, a, hold, rel) => notes.forEach((m, i) => {
+      const tt = at + i * 0.009;
+      if (!(real && sNote(set, m + shift, tt, a * SAMPLE_TRIM.blues, out, hold, rel))) synthVoice('pluck', m + shift, tt, a, hold, dest);
+    });
+    if (v >= 0.95) {
+      strum(-1, t, 0.7 * v, 0.05, 0.03);
+      strum(0, t + 0.07, v, Math.max(0.2, dur - 0.12), 0.18);
+    } else {
+      strum(0, t, v, 0.12, 0.05);
     }
   }
 
@@ -3950,9 +4143,22 @@ function compilePattern(preset, meter) {
     else if (ch === 'v') { m = R + iv[2] - 12; if (m < (real ? BASS_LOW : 36)) m += 12; } // a 4-string bass bottoms out at E1
     else if (ch === '6') m = R + iv[2] + 2;
     else if (ch === '8') m = R + 12;
+    else if (ch === '7') m = R + (iv.length > 3 ? iv[3] : 10); // the chord's 7th, or the flat 7th of a triad
     const hold = Math.max(0.09, Math.min(dur * 0.9, 1.6));
     if (real && sNote('bass', m, t, SAMPLE_TRIM.bass, dest, hold, 0.08)) return;
     synthBass(m, t, dur, dest);
+  }
+
+  // A quick strum of the chord showing on the track, on a newly picked instrument.
+  function previewInst(inst) {
+    if (!inst || !ensureCtx()) return;
+    const I = instById(inst);
+    loadSet(I.set).then(() => {
+      if (playing || !sReady(I.set)) return;
+      const chord = state.slots.length ? chordFor(Math.max(0, displaySlot())) : chordAt(keyInfo, 0, false);
+      const dest = instOut(inst, getPreviewBus(), 'strum');
+      strumShape(chord, ctx.currentTime + 0.03, 1, 1.4, dest, false, I.set);
+    });
   }
 
   function preview(chord) {
@@ -4001,21 +4207,21 @@ function compilePattern(preset, meter) {
   }
 
   // One chord part (main beat or a layer) for one 16th-note step.
-  function playPart(chord, src, P, step, inSlot, left, slotLen, tt, dest) {
+  function playPart(chord, src, P, step, inSlot, left, slotLen, tt, dest, inst) {
     const sd = stepDur();
     if (SUSTAIN[src.chord]) {
       // Held styles sound once per chord and ring for every measure it is held.
-      if (inSlot === 0) playChordHit(chord, src, P, step, tt, 1, slotLen * sd, dest);
+      if (inSlot === 0) playChordHit(chord, src, P, step, tt, 1, slotLen * sd, dest, inst);
       return;
     }
     const tr = P.tracks.c;
     if (!tr) return;
     const c = tr[step];
     if (c !== '-') {
-      playChordHit(chord, src, P, step, tt, VEL[c] || 0.7, Math.min(P.cLen[step], left) * sd, dest);
+      playChordHit(chord, src, P, step, tt, VEL[c] || 0.7, Math.min(P.cLen[step], left) * sd, dest, inst);
     } else if (inSlot === 0 && !hitIn(tr, step, Math.min(P.n, step + left))) {
       // A chord that starts mid-measure with no strum of its own still gets heard.
-      playChordHit(chord, src, P, step, tt, VEL.x, Math.min(P.n - step, left) * sd, dest);
+      playChordHit(chord, src, P, step, tt, VEL.x, Math.min(P.n - step, left) * sd, dest, inst);
     }
   }
 
@@ -4036,7 +4242,7 @@ function compilePattern(preset, meter) {
         if (ch && ch !== '-') DRUMS[k](tt, VEL[ch] || 0.7, partGains.drums);
       }
     }
-    if (mix.chords.on) playPart(chord, preset, P, step, inSlot, left, tl.lens[slot], tt, partGains.chords);
+    if (mix.chords.on) playPart(chord, preset, P, step, inSlot, left, tl.lens[slot], tt, partGains.chords, mainInst());
     if (mix.bass.on) {
       const b = P.tracks.b && P.tracks.b[step];
       if (b && b !== '-') playBass(chord, b, tt, Math.min(P.bLen[step], left) * stepDur(), partGains.bass);
@@ -4051,7 +4257,7 @@ function compilePattern(preset, meter) {
         return;
       }
       const src = presetById(L.src);
-      playPart(chord, src, patternFor(src), step, inSlot, left, tl.lens[slot], tt, partGains.layers);
+      playPart(chord, src, patternFor(src), step, inSlot, left, tl.lens[slot], tt, partGains.layers, layerInstOf(L));
     });
     if (live) uiQueue.push({ t, step, slot, inSlot, len: tl.lens[slot] });
   }
@@ -4515,6 +4721,7 @@ function compilePattern(preset, meter) {
     state.realInst = !state.realInst;
     save();
     renderRealToggle();
+    renderInst();
   });
 
   bgToggle.addEventListener('click', () => {
@@ -5602,9 +5809,12 @@ function compilePattern(preset, meter) {
     const free = d.free === true;
     if (!Array.isArray(d.slots) || d.slots.length < (free ? 0 : 1) || d.slots.length > MAX_CHORDS ||
         !d.slots.every(free ? okFreeSlot : okKeySlot)) return null;
+    const m = d.mix && typeof d.mix === 'object' ? d.mix : {};
+    return cleanSetupInst(cleanSetupBase(d, free, m), m);
+  }
+  function cleanSetupBase(d, free, m) {
     const vol = (v, dflt) => (Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : dflt);
     const part = (p) => ({ on: !(p && p.on === false), vol: vol(p && p.vol, 80) });
-    const m = d.mix && typeof d.mix === 'object' ? d.mix : {};
     return {
       root: d.root,
       scale: d.scale,
@@ -5621,6 +5831,13 @@ function compilePattern(preset, meter) {
         drumKit: DRUM_KITS.some((k) => k.id === m.drumKit) ? m.drumKit : 'rock',
       },
     };
+  }
+  // Instrument picks in a setup: kept only where they change something.
+  function cleanSetupInst(d, m) {
+    const p = PRESETS.find((x) => x.id === d.preset);
+    d.mix.inst = p.pick && instById(m.inst) && m.inst !== p.inst ? m.inst : null;
+    d.mix.layerInst = cleanLayerInst(m.layerInst, d.mix.layer);
+    return d;
   }
   function cleanSave(s) {
     if (!s || typeof s !== 'object') return null;
@@ -5652,13 +5869,14 @@ function compilePattern(preset, meter) {
         (s.bars !== 1 ? ' (' + (s.bars === 0.5 ? '½' : s.bars) + ')' : '')).join(' ')
       : 'No chords yet';
     const preset = PRESETS.find((p) => p.id === d.preset);
+    const on = (id) => (id ? ' on ' + instById(id).name.toLowerCase() : '');
     const layers = d.mix.layer.map(layerById).filter((l) => l && l.src !== d.preset)
-      .map((l) => (l.drums ? (DRUM_KITS.find((x) => x.id === d.mix.drumKit) || DRUM_KITS[0]).name + ' drums' : l.name));
+      .map((l) => (l.drums ? (DRUM_KITS.find((x) => x.id === d.mix.drumKit) || DRUM_KITS[0]).name + ' drums' : l.name + on(d.mix.layerInst[l.id])));
     const muted = ['drums', 'chords', 'bass'].filter((p) => !d.mix[p].on && presetHas(preset, p));
     return {
       key: (d.free ? 'Freestyle in ' : '') + (d.free ? keyTitle(k, d.scale) : cap(keyTitle(k, d.scale))),
       chords,
-      sound: preset.name + (layers.length ? ' + ' + layers.join(', ') : '') + ', ' + d.bpm + ' bpm' +
+      sound: preset.name + on(d.mix.inst) + (layers.length ? ' + ' + layers.join(', ') : '') + ', ' + d.bpm + ' bpm' +
         (d.meter !== '4/4' ? ', ' + d.meter : '') + (muted.length ? ', ' + muted.join(' and ') + ' muted' : ''),
     };
   }
@@ -5683,6 +5901,9 @@ function compilePattern(preset, meter) {
     state.mix.layers = { vol: d.mix.layers.vol };
     state.mix.layer = d.mix.layer.slice();
     state.mix.drumKit = d.mix.drumKit;
+    state.mix.inst = d.mix.inst;
+    state.mix.layerInst = Object.assign({}, d.mix.layerInst);
+    renderInst();
     idleSlot = 0;
     if (lastSlot >= state.slots.length) lastSlot = -1;
     keyChanged();
@@ -5837,6 +6058,11 @@ function compilePattern(preset, meter) {
       d.preset, d.meter, d.bpm, [m.drums.on ? 1 : 0, m.drums.vol, m.chords.on ? 1 : 0, m.chords.vol, m.bass.on ? 1 : 0, m.bass.vol, m.layers.vol],
       m.layer, m.drumKit];
     if (d.free) out.push(d.slots.map((x) => [x.r, x.q, hold(x), x.oct || 0]));
+    // Instrument picks, only when there are any: [main beat's, { layer: instrument }].
+    if (m.inst || Object.keys(m.layerInst).length) {
+      if (!d.free) out.push(null);
+      out.push([m.inst || '', m.layerInst]);
+    }
     return out;
   }
   const OCT_CODES = [0, 1, -1, 2, -2]; // old codes have 0 here, which reads as no octave change
@@ -5853,12 +6079,14 @@ function compilePattern(preset, meter) {
       });
     }
     const v = Array.isArray(a[9]) ? a[9] : [];
+    const ins = Array.isArray(a[13]) ? a[13] : [];
     return cleanSave({
       name: a[0], at: Number(a[1]) * 1000,
       data: {
         root: a[2], scale: a[3], spell: [null, 'sharp', 'flat'][a[4]] || null, free, slots, preset: a[6], meter: a[7], bpm: a[8],
         mix: { drums: { on: v[0] !== 0, vol: v[1] }, chords: { on: v[2] !== 0, vol: v[3] }, bass: { on: v[4] !== 0, vol: v[5] },
-          layers: { vol: v[6] }, layer: a[10], drumKit: a[11] },
+          layers: { vol: v[6] }, layer: a[10], drumKit: a[11],
+          inst: ins[0] || null, layerInst: ins[1] },
       },
     });
   }
@@ -7744,6 +7972,7 @@ function compilePattern(preset, meter) {
   document.addEventListener('touchstart', () => {}, { passive: true }); // enables :active on iOS
 
   /* ---------- Init ---------- */
+  renderInst();
   renderMeter();
   renderAll();
   renderLayers();

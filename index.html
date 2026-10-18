@@ -6347,7 +6347,6 @@ function compilePattern(preset, meter) {
     const weight = new Float32Array(STEM_SEG);
     for (let i = 0; i < half; i++) weight[i] = (i + 1) / half;
     for (let i = half; i < STEM_SEG; i++) weight[i] = (STEM_SEG - i) / half;
-    const sumW = new Float32Array(length);
     const total = Math.ceil(length / stride);
     const L = new Float32Array(STEM_SEG), R = new Float32Array(STEM_SEG);
     const mix = new Float32Array(2 * STEM_SEG);
@@ -6379,14 +6378,26 @@ function compilePattern(preset, meter) {
           oR[offset + t] += w * (fr[k] + xt[tr + k]);
         }
       }
-      for (let t = 0; t < chunk; t++) sumW[offset + t] += weight[t];
       done++;
       if (onStep) await onStep(done, total);
     }
-    for (let s = 0; s < 4; s++) {
-      for (let c = 0; c < 2; c++) {
-        const o = out[s][c];
-        for (let i = 0; i < length; i++) o[i] = (o[i] / sumW[i]) * std + mean;
+    // Each sample was added in from at most two overlapping pieces; divide by the weights it got.
+    // (Worked out per sample rather than kept in a song-length array, which would cost 40 MB for
+    // a four-minute song.)
+    const sumW = (i) => {
+      let w = 0;
+      for (let k = Math.max(0, Math.ceil((i - STEM_SEG + 1) / stride)); k * stride <= i; k++) {
+        const off = k * stride;
+        if (i - off < Math.min(length - off, STEM_SEG)) w += weight[i - off];
+      }
+      return w;
+    };
+    for (let i = 0; i < length; i++) {
+      const g = std / sumW(i);
+      for (let s = 0; s < 4; s++) {
+        const oL = out[s][0], oR = out[s][1];
+        oL[i] = oL[i] * g + mean;
+        oR[i] = oR[i] * g + mean;
       }
     }
   }
@@ -6739,7 +6750,10 @@ function compilePattern(preset, meter) {
   ];
   const MODEL_CACHE = 'stem-splitter-v1';
   const MODEL_KEY = 'stem-splitter/htdemucs.onnx'; // a name inside this page's own cache
-  const STEM_MAX_SEC = 15 * 60;
+  // A split song holds about 40 bytes for every sample (the song plus its four parts, in stereo):
+  // 10 MB a second of music. iPhones close a page well before a computer would, so they get a
+  // shorter limit than computers do.
+  const STEM_MAX_SEC = (IOS ? 8 : 15) * 60;
   // Display order. i is the model's output index.
   const STEM_PARTS = [
     { key: 'vocals', name: 'Vocals', i: 3 },
@@ -6789,6 +6803,24 @@ function compilePattern(preset, meter) {
   const hasGpu = () => !!navigator.gpu;
   // Inside the Claude app the page can't download the splitter, so say so up front.
   const inClaude = /claude/i.test(location.hostname);
+
+  /* If the phone closes the page mid-split (it does that, with no warning, when a page uses too much
+     memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
+     comes out when it's done; finding it on the next visit means the page was closed. */
+  const STEM_TRY = 'stem-splitter-attempt';
+  function markTry(v) {
+    try { if (v) localStorage.setItem(STEM_TRY, JSON.stringify(v)); else localStorage.removeItem(STEM_TRY); } catch (e) { /* storage off */ }
+  }
+  (() => {
+    let t = null;
+    try { t = JSON.parse(localStorage.getItem(STEM_TRY) || 'null'); } catch (e) { t = null; }
+    markTry(null);
+    if (!t || !(Date.now() - t.at < 3 * 86400e3)) return;
+    const len = t.sec ? ' (a ' + fmtTime(t.sec) + ' song)' : '';
+    stemFb.textContent = t.stage === 'split'
+      ? 'Last time, the page closed while splitting' + len + ', most likely because the phone ran out of memory for it. Close other apps and Safari tabs, then try again. A shorter song needs less memory.'
+      : 'Last time, the page closed while the splitter was getting ready, most likely because the phone ran out of memory for it. Close other apps and Safari tabs, then try again.';
+  })();
 
   function renderStems() {
     stemEngineNote.textContent = sx.busy ? '' : inClaude
@@ -7495,45 +7527,52 @@ function compilePattern(preset, meter) {
     sx.ort = ort;
     return ort;
   }
+  // Reads a response into one buffer with a little room to spare after the file (the low-memory
+  // rewrite adds about 70 KB on the end), without ever holding two copies of it.
+  const MODEL_ROOM = 256 * 1024;
+  async function readModel(res, onBytes) {
+    const total = Number(res.headers.get('Content-Length')) || 0;
+    if (!(res.body && res.body.getReader)) {
+      const all = new Uint8Array(await res.arrayBuffer());
+      return { buf: all, len: all.length };
+    }
+    const reader = res.body.getReader();
+    let buf = new Uint8Array((total || 175e6) + MODEL_ROOM), got = 0;
+    for (;;) {
+      if (sx.cancel) { try { reader.cancel(); } catch (e) { /* ignore */ } throw new Error('cancelled'); }
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (got + value.length + MODEL_ROOM > buf.length) {
+        const bigger = new Uint8Array(Math.max(buf.length * 1.1, got + value.length + MODEL_ROOM));
+        bigger.set(buf.subarray(0, got));
+        buf = bigger;
+      }
+      buf.set(value, got);
+      got += value.length;
+      if (onBytes) onBytes(got, total);
+    }
+    return { buf, len: got };
+  }
   // The model's bytes: from this phone's cache, or downloaded once (about 175 MB) and kept.
+  // The cache keeps the file exactly as downloaded; the low-memory rewrite happens on each load.
   async function getModelBytes(onBytes) {
     let cache = null;
     try {
       cache = await caches.open(MODEL_CACHE);
       const hit = await cache.match(MODEL_KEY);
-      if (hit) return new Uint8Array(await hit.arrayBuffer());
-    } catch (e) { cache = null; }
+      if (hit) return await readModel(hit, null);
+    } catch (e) { if (sx.cancel) throw e; cache = null; }
     let lastErr = null;
     for (const url of MODEL_URLS) {
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        const total = Number(res.headers.get('Content-Length')) || 0;
-        let bytes;
-        if (res.body && res.body.getReader) {
-          const reader = res.body.getReader();
-          let buf = new Uint8Array(total || 180e6), got = 0;
-          for (;;) {
-            if (sx.cancel) { try { reader.cancel(); } catch (e) { /* ignore */ } throw new Error('cancelled'); }
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (got + value.length > buf.length) {
-              const bigger = new Uint8Array(Math.max(buf.length * 1.25, got + value.length));
-              bigger.set(buf.subarray(0, got));
-              buf = bigger;
-            }
-            buf.set(value, got);
-            got += value.length;
-            onBytes(got, total);
-          }
-          bytes = got === buf.length ? buf : buf.slice(0, got);
-        } else {
-          bytes = new Uint8Array(await res.arrayBuffer());
-        }
-        if (bytes.length < 50e6) throw new Error('model file too small');
-        if (cache) { try { await cache.put(MODEL_KEY, new Response(bytes)); } catch (e) { /* no room: download again next time */ } }
+        const m = await readModel(res, onBytes);
+        if (m.len < 50e6) throw new Error('model file too small');
+        // Fully stored before the rewrite touches these bytes.
+        if (cache) { try { await cache.put(MODEL_KEY, new Response(m.buf.subarray(0, m.len))); } catch (e) { /* no room: download again next time */ } }
         try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* optional */ }
-        return bytes;
+        return m;
       } catch (e) {
         if (sx.cancel) throw e;
         lastErr = e;
@@ -7541,16 +7580,158 @@ function compilePattern(preset, meter) {
     }
     throw lastErr || new Error('download failed');
   }
+  /* Low-memory attention. The splitter's transformer builds each attention table for all 8 heads at
+     once: 2688 x 2688 numbers per head, 231 MB per table, with two tables alive together. That alone
+     is more than an iPhone lets a web page use. This rewrites the model, right here on the phone, to
+     work two heads at a time (58 MB a table). Same maths, same result. (Groups of two rather than
+     one: a phone's graphics chip lets one step touch at most 8 buffers, and splitting into 8 pieces
+     plus the input would be 9.)
+     It never re-encodes the 170 MB file. A few same-length byte edits switch the old attention off,
+     and a small block of new steps goes on the end (protobuf merges a repeated graph field into the
+     first one, so the new steps join the model's list). For each of the ten attentions:
+       - the old last step's output is renamed, so nothing reads it any more;
+       - the old first step is pointed at a one-row slice of its input, so the abandoned steps are tiny;
+       - new steps split Q, K and V into head pairs, work each pair, and join them under the old name.
+     If the model isn't the one this was written for, nothing is changed. */
+  const LOWMEM_GROUPS = 4; // of the 8 heads
+  function pbVarint(n) {
+    const out = [];
+    while (n > 127) { out.push((n % 128) | 128); n = Math.floor(n / 128); }
+    out.push(n);
+    return out;
+  }
+  const pbText = (s) => Array.from(new TextEncoder().encode(s));
+  const pbField = (field, bytes) => pbVarint(field * 8 + 2).concat(pbVarint(bytes.length), bytes);
+  const pbVar = (field, n) => pbVarint(field * 8).concat(pbVarint(n));
+  // AttributeProto: name (1), i (3), ints (8), type (20: INT 2, INTS 7). -1 is a 10-byte varint.
+  const NEG1 = [255, 255, 255, 255, 255, 255, 255, 255, 255, 1];
+  const pbAttrInt = (name, v) => pbField(5, [].concat(pbField(1, pbText(name)), v < 0 ? [3 << 3].concat(NEG1) : pbVar(3, v), pbVar(20, 2)));
+  const pbAttrInts = (name, list) => pbField(5, [].concat(pbField(1, pbText(name)), ...list.map((v) => pbVar(8, v)), pbVar(20, 7)));
+  // NodeProto: input (1), output (2), name (3), op_type (4), attribute (5); as GraphProto.node (1).
+  function pbNode(op, inputs, outputs, name, attrs) {
+    const b = [].concat(...inputs.map((x) => pbField(1, pbText(x))), ...outputs.map((x) => pbField(2, pbText(x))),
+      pbField(3, pbText(name)), pbField(4, pbText(op)), ...(attrs || []));
+    return pbField(1, b);
+  }
+  function readVarint(b, p) {
+    let n = 0, m = 1, c;
+    do { c = b[p++]; n += (c & 127) * m; m *= 128; } while (c & 128);
+    return [n, p];
+  }
+  // Byte range [start, end) holding the graph's steps (GraphProto.node entries).
+  function nodeRegion(b) {
+    let p = 0, gs = -1, ge = -1;
+    while (p < b.length) {
+      let tag; [tag, p] = readVarint(b, p);
+      const f = Math.floor(tag / 8), w = tag & 7;
+      if (w === 0) { [, p] = readVarint(b, p); continue; }
+      if (w === 1) { p += 8; continue; }
+      if (w === 5) { p += 4; continue; }
+      if (w !== 2) return null;
+      let len; [len, p] = readVarint(b, p);
+      if (f === 7 && gs < 0) { gs = p; ge = p + len; }
+      p += len;
+    }
+    if (gs < 0) return null;
+    let p2 = gs, ns = -1, ne = -1;
+    while (p2 < ge) {
+      let tag; [tag, p2] = readVarint(b, p2);
+      const f = Math.floor(tag / 8), w = tag & 7;
+      if (w === 0) { [, p2] = readVarint(b, p2); continue; }
+      if (w === 1) { p2 += 8; continue; }
+      if (w === 5) { p2 += 4; continue; }
+      if (w !== 2) return null;
+      let len; [len, p2] = readVarint(b, p2);
+      if (f === 1) { if (ns < 0) ns = p2; ne = p2 + len; }
+      p2 += len;
+    }
+    return ns < 0 ? null : [ns, ne];
+  }
+  // Offset of `name` where it appears as `tag len name` exactly once in [s, e); -1 otherwise.
+  function findOnce(b, s, e, tag, name) {
+    const nb = pbText(name), pat = [tag].concat(pbVarint(nb.length), nb);
+    let at = -1, i = s;
+    for (;;) {
+      i = b.indexOf(pat[0], i);
+      if (i < 0 || i + pat.length > e) break;
+      let k = 1;
+      while (k < pat.length && b[i + k] === pat[k]) k++;
+      if (k === pat.length) { if (at >= 0) return -1; at = i; }
+      i++;
+    }
+    return at < 0 ? -1 : at + pat.length - nb.length;
+  }
+  // The ten attentions in htdemucs.onnx, by the names its exporter gave them: [Q, K, V, output].
+  function lowmemSites() {
+    const out = [];
+    [0, 1, 2, 3, 4].forEach((l) => ['layers', 'layers_t'].forEach((side) => {
+      const self = l % 2 === 0, t = side === 'layers_t';
+      const p = '/crosstransformer/' + side + '.' + l + '/' + (self ? 'self_attn' : 'cross_attn') + '/';
+      const [q, k] = !t ? ['Mul', 'Mul_1'] : self ? ['Mul_1', 'Mul_2'] : ['Mul_2', 'Mul_3'];
+      out.push({ q: p + q + '_output_0', k: p + k + '_output_0', v: p + 'Reshape_8_output_0',
+        o: p + (self ? 'MatMul_2' : 'MatMul_3') + '_output_0', base: p + 'lowmem' });
+    }));
+    return out;
+  }
+  // Rewrites the model bytes `buf[0..len)`. When `buf` has room after `len`, the new steps go there
+  // without copying the file. Returns { bytes, patched }.
+  function lowmemPatch(buf, len) {
+    const bytes = buf.subarray(0, len);
+    const reg = nodeRegion(bytes);
+    if (!reg) return { bytes, patched: false };
+    const sites = lowmemSites(), outAt = [], qAt = [];
+    for (const s of sites) {
+      const o = findOnce(bytes, reg[0], reg[1], 0x12, s.o); // output of the old last step
+      const q = findOnce(bytes, reg[0], reg[1], 0x0a, s.q); // input of the old first step
+      if (o < 0 || q < 0) return { bytes, patched: false };
+      outAt.push(o + s.o.length - 1);
+      qAt.push(q + s.q.length - 1);
+    }
+    const H = LOWMEM_GROUPS;
+    let tail = [].concat(
+      pbNode('Constant', [], ['/lowmem/zero'], '/lowmem/zero', [pbAttrInts('value_ints', [0])]),
+      pbNode('Constant', [], ['/lowmem/one'], '/lowmem/one', [pbAttrInts('value_ints', [1])]),
+      pbNode('Constant', [], ['/lowmem/axis2'], '/lowmem/axis2', [pbAttrInts('value_ints', [2])]));
+    for (const s of sites) {
+      const b = s.base, heads = (t) => Array.from({ length: H }, (_, h) => b + '/' + t + h);
+      tail = tail.concat(
+        pbNode('Slice', [s.q, '/lowmem/zero', '/lowmem/one', '/lowmem/axis2'], [s.q.slice(0, -1) + 'Z'], b + '/tinyq'),
+        pbNode('Split', [s.q], heads('q'), b + '/split_q', [pbAttrInt('axis', 1)]),
+        pbNode('Split', [s.k], heads('k'), b + '/split_k', [pbAttrInt('axis', 1)]),
+        pbNode('Split', [s.v], heads('v'), b + '/split_v', [pbAttrInt('axis', 1)]));
+      for (let h = 0; h < H; h++) {
+        tail = tail.concat(
+          pbNode('MatMul', [b + '/q' + h, b + '/k' + h], [b + '/s' + h], b + '/mm1_' + h),
+          pbNode('Softmax', [b + '/s' + h], [b + '/p' + h], b + '/sm_' + h, [pbAttrInt('axis', -1)]),
+          pbNode('MatMul', [b + '/p' + h, b + '/v' + h], [b + '/o' + h], b + '/mm2_' + h));
+      }
+      tail = tail.concat(pbNode('Concat', heads('o'), [s.o], b + '/concat', [pbAttrInt('axis', 1)]));
+    }
+    const frag = [0x3a].concat(pbVarint(tail.length), tail); // ModelProto.graph (field 7)
+    outAt.forEach((i) => { bytes[i] = 0x58; }); // ..._output_0 -> ..._output_X: nothing reads it now
+    qAt.forEach((i) => { bytes[i] = 0x5a; });   // old first step now reads ..._output_Z, the 1-row slice
+    let out;
+    if (buf.length >= len + frag.length) out = buf.subarray(0, len + frag.length);
+    else { out = new Uint8Array(len + frag.length); out.set(bytes); }
+    out.set(frag, len);
+    return { bytes: out, patched: true };
+  }
+
   async function openSession(ep, onBytes) {
     const ort = await loadOrt();
-    let bytes = await getModelBytes(onBytes);
+    const m = await getModelBytes(onBytes);
+    let bytes = lowmemPatch(m.buf, m.len).bytes;
+    m.buf = null;
     stemProgress('Getting the splitter ready', 1, ep === 'webgpu' ? 'Setting it up on your phone\'s graphics chip' : 'Setting it up');
-    const make = ort.InferenceSession.create(bytes, { executionProviders: [ep] });
+    await new Promise((r) => setTimeout(r, 50)); // let the bar finish drawing before the heavy part
+    // Graph rewrites are skipped: they make extra copies of the model's weights while loading, and
+    // the phone's memory matters far more here than the few percent of speed they'd buy.
+    const make = ort.InferenceSession.create(bytes, { executionProviders: [ep], graphOptimizationLevel: 'disabled' });
+    bytes = null; // ONNX Runtime has its own copy now; let this one go
     // A graphics chip that stalls here gets 90 seconds before the slower route takes over.
     const session = ep === 'webgpu'
       ? await Promise.race([make, new Promise((_, rej) => setTimeout(() => rej(new Error('graphics chip timed out')), 90000))])
       : await make;
-    bytes = null;
     return session;
   }
   function modelRunner(ort, session) {
@@ -7608,6 +7789,7 @@ function compilePattern(preset, meter) {
       const right = song.numberOfChannels > 1 ? song.getChannelData(1) : left;
 
       stage = 'model';
+      markTry({ stage: 'setup', at: Date.now(), sec: song.duration });
       if (!sx.session) {
         stemProgress('Getting the splitter ready', 0, 'Checking for a saved copy on this phone');
         const onBytes = (got, total) => {
@@ -7626,6 +7808,7 @@ function compilePattern(preset, meter) {
       }
 
       stage = 'split';
+      markTry({ stage: 'split', at: Date.now(), sec: song.duration });
       const out = [0, 1, 2, 3].map(() => newStereo(n));
       const outArr = () => out.map((b) => [b.getChannelData(0), b.getChannelData(1)]);
       const t0 = performance.now();
@@ -7646,11 +7829,14 @@ function compilePattern(preset, meter) {
       } catch (e) {
         if (sx.cancel || sx.ep === 'wasm') throw e;
         if (pieces > 0) { // it was working, so something interrupted it (often leaving the page)
+          try { await sx.session.release(); } catch (e2) { /* already gone */ }
           sx.session = null;
           throw Object.assign(new Error('interrupted'), { stage: 'interrupted' });
         }
-        // The graphics chip couldn't run it at all: start over the slower way.
+        // The graphics chip couldn't run it at all: start over the slower way, after letting go of
+        // the first copy of the model (two at once is more than a phone has room for).
         sx.ep = 'wasm';
+        try { await sx.session.release(); } catch (e2) { /* already gone */ }
         sx.session = null;
         stemProgress('Switching to the slower splitter', 0, 'Your phone\'s graphics chip couldn\'t run this one.');
         sx.session = await openSession('wasm', () => {});
@@ -7693,7 +7879,8 @@ function compilePattern(preset, meter) {
       } else if (e && e.stage === 'interrupted') {
         stemFb.textContent = 'Splitting stopped partway, usually because the phone left this page or locked. Choose the song again and keep this page open until it finishes.';
       } else if (e && e.stage === 'long') {
-        stemFb.textContent = 'That song is ' + fmtTime(e.sec) + ' long. Songs up to 15 minutes work; try a shorter one.';
+        stemFb.textContent = 'That song is ' + fmtTime(e.sec) + ' long. Songs up to ' + STEM_MAX_SEC / 60 + ' minutes work' +
+          (IOS ? ' on an iPhone, which has less memory to spare than a computer' : '') + '; try a shorter one.';
       } else if (stage === 'read') {
         stemFb.textContent = 'Couldn\'t read that file. Try an mp3 or m4a song file. Songs from Apple Music or Spotify are copy-protected and can\'t be opened.';
       } else if (stage === 'model') {
@@ -7702,6 +7889,7 @@ function compilePattern(preset, meter) {
         stemFb.textContent = 'Splitting stopped partway: ' + msg + '. This can happen when the phone runs low on memory; try closing other tabs and apps, or a shorter song.';
       }
     } finally {
+      markTry(null);
       sx.busy = false;
       sx.cancel = false;
       if (!playing) releaseWake();

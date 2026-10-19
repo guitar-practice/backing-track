@@ -6332,14 +6332,27 @@ function compilePattern(preset, meter) {
   // run(mix, mag) runs the model and resolves to { x, xt } (the spectrogram and waveform outputs).
   // out is [drums, bass, other, vocals], each [left, right] Float32Arrays of the song's length.
   // onStep(done, total) reports progress and may return a promise (to let the page breathe).
-  async function stemSplit(left, right, run, out, onStep) {
-    const length = left.length;
+  /* While a song splits, it and its parts are kept as 16-bit numbers: half the memory of the
+     32-bit ones playback needs, which only get made once the splitter has shut down and given its
+     memory back. PCM_SCALE maps -1..1 to +-16384, leaving room up to +-2 for loud masters. */
+  const PCM_SCALE = 16384;
+  const toPcm = (v) => { const x = Math.round(v * PCM_SCALE); return x > 32767 ? 32767 : x < -32768 ? -32768 : x; };
+  function pcmFrom(f) {
+    const o = new Int16Array(f.length);
+    for (let i = 0; i < f.length; i++) o[i] = toPcm(f[i]);
+    return o;
+  }
+  // left, right: the song as 16-bit. Returns the four parts, [part][channel], as 16-bit.
+  // Each piece is added in where it overlaps the last; a sample is finished (and written out) as
+  // soon as no later piece can reach it, so only one piece's worth is kept at full precision.
+  async function stemSplit(left, right, run, onStep) {
+    const length = left.length, k = 1 / PCM_SCALE;
     // Normalise the whole song like demucs does (the model also normalises each piece).
     let mean = 0;
-    for (let i = 0; i < length; i++) mean += (left[i] + right[i]) * 0.5;
+    for (let i = 0; i < length; i++) mean += (left[i] + right[i]) * 0.5 * k;
     mean /= length;
     let v = 0;
-    for (let i = 0; i < length; i++) { const d = (left[i] + right[i]) * 0.5 - mean; v += d * d; }
+    for (let i = 0; i < length; i++) { const d = (left[i] + right[i]) * 0.5 * k - mean; v += d * d; }
     const std = Math.sqrt(v / Math.max(1, length - 1)) || 1;
 
     const stride = Math.floor(0.75 * STEM_SEG);
@@ -6347,10 +6360,21 @@ function compilePattern(preset, meter) {
     const weight = new Float32Array(STEM_SEG);
     for (let i = 0; i < half; i++) weight[i] = (i + 1) / half;
     for (let i = half; i < STEM_SEG; i++) weight[i] = (STEM_SEG - i) / half;
+    // How much weight sample i got in all: it sits in at most two overlapping pieces.
+    const sumW = (i) => {
+      let w = 0;
+      for (let p = Math.max(0, Math.ceil((i - STEM_SEG + 1) / stride)); p * stride <= i; p++) {
+        const off = p * stride;
+        if (i - off < Math.min(length - off, STEM_SEG)) w += weight[i - off];
+      }
+      return w;
+    };
     const total = Math.ceil(length / stride);
     const L = new Float32Array(STEM_SEG), R = new Float32Array(STEM_SEG);
     const mix = new Float32Array(2 * STEM_SEG);
     const fl = new Float32Array(STEM_SEG), fr = new Float32Array(STEM_SEG);
+    const out = [0, 1, 2, 3].map(() => [new Int16Array(length), new Int16Array(length)]);
+    const acc = [0, 1, 2, 3].map(() => [new Float32Array(STEM_SEG), new Float32Array(STEM_SEG)]); // from `offset` on
     let done = 0;
     for (let offset = 0; offset < length; offset += stride) {
       const chunk = Math.min(length - offset, STEM_SEG);
@@ -6359,8 +6383,8 @@ function compilePattern(preset, meter) {
       for (let i = 0; i < STEM_SEG; i++) {
         const j = start + i;
         const inSong = j >= 0 && j < length;
-        L[i] = inSong ? (left[j] - mean) / std : 0;
-        R[i] = inSong ? (right[j] - mean) / std : 0;
+        L[i] = inSong ? (left[j] * k - mean) / std : 0;
+        R[i] = inSong ? (right[j] * k - mean) / std : 0;
       }
       mix.set(L, 0);
       mix.set(R, STEM_SEG);
@@ -6371,35 +6395,29 @@ function compilePattern(preset, meter) {
         fl.fill(0); fr.fill(0);
         stemISpecAdd(x, s, fl, fr);
         const tl = s * 2 * STEM_SEG, tr = tl + STEM_SEG;
-        const oL = out[s][0], oR = out[s][1];
+        const aL = acc[s][0], aR = acc[s][1];
         for (let t = 0; t < chunk; t++) {
-          const w = weight[t], k = t + trim;
-          oL[offset + t] += w * (fl[k] + xt[tl + k]);
-          oR[offset + t] += w * (fr[k] + xt[tr + k]);
+          const w = weight[t], q = t + trim;
+          aL[t] += w * (fl[q] + xt[tl + q]);
+          aR[t] += w * (fr[q] + xt[tr + q]);
         }
+      }
+      // Everything before the next piece's start is final now.
+      const fin = offset + stride < length ? stride : length - offset;
+      for (let t = 0; t < fin; t++) {
+        const g = std / sumW(offset + t);
+        for (let s = 0; s < 4; s++) {
+          out[s][0][offset + t] = toPcm(acc[s][0][t] * g + mean);
+          out[s][1][offset + t] = toPcm(acc[s][1][t] * g + mean);
+        }
+      }
+      for (let s = 0; s < 4; s++) {
+        for (const a of acc[s]) { a.copyWithin(0, fin); a.fill(0, STEM_SEG - fin); }
       }
       done++;
       if (onStep) await onStep(done, total);
     }
-    // Each sample was added in from at most two overlapping pieces; divide by the weights it got.
-    // (Worked out per sample rather than kept in a song-length array, which would cost 40 MB for
-    // a four-minute song.)
-    const sumW = (i) => {
-      let w = 0;
-      for (let k = Math.max(0, Math.ceil((i - STEM_SEG + 1) / stride)); k * stride <= i; k++) {
-        const off = k * stride;
-        if (i - off < Math.min(length - off, STEM_SEG)) w += weight[i - off];
-      }
-      return w;
-    };
-    for (let i = 0; i < length; i++) {
-      const g = std / sumW(i);
-      for (let s = 0; s < 4; s++) {
-        const oL = out[s][0], oR = out[s][1];
-        oL[i] = oL[i] * g + mean;
-        oR[i] = oR[i] * g + mean;
-      }
-    }
+    return out;
   }
 
   /* ---------- Finding the beat ----------
@@ -6792,7 +6810,7 @@ function compilePattern(preset, meter) {
     loopOn: false, A: 0, B: 0, focus: null, view: { s: 0, e: 0 }, peaks: null, cols: null, colsKey: '',
   };
   // The splitter: ONNX Runtime, the loaded model, and the job in progress.
-  const sx = { ort: null, session: null, ep: '', busy: false, cancel: false };
+  const sx = { ort: null, busy: false, cancel: false };
 
   const fmtTime = (s) => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
   const fmtFine = (s) => { // 1:23.45
@@ -7716,6 +7734,130 @@ function compilePattern(preset, meter) {
     out.set(frag, len);
     return { bytes: out, patched: true };
   }
+  /* Half-precision weights. The splitter's 42 million weights are stored as 32-bit numbers; as
+     16-bit ones they take half the memory everywhere they're copied while the splitter gets ready
+     (the separated parts come out within 70 dB of the full-precision ones: far below hearing).
+     Each big weight becomes a 16-bit copy plus a step that turns it back into 32-bit as it's used.
+     Only when the graphics chip can handle 16-bit numbers, or on the slower route. */
+  function f32to16(x) { // float32 bits -> float16 bits, rounding to nearest even
+    const s = (x >>> 16) & 0x8000, ex = (x >>> 23) & 0xff, m = x & 0x7fffff;
+    if (ex === 0xff) return s | 0x7c00 | (m ? 0x200 : 0);
+    const e = ex - 112; // rebias 127 -> 15
+    if (e >= 31) return s | 0x7c00;
+    if (e <= 0) {
+      if (e < -10) return s;
+      const mm = m | 0x800000, sh = 14 - e;
+      let h = mm >>> sh;
+      const rem = mm & ((1 << sh) - 1), half = 1 << (sh - 1);
+      if (rem > half || (rem === half && (h & 1))) h++;
+      return s | h;
+    }
+    let h = (e << 10) | (m >>> 13);
+    const rem = m & 0x1fff;
+    if (rem > 0x1000 || (rem === 0x1000 && (h & 1))) h++;
+    return s | h;
+  }
+  const pbLenField = (field, len) => pbVarint(field * 8 + 2).concat(pbVarint(len));
+  // Returns new model bytes with half-precision weights, or null if the file isn't laid out as expected.
+  function halfModel(b) {
+    // Top level: find the graph fields; everything else is copied as is.
+    const top = [];
+    let p = 0;
+    while (p < b.length) {
+      const s0 = p;
+      let tag; [tag, p] = readVarint(b, p);
+      const f = Math.floor(tag / 8), w = tag & 7;
+      if (w === 0) [, p] = readVarint(b, p);
+      else if (w === 1) p += 8;
+      else if (w === 5) p += 4;
+      else if (w === 2) { let len; [len, p] = readVarint(b, p); top.push({ s0, f, s: p, e: p + len }); p += len; continue; }
+      else return null;
+      top.push({ s0, f: -1, s: s0, e: p });
+    }
+    const gi = top.findIndex((t) => t.f === 7);
+    if (gi < 0) return null;
+    const g = top[gi];
+    // The graph's fields; big 32-bit weights get rewritten.
+    const parts = []; // { copy: [s, e] } | { tensor: {...} } | { bytes: [] }
+    const casts = [];
+    p = g.s;
+    while (p < g.e) {
+      const s0 = p;
+      let tag; [tag, p] = readVarint(b, p);
+      const f = Math.floor(tag / 8), w = tag & 7;
+      if (w !== 2) {
+        if (w === 0) [, p] = readVarint(b, p); else if (w === 1) p += 8; else if (w === 5) p += 4; else return null;
+        parts.push({ copy: [s0, p] });
+        continue;
+      }
+      let len; [len, p] = readVarint(b, p);
+      const e = p + len;
+      if (f === 5) { // TensorProto
+        const keep = [];
+        let dtype = 0, name = null, raw = null, q = p;
+        while (q < e) {
+          const t0 = q;
+          let tg; [tg, q] = readVarint(b, q);
+          const ff = Math.floor(tg / 8), ww = tg & 7;
+          if (ww === 0) { let v; [v, q] = readVarint(b, q); if (ff === 2) { dtype = v; continue; } }
+          else if (ww === 1) q += 8;
+          else if (ww === 5) q += 4;
+          else if (ww === 2) {
+            let l; [l, q] = readVarint(b, q);
+            if (ff === 8) { name = new TextDecoder().decode(b.subarray(q, q + l)); q += l; continue; }
+            if (ff === 9) { raw = [q, q + l]; q += l; continue; }
+            q += l;
+          } else return null;
+          keep.push([t0, q]);
+        }
+        if (dtype === 1 && raw && raw[1] - raw[0] >= 4096 && name) {
+          const nm = pbField(8, pbText(name + '/f16'));
+          const half = raw[1] - raw[0] >> 1;
+          const body = keep.reduce((a, [s1, e1]) => a + e1 - s1, 0) + pbVar(2, 10).length + nm.length + pbLenField(9, half).length + half;
+          parts.push({ tensor: { keep, nm, raw, half, body } });
+          casts.push(name);
+          p = e;
+          continue;
+        }
+      }
+      parts.push({ copy: [s0, e] });
+      p = e;
+    }
+    if (!casts.length) return null;
+    // NodeProto for each Cast (to = FLOAT), as GraphProto.node entries.
+    const castBytes = [].concat(...casts.map((n) => pbNode('Cast', [n + '/f16'], [n], n + '/cast', [pbAttrInt('to', 1)])));
+    let glen = castBytes.length;
+    for (const pt of parts) glen += pt.copy ? pt.copy[1] - pt.copy[0] : pbLenField(5, pt.tensor.body).length + pt.tensor.body;
+    let total = 0;
+    top.forEach((t, i) => { total += i === gi ? pbLenField(7, glen).length + glen : t.e - t.s0; });
+    const out = new Uint8Array(total);
+    let o = 0;
+    const put = (arr) => { out.set(arr, o); o += arr.length; };
+    const scratch = new Uint8Array(4 * 4 * 1024 * 1024);
+    for (let i = 0; i < top.length; i++) {
+      const t = top[i];
+      if (i !== gi) { out.set(b.subarray(t.s0, t.e), o); o += t.e - t.s0; continue; }
+      put(pbLenField(7, glen));
+      put(castBytes); // the Cast steps first, so they run before anything uses the weights
+      for (const pt of parts) {
+        if (pt.copy) { out.set(b.subarray(pt.copy[0], pt.copy[1]), o); o += pt.copy[1] - pt.copy[0]; continue; }
+        const T = pt.tensor;
+        put(pbLenField(5, T.body));
+        for (const [s1, e1] of T.keep) { out.set(b.subarray(s1, e1), o); o += e1 - s1; }
+        put(pbVar(2, 10)); // FLOAT16
+        put(T.nm);
+        put(pbLenField(9, T.half));
+        // Convert in aligned pieces of up to 4 M floats.
+        for (let r = T.raw[0]; r < T.raw[1]; r += scratch.length) {
+          const n = Math.min(scratch.length, T.raw[1] - r);
+          scratch.set(b.subarray(r, r + n));
+          const u = new Uint32Array(scratch.buffer, 0, n >> 2);
+          for (let k = 0; k < u.length; k++) { const h = f32to16(u[k]); out[o++] = h & 255; out[o++] = h >>> 8; }
+        }
+      }
+    }
+    return o === total ? out : null;
+  }
 
   async function openSession(ep, onBytes) {
     const ort = await loadOrt();
@@ -7734,24 +7876,166 @@ function compilePattern(preset, meter) {
       : await make;
     return session;
   }
-  function modelRunner(ort, session) {
-    const inMix = session.inputNames[0], inMag = session.inputNames[1];
+  // The model's two inputs for one 7.8 s piece, and its two outputs (the 4 parts as spectrograms
+  // and as waveforms). The first answer is checked: a graphics chip that gets the maths wrong
+  // shows up as NaN straight away.
+  function checkedRun(run) {
     let checked = false;
+    return async (mix, mag) => {
+      const r = await run(mix, mag);
+      if (!r.x || !r.xt) throw new Error('unexpected model output');
+      if (!checked) {
+        for (let i = 0; i < r.x.length; i += 997) if (!Number.isFinite(r.x[i])) throw new Error('bad numbers');
+        for (let i = 0; i < r.xt.length; i += 997) if (!Number.isFinite(r.xt[i])) throw new Error('bad numbers');
+        checked = true;
+      }
+      return r;
+    };
+  }
+  function pageRunner(ort, session) {
+    const inMix = session.inputNames[0], inMag = session.inputNames[1];
     return async (mix, mag) => {
       const r = await session.run({
         [inMix]: new ort.Tensor('float32', mix, [1, 2, STEM_SEG]),
         [inMag]: new ort.Tensor('float32', mag, [1, 4, SPEC_BINS, SPEC_FRAMES]),
       });
       let x = null, xt = null;
-      session.outputNames.forEach((k) => { if (r[k].dims.length === 5) x = r[k].data; else xt = r[k].data; });
-      if (!x || !xt) throw new Error('unexpected model output');
-      if (!checked) { // a graphics chip that gets the maths wrong shows up as NaN straight away
-        for (let i = 0; i < x.length; i += 997) if (!Number.isFinite(x[i])) throw new Error('bad numbers');
-        for (let i = 0; i < xt.length; i += 997) if (!Number.isFinite(xt[i])) throw new Error('bad numbers');
-        checked = true;
-      }
+      session.outputNames.forEach((key) => { if (r[key].dims.length === 5) x = r[key].data; else xt = r[key].data; });
       return { x, xt };
     };
+  }
+
+  /* The splitter runs in a worker of its own. A web page can never give back memory its
+     WebAssembly has grown into (and ONNX Runtime grows to about half a gigabyte), but shutting a
+     worker down hands all of its memory back. So each split gets a fresh worker, and it is shut
+     down before the parts are turned into playable audio. Pages that can't run one (or whose
+     workers can't reach the graphics chip) run the splitter in the page, as before. */
+  const ENGINE_SRC = `
+let ort = null, session = null;
+self.onmessage = async (e) => {
+  const m = e.data;
+  try {
+    if (m.type === 'probe') {
+      let gpu = false, f16 = false;
+      try {
+        const a = self.navigator && self.navigator.gpu ? await self.navigator.gpu.requestAdapter() : null;
+        gpu = !!a;
+        f16 = !!a && a.features.has('shader-f16');
+      } catch (err) { /* no graphics chip here */ }
+      postMessage({ type: 'probe', gpu, f16 });
+      return;
+    }
+    if (m.type === 'init') {
+      ort = await import(m.base + 'ort.webgpu.min.mjs');
+      ort.env.wasm.wasmPaths = m.base;
+      ort.env.wasm.numThreads = 1;
+      session = await ort.InferenceSession.create(new Uint8Array(m.buf, m.off, m.len), { executionProviders: [m.ep], graphOptimizationLevel: 'disabled' });
+      postMessage({ type: 'ready' });
+      return;
+    }
+    if (m.type === 'run') {
+      const r = await session.run({
+        [session.inputNames[0]]: new ort.Tensor('float32', m.mix, [1, 2, ${STEM_SEG}]),
+        [session.inputNames[1]]: new ort.Tensor('float32', m.mag, [1, 4, ${SPEC_BINS}, ${SPEC_FRAMES}]),
+      });
+      let x = null, xt = null;
+      for (const k of session.outputNames) {
+        const d = r[k].data;
+        const own = d.byteOffset === 0 && d.byteLength === d.buffer.byteLength ? d : d.slice();
+        if (r[k].dims.length === 5) x = own; else xt = own;
+      }
+      postMessage({ type: 'out', x, xt }, [x.buffer, xt.buffer]);
+    }
+  } catch (err) {
+    postMessage({ type: 'error', msg: String((err && err.message) || err) });
+  }
+};`;
+  function newWorker() {
+    let w, url;
+    try {
+      url = URL.createObjectURL(new Blob([ENGINE_SRC], { type: 'text/javascript' }));
+      w = new Worker(url, { type: 'module' });
+    } catch (e) { return null; }
+    let pending = null, timer = null;
+    const settle = (d) => { clearTimeout(timer); const p = pending; pending = null; if (p) p(d); };
+    w.onmessage = (e) => settle(e.data);
+    w.onerror = (e) => { if (e.preventDefault) e.preventDefault(); settle({ type: 'error', msg: (e && e.message) || 'the splitter worker stopped' }); };
+    w.onmessageerror = () => settle({ type: 'error', msg: 'the splitter worker stopped' });
+    return {
+      ask: (msg, transfer, ms) => new Promise((res) => {
+        pending = res;
+        if (ms) timer = setTimeout(() => settle({ type: 'error', msg: 'timed out' }), ms);
+        w.postMessage(msg, transfer || []);
+      }),
+      close: () => { try { w.terminate(); } catch (e) { /* gone */ } URL.revokeObjectURL(url); },
+    };
+  }
+  // The model, ready to run: { ep, run, close, rest }. Tries, in order: the graphics chip with
+  // half-precision weights (when it can do 16-bit maths), the graphics chip with full ones, then
+  // the slower route. `plan` continues from a list returned as `rest` after a failure.
+  async function startEngine(onBytes, plan) {
+    const setting = (ep, sub) => stemProgress('Getting the splitter ready', 1, sub ||
+      (ep === 'webgpu' ? 'Setting it up on your phone\'s graphics chip' : 'Setting it up'));
+    let lastErr = null;
+    let wk = newWorker();
+    const probe = wk ? await wk.ask({ type: 'probe' }, null, 15000) : null;
+    if (!plan) {
+      const gpu = probe && probe.type === 'probe' ? probe.gpu : hasGpu();
+      plan = gpu ? [{ ep: 'webgpu', half: !!(probe && probe.f16) }, { ep: 'webgpu', half: false }, { ep: 'wasm', half: true }]
+        : [{ ep: 'wasm', half: true }];
+      plan = plan.filter((x, i) => i === 0 || x.ep !== plan[i - 1].ep || x.half !== plan[i - 1].half);
+    }
+    const workerOk = !!(probe && probe.type === 'probe');
+    for (let i = 0; i < plan.length; i++) {
+      const { ep, half } = plan[i], rest = plan.slice(i + 1);
+      if (workerOk && (ep === 'wasm' || probe.gpu)) {
+        if (!wk) { wk = newWorker(); await wk.ask({ type: 'probe' }, null, 15000); }
+        const m = await getModelBytes(onBytes);
+        if (sx.cancel) { wk.close(); throw new Error('cancelled'); }
+        let bytes = lowmemPatch(m.buf, m.len).bytes;
+        m.buf = null;
+        if (half) {
+          setting(ep, 'Making it lighter for your phone');
+          await new Promise((r) => setTimeout(r, 50));
+          bytes = halfModel(bytes) || bytes;
+        }
+        setting(ep);
+        // The model's bytes move into the worker rather than being copied.
+        const r = await wk.ask({ type: 'init', base: ORT_BASE, ep, buf: bytes.buffer, off: bytes.byteOffset, len: bytes.length },
+          [bytes.buffer], ep === 'webgpu' ? 90000 : 0);
+        bytes = null;
+        if (r.type === 'ready') {
+          const w = wk;
+          return {
+            ep, rest,
+            run: async (mix, mag) => {
+              const o = await w.ask({ type: 'run', mix: mix.slice(), mag }, [mag.buffer]);
+              if (o.type !== 'out') throw new Error(o.msg || 'the splitter stopped');
+              return { x: o.x, xt: o.xt };
+            },
+            close: w.close,
+          };
+        }
+        wk.close(); // all of that worker's memory goes with it
+        wk = null;
+        lastErr = new Error(r.msg);
+        if (sx.cancel) throw new Error('cancelled');
+        continue;
+      }
+      // No worker here, or the worker can't see the graphics chip: run it in the page.
+      if (wk) { wk.close(); wk = null; }
+      if (half && plan.some((x, j) => j > i && x.ep === ep)) continue; // the page route uses full precision
+      try {
+        const session = await openSession(ep, onBytes);
+        const ort = await loadOrt();
+        return { ep, rest, run: pageRunner(ort, session), close: () => { try { session.release(); } catch (e) { /* gone */ } } };
+      } catch (e) {
+        if (sx.cancel || /HTTP|download|too small|Failed to fetch|Load failed|NetworkError/i.test(String(e && e.message))) throw e;
+        lastErr = e;
+      }
+    }
+    if (wk) wk.close();
+    throw lastErr || new Error('the splitter couldn\'t start');
   }
   async function decodeSong(file) {
     const data = await file.arrayBuffer();
@@ -7782,35 +8066,35 @@ function compilePattern(preset, meter) {
     let finished = null;
     try {
       stemProgress('Reading the song', 0.02, file.name);
-      const song = await decodeSong(file);
-      if (song.duration > STEM_MAX_SEC) throw Object.assign(new Error('long'), { stage: 'long', sec: song.duration });
+      let song = await decodeSong(file);
+      const sec = song.duration;
+      if (sec > STEM_MAX_SEC) throw Object.assign(new Error('long'), { stage: 'long', sec });
       const n = song.length;
-      const left = song.getChannelData(0);
-      const right = song.numberOfChannels > 1 ? song.getChannelData(1) : left;
+      const left = pcmFrom(song.getChannelData(0));
+      const right = song.numberOfChannels > 1 ? pcmFrom(song.getChannelData(1)) : left;
+      song = null; // the 16-bit copy is all the splitter needs
 
-      stage = 'model';
-      markTry({ stage: 'setup', at: Date.now(), sec: song.duration });
-      if (!sx.session) {
-        stemProgress('Getting the splitter ready', 0, 'Checking for a saved copy on this phone');
-        const onBytes = (got, total) => {
-          const mb = (b) => Math.round(b / 1e6);
-          stemProgress('Downloading the splitter (first time only)', total ? got / total : 0.5,
-            mb(got) + (total ? ' of ' + mb(total) : '') + ' MB. It\'s saved on your phone after this.');
-        };
-        sx.ep = hasGpu() ? 'webgpu' : 'wasm';
-        try {
-          sx.session = await openSession(sx.ep, onBytes);
-        } catch (e) {
-          if (sx.cancel || sx.ep === 'wasm' || /HTTP|download|too small|Failed to fetch|Load failed|NetworkError/i.test(String(e && e.message))) throw e;
-          sx.ep = 'wasm'; // the graphics chip route didn't start; the slower one still works
-          sx.session = await openSession(sx.ep, onBytes);
-        }
+      // The song that was open closes now, so its audio isn't held in memory during the split.
+      // (It's in your library if it was saved.)
+      if (sp.bufs) {
+        stemHalt();
+        sp.bufs = null;
+        sp.libId = null;
+        renderStems();
       }
 
+      stage = 'model';
+      markTry({ stage: 'setup', at: Date.now(), sec });
+      stemProgress('Getting the splitter ready', 0, 'Checking for a saved copy on this phone');
+      const onBytes = (got, total) => {
+        const mb = (b) => Math.round(b / 1e6);
+        stemProgress('Downloading the splitter (first time only)', total ? got / total : 0.5,
+          mb(got) + (total ? ' of ' + mb(total) : '') + ' MB. It\'s saved on your phone after this.');
+      };
+      let eng = await startEngine(onBytes);
+
       stage = 'split';
-      markTry({ stage: 'split', at: Date.now(), sec: song.duration });
-      const out = [0, 1, 2, 3].map(() => newStereo(n));
-      const outArr = () => out.map((b) => [b.getChannelData(0), b.getChannelData(1)]);
+      markTry({ stage: 'split', at: Date.now(), sec });
       const t0 = performance.now();
       let pieces = 0;
       const onStep = (done, total) => {
@@ -7822,30 +8106,55 @@ function compilePattern(preset, meter) {
         stemProgress('Splitting the song', done / total, eta + '. Keep this page open.');
         return new Promise((r) => setTimeout(r, 0)); // let the page update between pieces
       };
-      stemProgress('Splitting the song', 0, sx.ep === 'webgpu' ? 'Using your phone\'s graphics chip. Keep this page open.' : 'Keep this page open. This one takes a while.');
-      await new Promise((r) => setTimeout(r, 30));
+      let stems;
       try {
-        await stemSplit(left, right, modelRunner(sx.ort, sx.session), outArr(), onStep);
-      } catch (e) {
-        if (sx.cancel || sx.ep === 'wasm') throw e;
-        if (pieces > 0) { // it was working, so something interrupted it (often leaving the page)
-          try { await sx.session.release(); } catch (e2) { /* already gone */ }
-          sx.session = null;
-          throw Object.assign(new Error('interrupted'), { stage: 'interrupted' });
+        stemProgress('Splitting the song', 0, eng.ep === 'webgpu' ? 'Using your phone\'s graphics chip. Keep this page open.' : 'Keep this page open. This one takes a while.');
+        await new Promise((r) => setTimeout(r, 30));
+        try {
+          stems = await stemSplit(left, right, checkedRun(eng.run), onStep);
+        } catch (e) {
+          if (sx.cancel || !eng.rest.length) throw e;
+          // It was working, so something interrupted it (often leaving the page).
+          if (pieces > 0) throw Object.assign(new Error('interrupted'), { stage: 'interrupted' });
+          // That setup couldn't run it at all: let its copy of the model go, then try the next one
+          // (full precision on the graphics chip, then the slower route).
+          const rest = eng.rest;
+          eng.close();
+          eng = null;
+          stemProgress('Trying another way', 0, rest[0].ep === 'webgpu' ? 'Setting the graphics chip up differently.' : 'Your phone\'s graphics chip couldn\'t run this one, so this will be slower.');
+          eng = await startEngine(() => {}, rest);
+          stemProgress('Splitting the song', 0, 'Keep this page open.');
+          try {
+            stems = await stemSplit(left, right, checkedRun(eng.run), onStep);
+          } catch (e2) {
+            if (sx.cancel || !eng.rest.length || pieces > 0) throw e2;
+            const rest2 = eng.rest;
+            eng.close();
+            eng = null;
+            stemProgress('Trying another way', 0, 'Your phone\'s graphics chip couldn\'t run this one, so this will be slower.');
+            eng = await startEngine(() => {}, rest2);
+            stems = await stemSplit(left, right, checkedRun(eng.run), onStep);
+          }
         }
-        // The graphics chip couldn't run it at all: start over the slower way, after letting go of
-        // the first copy of the model (two at once is more than a phone has room for).
-        sx.ep = 'wasm';
-        try { await sx.session.release(); } catch (e2) { /* already gone */ }
-        sx.session = null;
-        stemProgress('Switching to the slower splitter', 0, 'Your phone\'s graphics chip couldn\'t run this one.');
-        sx.session = await openSession('wasm', () => {});
-        out.forEach((b) => { b.getChannelData(0).fill(0); b.getChannelData(1).fill(0); });
-        await stemSplit(left, right, modelRunner(sx.ort, sx.session), outArr(), onStep);
+      } finally {
+        if (eng) eng.close(); // the splitter's memory is handed back here
       }
 
+      // Now the parts become playable audio, one at a time, dropping each 16-bit copy as it goes.
       stemProgress('Finding the beat and the key', 1, 'Almost done');
       await new Promise((r) => setTimeout(r, 30));
+      const out = stems.map((pair, s) => {
+        const b = newStereo(n);
+        for (let c = 0; c < 2; c++) {
+          const d = b.getChannelData(c), p = pair[c];
+          for (let i = 0; i < n; i++) d[i] = p[i] / PCM_SCALE;
+        }
+        stems[s] = null;
+        return b;
+      });
+      stems = null;
+      const outArr = () => out.map((b) => [b.getChannelData(0), b.getChannelData(1)]);
+
       let beat = null, key = null;
       try { beat = analyzeBeat(outArr()); } catch (e) { beat = null; }
       try { key = analyzeKey(outArr()); } catch (e) { key = null; }

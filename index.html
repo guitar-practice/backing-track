@@ -775,6 +775,8 @@
   .stem-actions .btn svg { width: 15px; height: 15px; }
   .stem-note { font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--parchment-faint); }
   p.stem-note { margin: 0; }
+  .stem-import { margin-top: 10px !important; }
+  .stem-import .textbtn { font-size: 12px; margin-left: 4px; }
   .stem-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--well); border: 1px solid var(--line); border-radius: 12px; }
   .stem-workhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
   .stem-msg { font-family: var(--sans); font-size: 14px; color: var(--parchment); }
@@ -1409,10 +1411,14 @@
     </div>
     <input type="file" id="stemFile" class="vh" tabindex="-1" aria-hidden="true"
       accept="audio/*,video/*,.mp3,.m4a,.aac,.wav,.aif,.aiff,.flac,.ogg,.mp4,.mov">
+    <p class="stem-note stem-import"><span id="splitOpenLead">Split it on another device?</span>
+      <button type="button" class="textbtn" id="splitOpen">Open a split song file</button></p>
+    <input type="file" id="splitFileIn" class="vh" tabindex="-1" aria-hidden="true">
     <div class="stem-lib" id="libRow" hidden>
       <label class="sublbl" for="libSel">Your songs</label>
       <div class="libpick">
         <select id="libSel" aria-describedby="libNote"></select>
+        <button type="button" class="textbtn" id="libSend" hidden>Send</button>
         <button type="button" class="textbtn" id="libDel" hidden>Delete</button>
       </div>
       <p class="stem-note" id="libNote"></p>
@@ -1517,7 +1523,8 @@
     </details>
     <p class="credit">Splitting by <a href="https://github.com/facebookresearch/demucs" target="_blank" rel="noopener">Demucs</a> (Meta AI), using the model from
       <a href="https://github.com/bakkot/demucs-js" target="_blank" rel="noopener">demucs-js</a> by Kevin Gibbons and
-      <a href="https://onnxruntime.ai" target="_blank" rel="noopener">ONNX Runtime</a>. The model is for personal use.</p>
+      <a href="https://onnxruntime.ai" target="_blank" rel="noopener">ONNX Runtime</a>. The model is for personal use.
+      <span id="appVer"></span></p>
   </section>
 
   <div class="toast" id="toast" role="status" hidden></div>
@@ -6825,25 +6832,41 @@ function compilePattern(preset, meter) {
   /* If the phone closes the page mid-split (it does that, with no warning, when a page uses too much
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
+  // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
+  const APP_VERSION = '2026-10-19c';
+  $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
+  let tryNote = null;
   function markTry(v) {
+    tryNote = v;
     try { if (v) localStorage.setItem(STEM_TRY, JSON.stringify(v)); else localStorage.removeItem(STEM_TRY); } catch (e) { /* storage off */ }
   }
+  // Adds to the note: which route the splitter took, which step it was on, how many pieces were done.
+  function noteTry(more) { if (tryNote) markTry(Object.assign(tryNote, more)); }
   (() => {
     let t = null;
     try { t = JSON.parse(localStorage.getItem(STEM_TRY) || 'null'); } catch (e) { t = null; }
     markTry(null);
     if (!t || !(Date.now() - t.at < 3 * 86400e3)) return;
     const len = t.sec ? ' (a ' + fmtTime(t.sec) + ' song)' : '';
-    stemFb.textContent = t.stage === 'split'
-      ? 'Last time, the page closed while splitting' + len + ', most likely because the phone ran out of memory for it. Close other apps and Safari tabs, then try again. A shorter song needs less memory.'
-      : 'Last time, the page closed while the splitter was getting ready, most likely because the phone ran out of memory for it. Close other apps and Safari tabs, then try again.';
+    const where = { setup: 'while the splitter was getting ready', split: 'while splitting' + len, finish: 'while finishing a split' + len };
+    let msg = 'Last time, the page closed ' + (where[t.stage] || where.split) + ', most likely because the phone ran out of memory for it. ' +
+      'Close other apps and Safari tabs, then try again.' + (t.stage === 'setup' ? '' : ' A shorter song needs less memory.');
+    // The details that say what to fix next.
+    const det = ['version ' + (t.ver || 'before 2026-10-19c')];
+    if (t.ep) det.push((t.ep === 'webgpu' ? 'graphics chip' : 'slower route') + (t.half ? ', 16-bit' : ', 32-bit') + (t.where === 'page' ? ', in the page' : ', in a worker'));
+    if (t.step) det.push(t.step);
+    if (t.total) det.push('stopped after piece ' + (t.piece || 0) + ' of ' + t.total);
+    msg += ' (Details: ' + det.join(' · ') + '.)';
+    stemFb.textContent = msg;
   })();
 
   function renderStems() {
     stemEngineNote.textContent = sx.busy ? '' : inClaude
       ? 'Song splitting can\'t download its AI model inside the Claude app. Open your GitHub page in Safari to split songs.'
-      : hasGpu()
+      : IOS
+        ? 'Splitting needs a lot of memory, and an iPhone may close the page partway. Splitting on a computer works much better: open this page there, split the song, tap Send under "Your songs", and AirDrop the file here.'
+        : hasGpu()
         ? 'Splitting a song takes a few minutes.'
         : 'This browser can\'t use your phone\'s graphics chip, so splitting will be slow (10 minutes or more for a song).';
     stemChooseTxt.textContent = sp.bufs ? 'Choose another song' : 'Choose a song';
@@ -7990,24 +8013,28 @@ self.onmessage = async (e) => {
       const { ep, half } = plan[i], rest = plan.slice(i + 1);
       if (workerOk && (ep === 'wasm' || probe.gpu)) {
         if (!wk) { wk = newWorker(); await wk.ask({ type: 'probe' }, null, 15000); }
+        noteTry({ step: 'loading the model', ep, half, where: 'worker' });
         const m = await getModelBytes(onBytes);
         if (sx.cancel) { wk.close(); throw new Error('cancelled'); }
         let bytes = lowmemPatch(m.buf, m.len).bytes;
         m.buf = null;
         if (half) {
+          noteTry({ step: 'making the model 16-bit' });
           setting(ep, 'Making it lighter for your phone');
           await new Promise((r) => setTimeout(r, 50));
           bytes = halfModel(bytes) || bytes;
         }
         setting(ep);
+        noteTry({ step: 'starting the model' });
         // The model's bytes move into the worker rather than being copied.
         const r = await wk.ask({ type: 'init', base: ORT_BASE, ep, buf: bytes.buffer, off: bytes.byteOffset, len: bytes.length },
           [bytes.buffer], ep === 'webgpu' ? 90000 : 0);
         bytes = null;
         if (r.type === 'ready') {
           const w = wk;
+          noteTry({ step: 'model ready' });
           return {
-            ep, rest,
+            ep, rest, half, where: 'worker',
             run: async (mix, mag) => {
               const o = await w.ask({ type: 'run', mix: mix.slice(), mag }, [mag.buffer]);
               if (o.type !== 'out') throw new Error(o.msg || 'the splitter stopped');
@@ -8026,9 +8053,11 @@ self.onmessage = async (e) => {
       if (wk) { wk.close(); wk = null; }
       if (half && plan.some((x, j) => j > i && x.ep === ep)) continue; // the page route uses full precision
       try {
+        noteTry({ step: 'starting the model', ep, half: false, where: 'page' });
         const session = await openSession(ep, onBytes);
         const ort = await loadOrt();
-        return { ep, rest, run: pageRunner(ort, session), close: () => { try { session.release(); } catch (e) { /* gone */ } } };
+        noteTry({ step: 'model ready' });
+        return { ep, rest, half: false, where: 'page', run: pageRunner(ort, session), close: () => { try { session.release(); } catch (e) { /* gone */ } } };
       } catch (e) {
         if (sx.cancel || /HTTP|download|too small|Failed to fetch|Load failed|NetworkError/i.test(String(e && e.message))) throw e;
         lastErr = e;
@@ -8084,7 +8113,7 @@ self.onmessage = async (e) => {
       }
 
       stage = 'model';
-      markTry({ stage: 'setup', at: Date.now(), sec });
+      markTry({ stage: 'setup', at: Date.now(), sec, ver: APP_VERSION });
       stemProgress('Getting the splitter ready', 0, 'Checking for a saved copy on this phone');
       const onBytes = (got, total) => {
         const mb = (b) => Math.round(b / 1e6);
@@ -8094,11 +8123,12 @@ self.onmessage = async (e) => {
       let eng = await startEngine(onBytes);
 
       stage = 'split';
-      markTry({ stage: 'split', at: Date.now(), sec });
+      noteTry({ stage: 'split', step: 'splitting', piece: 0 });
       const t0 = performance.now();
       let pieces = 0;
       const onStep = (done, total) => {
         pieces = done;
+        noteTry({ piece: done, total });
         if (sx.cancel) throw new Error('cancelled');
         const per = (performance.now() - t0) / done / 1000;
         const left = Math.round(per * (total - done));
@@ -8140,6 +8170,7 @@ self.onmessage = async (e) => {
         if (eng) eng.close(); // the splitter's memory is handed back here
       }
 
+      noteTry({ stage: 'finish', step: 'making the parts playable' });
       // Now the parts become playable audio, one at a time, dropping each 16-bit copy as it goes.
       stemProgress('Finding the beat and the key', 1, 'Almost done');
       await new Promise((r) => setTimeout(r, 30));
@@ -8230,6 +8261,7 @@ self.onmessage = async (e) => {
   const LIB_DB = 'splitter-library', LIB_STORE = 'songs', LIB_KBPS = 112;
   const LAME_URL = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
   const libRow = $('libRow'), libSel = $('libSel'), libDel = $('libDel'), libNote = $('libNote'), libStatus = $('libStatus');
+  const libSend = $('libSend'), splitOpen = $('splitOpen'), splitFileIn = $('splitFileIn');
   const lib = { db: null, songs: [], saving: false, opening: false, worker: null, delArmed: null, ok: typeof indexedDB !== 'undefined' };
   function libReq(r) { return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
   async function libOpenDb() {
@@ -8261,6 +8293,7 @@ self.onmessage = async (e) => {
     libSel.value = lib.songs.some((s) => s.id === cur) ? cur : '';
     libSel.disabled = sx.busy || lib.saving || lib.opening;
     libDel.hidden = !libSel.value;
+    libSend.hidden = !libSel.value;
     libDel.textContent = lib.delArmed === libSel.value && libSel.value ? 'Tap again to delete' : 'Delete';
     const total = lib.songs.reduce((a, s) => a + (s.bytes || 0), 0);
     libNote.textContent = lib.songs.length + (lib.songs.length === 1 ? ' song' : ' songs') + ' · ' + fmtMB(total) +
@@ -8449,6 +8482,101 @@ self.onmessage = async (e) => {
     await libRefresh();
   });
   libRefresh();
+
+  /* Moving a split song between devices: one file holding the four parts (the same MP3s the
+     library keeps) and the song's details. Split on a computer, Send, AirDrop it to the phone,
+     then Open it there. Layout: "BTSPLIT1", the header's length (4 bytes), the header as JSON,
+     then the four parts back to back. */
+  const SPLIT_MAGIC = 'BTSPLIT1';
+  async function sendSong(id) {
+    const rec = await libReq((await libStore('readonly')).get(id));
+    if (!rec) throw new Error('not found');
+    const head = utf8(JSON.stringify({
+      v: 1, name: rec.name, dur: rec.dur, delay: rec.delay || 0, beat: rec.beat || null, key: rec.key || null,
+      sizes: rec.parts.map((b) => b.size), types: rec.parts.map((b) => b.type || 'audio/mpeg'),
+    }));
+    const len = new Uint8Array(4);
+    new DataView(len.buffer).setUint32(0, head.length, true);
+    const blob = new Blob([utf8(SPLIT_MAGIC), len, head, ...rec.parts], { type: 'application/octet-stream' });
+    const fname = (rec.name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Split song') + '.btsplit';
+    // Phones and Macs can hand it straight to AirDrop; otherwise it downloads.
+    try {
+      const file = new File([blob], fname, { type: 'application/octet-stream' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: rec.name });
+        return 'shared';
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return 'cancelled';
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 10000);
+    return 'downloaded';
+  }
+  async function openSplitFile(file) {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const bad = () => new Error('not a split song file');
+    if (buf.length < 12 || new TextDecoder().decode(buf.subarray(0, 8)) !== SPLIT_MAGIC) throw bad();
+    const hlen = new DataView(buf.buffer, buf.byteOffset + 8, 4).getUint32(0, true);
+    if (12 + hlen > buf.length) throw bad();
+    const h = JSON.parse(new TextDecoder().decode(buf.subarray(12, 12 + hlen)));
+    if (!h || h.v !== 1 || !Array.isArray(h.sizes) || h.sizes.length !== 4) throw bad();
+    let off = 12 + hlen;
+    if (off + h.sizes.reduce((a, b) => a + b, 0) !== buf.length) throw bad();
+    const parts = h.sizes.map((n, i) => { const b = new Blob([buf.subarray(off, off + n)], { type: h.types[i] || 'audio/mpeg' }); off += n; return b; });
+    const same = lib.songs.find((x) => x.name === h.name && Math.abs(x.dur - h.dur) < 0.5);
+    if (same) return { id: same.id, again: true, name: h.name };
+    const rec = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      name: String(h.name || 'Split song').slice(0, 200), dur: Number(h.dur) || 0, savedAt: Date.now(),
+      bytes: parts.reduce((a, b) => a + b.size, 0), delay: Number(h.delay) || 0, parts,
+      beat: h.beat && Array.isArray(h.beat.beats) ? { bpm: h.beat.bpm, meter: h.beat.meter, beats: h.beat.beats } : null,
+      key: h.key && Number.isInteger(h.key.root) ? { root: h.key.root, scale: h.key.scale } : null,
+    };
+    await libReq((await libStore('readwrite')).put(rec));
+    await libRefresh();
+    return { id: rec.id, again: false, name: rec.name };
+  }
+  libSend.addEventListener('click', async () => {
+    const id = libSel.value;
+    if (!id) return;
+    const name = (lib.songs.find((s) => s.id === id) || {}).name || 'this song';
+    try {
+      const how = await sendSong(id);
+      if (how === 'downloaded') setLibStatus('Saved ' + name + ' as a .btsplit file (in Downloads). Send it to your phone with AirDrop, then tap "Open a split song file" there.');
+      else if (how === 'shared') setLibStatus('Sent ' + name + '. On the other device, tap "Open a split song file" and pick it.');
+    } catch (e) {
+      setLibStatus('Couldn\'t make a file of that song (' + String((e && e.message) || e) + ').');
+    }
+  });
+  $('splitOpenLead').textContent = IOS ? 'Split it on a computer instead?' : 'Split it on another device?';
+  splitOpen.addEventListener('click', () => {
+    ensureCtx();
+    splitFileIn.value = '';
+    splitFileIn.click();
+  });
+  splitFileIn.addEventListener('change', async () => {
+    const f = splitFileIn.files && splitFileIn.files[0];
+    if (!f || sx.busy || lib.opening) return;
+    stemFb.textContent = '';
+    setLibStatus('');
+    try {
+      if (!lib.ok) throw new Error('this browser can\'t keep a song library');
+      const r = await openSplitFile(f);
+      await openFromLibrary(r.id);
+      setLibStatus(r.again ? r.name + ' was already in your library, so that copy is open now.' : 'Added ' + r.name + ' to your library. It plays right away and stays here.');
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      stemFb.textContent = /not a split song/.test(msg)
+        ? 'That isn\'t a split song file. Pick the .btsplit file made with Send on the other device.'
+        : 'Couldn\'t open that file (' + msg + ').';
+    }
+  });
+  renderLibrary();
 
   /* ---------- Keyboard ---------- */
   document.addEventListener('keydown', (e) => {

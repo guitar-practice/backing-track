@@ -776,6 +776,11 @@
   .stem-note { font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--parchment-faint); }
   p.stem-note { margin: 0; }
   .stem-import { margin-top: 10px !important; }
+  .sendbox { margin-top: 10px; }
+  .sendbtns { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .sendbox .stem-note b, .stem-help .steps b { color: var(--parchment); font-weight: 600; }
+  .stem-help .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px;
+    font-family: var(--sans); font-size: 13px; line-height: 1.5; color: var(--parchment-dim); }
   .stem-import .textbtn { font-size: 12px; margin-left: 4px; }
   .stem-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--well); border: 1px solid var(--line); border-radius: 12px; }
   .stem-workhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
@@ -1422,6 +1427,17 @@
         <button type="button" class="textbtn" id="libDel" hidden>Delete</button>
       </div>
       <p class="stem-note" id="libNote"></p>
+      <div class="stem-card sendbox" id="sendBox" hidden>
+        <div class="stem-workhead">
+          <span class="stem-msg" id="sendTitle">Send this song</span>
+          <button type="button" class="textbtn" id="sendClose">Close</button>
+        </div>
+        <div class="sendbtns">
+          <button type="button" class="btn primary" id="sendShare">AirDrop or share</button>
+          <button type="button" class="btn" id="sendSave">Save the file</button>
+        </div>
+        <p class="stem-note" id="sendNote" aria-live="polite"></p>
+      </div>
     </div>
 
     <div class="stem-card" id="stemWork" hidden>
@@ -1519,6 +1535,15 @@
         <p class="intro"><b>Songs you bought on iTunes:</b> on a Mac, open the Music app and drag the song to your desktop, then AirDrop it to your phone and choose Save to Files. On a Windows PC, the songs are in your iTunes Media folder; copy one into iCloud Drive.</p>
         <p class="intro"><b>Apple Music and Spotify songs</b> are copy-protected, so they can't be split, here or in any other app.</p>
         <p class="intro"><b>The first song</b> downloads the splitter, an AI model of about 200 MB, so use Wi-Fi. It's saved on your phone after that. A typical song takes a few minutes to split; keep this page open while it works.</p>
+        <p class="intro"><b>Split on your computer, play on your iPhone.</b> Splitting needs more memory than an iPhone gives a web page, so it can close the page partway. A laptop has plenty. Each device keeps its own list of songs, so a song split on the laptop isn't on the phone until you send it over:</p>
+        <ol class="steps">
+          <li>On the laptop, open this page, go to <b>Splitter</b> and choose the song. When it's done, it's saved under <b>Your songs</b>.</li>
+          <li>Pick it in Your songs and tap <b>Send</b>.</li>
+          <li>Tap <b>AirDrop or share</b>, choose <b>AirDrop</b>, then pick your iPhone. (Or tap <b>Save the file</b>: it goes to the laptop's Downloads folder, and from there you can AirDrop it from Finder, drag it into iCloud Drive, or email it to yourself.)</li>
+          <li>On the iPhone, AirDrop puts it in the <b>Files</b> app, in <b>Downloads</b>. If the phone asks what to do with it, choose <b>Save to Files</b>.</li>
+          <li>Open this page on the iPhone, go to <b>Splitter</b> and tap <b>Open a split song file</b>. Choose <b>Choose File</b> (not Photo Library), then <b>Browse</b>, then <b>Downloads</b> (or iCloud Drive), and pick the song.</li>
+        </ol>
+        <p class="intro">The song goes into the iPhone's own list, so you only send it once. A 4-minute song is a file of about 14 MB. The Home Screen icon and Safari keep separate lists, so open the file in whichever one you practice with.</p>
       </div>
     </details>
     <p class="credit">Splitting by <a href="https://github.com/facebookresearch/demucs" target="_blank" rel="noopener">Demucs</a> (Meta AI), using the model from
@@ -6833,7 +6858,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-10-19c';
+  const APP_VERSION = '2026-10-19d';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;
@@ -6865,7 +6890,7 @@ function compilePattern(preset, meter) {
     stemEngineNote.textContent = sx.busy ? '' : inClaude
       ? 'Song splitting can\'t download its AI model inside the Claude app. Open your GitHub page in Safari to split songs.'
       : IOS
-        ? 'Splitting needs a lot of memory, and an iPhone may close the page partway. Splitting on a computer works much better: open this page there, split the song, tap Send under "Your songs", and AirDrop the file here.'
+        ? 'Splitting needs a lot of memory, and an iPhone may close the page partway. Splitting on a computer works much better; see "How to get a song onto your phone" below for how to send it here.'
         : hasGpu()
         ? 'Splitting a song takes a few minutes.'
         : 'This browser can\'t use your phone\'s graphics chip, so splitting will be slow (10 minutes or more for a song).';
@@ -8262,6 +8287,7 @@ self.onmessage = async (e) => {
   const LAME_URL = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
   const libRow = $('libRow'), libSel = $('libSel'), libDel = $('libDel'), libNote = $('libNote'), libStatus = $('libStatus');
   const libSend = $('libSend'), splitOpen = $('splitOpen'), splitFileIn = $('splitFileIn');
+  const sendBox = $('sendBox'), sendTitle = $('sendTitle'), sendShare = $('sendShare'), sendSave = $('sendSave'), sendNote = $('sendNote');
   const lib = { db: null, songs: [], saving: false, opening: false, worker: null, delArmed: null, ok: typeof indexedDB !== 'undefined' };
   function libReq(r) { return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
   async function libOpenDb() {
@@ -8460,6 +8486,8 @@ self.onmessage = async (e) => {
   }
   libSel.addEventListener('change', () => {
     lib.delArmed = null;
+    sendBox.hidden = true;
+    sending = null;
     if (libSel.value) { ensureCtx(); openFromLibrary(libSel.value); }
     renderLibrary();
   });
@@ -8475,6 +8503,7 @@ self.onmessage = async (e) => {
       return;
     }
     lib.delArmed = null;
+    sendBox.hidden = true;
     const name = (lib.songs.find((s) => s.id === id) || {}).name;
     try { await libReq((await libStore('readwrite')).delete(id)); } catch (e) { /* listed again below */ }
     if (sp.libId === id) sp.libId = null;
@@ -8488,7 +8517,10 @@ self.onmessage = async (e) => {
      then Open it there. Layout: "BTSPLIT1", the header's length (4 bytes), the header as JSON,
      then the four parts back to back. */
   const SPLIT_MAGIC = 'BTSPLIT1';
-  async function sendSong(id) {
+  const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  // The song as one file, ready before either button is tapped: a share sheet only opens straight
+  // from a tap, with no waiting in between.
+  async function songFile(id) {
     const rec = await libReq((await libStore('readonly')).get(id));
     if (!rec) throw new Error('not found');
     const head = utf8(JSON.stringify({
@@ -8499,24 +8531,56 @@ self.onmessage = async (e) => {
     new DataView(len.buffer).setUint32(0, head.length, true);
     const blob = new Blob([utf8(SPLIT_MAGIC), len, head, ...rec.parts], { type: 'application/octet-stream' });
     const fname = (rec.name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Split song') + '.btsplit';
-    // Phones and Macs can hand it straight to AirDrop; otherwise it downloads.
+    return { name: rec.name, fname, blob, file: new File([blob], fname, { type: 'application/octet-stream' }) };
+  }
+  let sending = null; // { id, name, fname, blob, file }
+  const canShareFile = (f) => { try { return !!(navigator.canShare && navigator.canShare({ files: [f] })); } catch (e) { return false; } };
+  const phoneSteps = (fname) => 'On your iPhone, it\'s in the <b>Files</b> app under <b>Downloads</b> (if the phone asks, choose Save to Files). ' +
+    'Then open this page there, go to Splitter, tap <b>Open a split song file</b> → <b>Choose File</b> → <b>Browse</b> → <b>Downloads</b>, and pick <b>' + escapeHtml(fname) + '</b>.';
+  async function openSend(id) {
+    sendBox.hidden = false;
+    sendShare.disabled = sendSave.disabled = true;
+    sendTitle.textContent = 'Getting the file ready';
+    sendNote.textContent = '';
     try {
-      const file = new File([blob], fname, { type: 'application/octet-stream' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: rec.name });
-        return 'shared';
-      }
+      sending = Object.assign({ id }, await songFile(id));
     } catch (e) {
-      if (e && e.name === 'AbortError') return 'cancelled';
+      sending = null;
+      sendTitle.textContent = 'Couldn\'t make a file of that song';
+      sendNote.textContent = String((e && e.message) || e);
+      return;
     }
+    sendTitle.textContent = IOS ? 'Send ' + sending.name : 'Send ' + sending.name + ' to your iPhone';
+    const share = canShareFile(sending.file);
+    sendShare.hidden = !share;
+    sendShare.disabled = sendSave.disabled = false;
+    sendNote.innerHTML = (share ? '<b>AirDrop or share</b> opens your share options: pick AirDrop, then your iPhone. ' : '') +
+      '<b>Save the file</b> puts it in ' + (IOS ? 'Files' : 'your Downloads folder') + ' as <b>' + escapeHtml(sending.fname) + '</b> (' + fmtMB(sending.blob.size) + ').';
+  }
+  sendShare.addEventListener('click', async () => {
+    if (!sending) return;
+    try {
+      await navigator.share({ files: [sending.file], title: sending.name });
+      sendNote.innerHTML = 'Sent, if you picked AirDrop and your iPhone. ' + phoneSteps(sending.fname);
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // closed without sending
+      sendNote.innerHTML = 'That didn\'t open (' + escapeHtml(String((e && e.message) || e)) + '). Tap <b>Save the file</b> instead.';
+    }
+  });
+  sendSave.addEventListener('click', () => {
+    if (!sending) return;
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fname;
+    a.href = URL.createObjectURL(sending.blob);
+    a.download = sending.fname;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 10000);
-    return 'downloaded';
-  }
+    sendNote.innerHTML = IOS
+      ? 'Saved as <b>' + escapeHtml(sending.fname) + '</b>. Safari may ask first; it then goes to Files → Downloads.'
+      : 'Saved to your <b>Downloads</b> folder as <b>' + escapeHtml(sending.fname) + '</b>. To get it onto your iPhone: in Finder, open Downloads, ' +
+        'right-click the file, choose <b>Share → AirDrop</b> and pick your iPhone (or drag it into iCloud Drive). ' + phoneSteps(sending.fname);
+  });
+  $('sendClose').addEventListener('click', () => { sendBox.hidden = true; sending = null; });
   async function openSplitFile(file) {
     const buf = new Uint8Array(await file.arrayBuffer());
     const bad = () => new Error('not a split song file');
@@ -8541,17 +8605,8 @@ self.onmessage = async (e) => {
     await libRefresh();
     return { id: rec.id, again: false, name: rec.name };
   }
-  libSend.addEventListener('click', async () => {
-    const id = libSel.value;
-    if (!id) return;
-    const name = (lib.songs.find((s) => s.id === id) || {}).name || 'this song';
-    try {
-      const how = await sendSong(id);
-      if (how === 'downloaded') setLibStatus('Saved ' + name + ' as a .btsplit file (in Downloads). Send it to your phone with AirDrop, then tap "Open a split song file" there.');
-      else if (how === 'shared') setLibStatus('Sent ' + name + '. On the other device, tap "Open a split song file" and pick it.');
-    } catch (e) {
-      setLibStatus('Couldn\'t make a file of that song (' + String((e && e.message) || e) + ').');
-    }
+  libSend.addEventListener('click', () => {
+    if (libSel.value) openSend(libSel.value);
   });
   $('splitOpenLead').textContent = IOS ? 'Split it on a computer instead?' : 'Split it on another device?';
   splitOpen.addEventListener('click', () => {

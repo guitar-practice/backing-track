@@ -89,7 +89,7 @@
   /* Tabs */
   .tabs {
     display: grid;
-    grid-template-columns: repeat(6, auto);
+    grid-template-columns: repeat(7, auto);
     justify-content: space-between;
     border-bottom: 1px solid var(--line);
     margin: 0 -6px 20px;
@@ -841,6 +841,84 @@
   .credit { margin: 10px 0 0; font-family: var(--sans); font-size: 11px; line-height: 1.45; color: rgba(237, 226, 208, 0.4); }
   .credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
+  /* Looper */
+  .lp-top { display: flex; align-items: center; gap: 14px; }
+  .lp-tempo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .lp-tempo output { min-width: 0; font-size: 14px; margin-left: 4px; color: var(--parchment); }
+  .tempo-adj button:disabled { opacity: 0.35; cursor: default; }
+  .lp-pair { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 5fr); gap: 10px; }
+  .lp-pair .seg button { padding-left: 0; padding-right: 0; }
+  .seg button:disabled { opacity: 0.4; cursor: default; }
+  .lp-lock { margin: -6px 0 0; font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--parchment-faint); }
+  .lp-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px;
+    padding: 14px 12px 10px; border-radius: 16px; background: #060505;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 6px 18px rgba(0, 0, 0, 0.6);
+  }
+  .lp-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+  .lp-circle { position: relative; width: 100%; aspect-ratio: 1 / 1; }
+  .lp-circle canvas { display: block; width: 100%; height: 100%; }
+  .lp-hit {
+    position: absolute; inset: 3%; border-radius: 50%; background: none; border: none; padding: 0; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lp-hit:focus-visible { outline: 2px solid var(--parchment); outline-offset: 2px; }
+  .lp-edit {
+    position: absolute; left: 50%; top: 50%; width: 30%; height: 30%; transform: translate(-50%, -50%);
+    border-radius: 50%; border: 1.5px solid currentColor; background: rgba(0, 0, 0, 0.55); color: var(--lpc, #fff);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lp-edit svg { width: 44%; height: 44%; }
+  .lp-edit:active { transform: translate(-50%, -50%) scale(0.92); }
+  .lp-edit.muted { color: rgba(237, 226, 208, 0.55); }
+  .lp-foot { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 32px; max-width: 100%; }
+  .lp-cap { font-family: var(--sans); font-size: 11.5px; line-height: 1.25; color: rgba(237, 226, 208, 0.7); font-variant-numeric: tabular-nums; min-width: 0; }
+  .lp-clear {
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid rgba(237, 226, 208, 0.6); background: none;
+    color: rgba(237, 226, 208, 0.75); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lp-clear svg { width: 12px; height: 12px; }
+  .lp-clear:disabled { opacity: 0.2; cursor: default; }
+  .lp-under { display: flex; flex-direction: column; gap: 8px; margin-top: -6px; }
+  .lp-status { margin: 0; min-height: 1.45em; font-family: var(--sans); font-size: 13px; line-height: 1.45; color: var(--parchment); }
+  .lp-mic { display: flex; align-items: center; gap: 10px; }
+  .lp-mic .sublbl { min-width: 48px; }
+  .lp-level { flex: 1; height: 6px; border-radius: 3px; background: var(--well); overflow: hidden; }
+  .lp-level i { display: block; height: 100%; width: 0; background: var(--good); border-radius: 3px; }
+  .lp-level i.hot { background: var(--warn); }
+  .lp-note { margin: -4px 0 0; font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--parchment-faint); }
+  .lp-drums { display: flex; flex-direction: column; gap: 8px; }
+  .lp-drumrow { display: flex; align-items: center; gap: 14px; }
+  .lp-drumrow .layercombo { flex: 0 1 200px; }
+  .lp-drumrow input[type="range"] { flex: 1; min-width: 70px; }
+  .lp-settings { display: flex; flex-direction: column; gap: 16px; padding: 4px 0 6px; }
+  .lp-settings .bgrow { margin-top: 0; }
+  .lp-slider { display: flex; flex-direction: column; gap: 6px; font-family: var(--sans); font-size: 12px; color: var(--parchment-dim); }
+  .lp-slider output, .lp-sync output { min-width: 0; font-size: 12px; font-family: var(--sans); color: var(--parchment); margin-left: 2px; }
+  .lp-sync { display: flex; flex-direction: column; gap: 8px; }
+  .lp-modal {
+    position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center;
+    background: rgba(10, 6, 3, 0.62); padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  .lp-modal.lp-center { align-items: center; }
+  .lp-sheet {
+    width: 100%; max-width: 460px; max-height: calc(100% - 8px); overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+    padding: 16px; border-radius: 16px; border: 1px solid var(--line);
+    background: linear-gradient(160deg, var(--wood) 0%, var(--wood-dark) 100%); box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+    animation: open 0.16s ease;
+  }
+  .lp-sheet.lp-small { max-width: 340px; }
+  .lp-sheet p { margin: 0; }
+  .lp-sheet .actions { display: flex; justify-content: flex-end; gap: 10px; }
+  #lpCfText { font-family: var(--sans); font-size: 15px; line-height: 1.45; color: var(--parchment); }
+  .lp-sheet-head { display: flex; align-items: center; justify-content: space-between; font-family: var(--serif); font-size: 18px; color: var(--parchment); }
+  .lp-sheet-head .btn { padding: 7px 18px; }
+  .lp-trim { height: 140px; }
+  .lp-focus { flex: 0 1 150px; }
+  .lp-edrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
   /* Pill buttons */
   .actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .btn {
@@ -1142,6 +1220,7 @@
     <button type="button" class="tab" role="tab" id="tab-drills" data-tab="drills" aria-controls="panel-drills" aria-selected="false" tabindex="-1">Drills</button>
     <button type="button" class="tab" role="tab" id="tab-saved" data-tab="saved" aria-controls="panel-saved" aria-selected="false" tabindex="-1">Saved</button>
     <button type="button" class="tab" role="tab" id="tab-stems" data-tab="stems" aria-controls="panel-stems" aria-selected="false" tabindex="-1">Splitter</button>
+    <button type="button" class="tab" role="tab" id="tab-looper" data-tab="looper" aria-controls="panel-looper" aria-selected="false" tabindex="-1">Looper</button>
   </div>
 
   <div class="head">
@@ -1550,6 +1629,121 @@
       <a href="https://github.com/bakkot/demucs-js" target="_blank" rel="noopener">demucs-js</a> by Kevin Gibbons and
       <a href="https://onnxruntime.ai" target="_blank" rel="noopener">ONNX Runtime</a>. The model is for personal use.
       <span id="appVer"></span></p>
+  </section>
+
+  <!-- Looper -->
+  <section class="panel flow" id="panel-looper" data-tab="looper" role="tabpanel" aria-labelledby="tab-looper" hidden>
+    <div class="lp-top">
+      <button type="button" id="lpPlay" class="play" aria-label="Play the loops"></button>
+      <div class="lp-tempo">
+        <span class="sublbl" id="lpTempoLbl">Tempo <output id="lpBpm">♩ = 92</output></span>
+        <div class="tempo-adj" role="group" aria-labelledby="lpTempoLbl" id="lpTempo">
+          <button type="button" data-d="-10" aria-label="10 bpm slower">−10</button>
+          <button type="button" data-d="-1" aria-label="1 bpm slower">−1</button>
+          <button type="button" data-d="1" aria-label="1 bpm faster">+1</button>
+          <button type="button" data-d="10" aria-label="10 bpm faster">+10</button>
+        </div>
+      </div>
+    </div>
+    <div class="lp-pair">
+      <div class="field">
+        <span id="lpMeterLbl">Time</span>
+        <div class="seg small" id="lpMeter" role="group" aria-labelledby="lpMeterLbl">
+          <button type="button" data-m="4/4" aria-pressed="true">4/4</button><button type="button" data-m="3/4" aria-pressed="false">3/4</button><button type="button" data-m="6/8" aria-pressed="false">6/8</button>
+        </div>
+      </div>
+      <div class="field">
+        <span id="lpBarsLbl">Measures to record</span>
+        <div class="seg small five" id="lpBars" role="group" aria-labelledby="lpBarsLbl">
+          <button type="button" data-b="1">1</button><button type="button" data-b="2">2</button><button type="button" data-b="4">4</button><button type="button" data-b="8">8</button><button type="button" data-b="16">16</button>
+        </div>
+      </div>
+    </div>
+    <p class="lp-lock" id="lpLock" hidden>Tempo and time are set by your loops. Clear them all to change these.</p>
+    <div class="field">
+      <span id="lpMetroLbl">Metronome</span>
+      <div class="seg small" id="lpMetro" role="group" aria-labelledby="lpMetroLbl">
+        <button type="button" data-v="off">Off</button><button type="button" data-v="count">Count-in only</button><button type="button" data-v="always">Always on</button>
+      </div>
+    </div>
+
+    <div class="lp-grid" id="lpGrid"></div>
+    <div class="lp-under">
+      <p class="lp-status" id="lpStatus" aria-live="polite"></p>
+      <div class="lp-mic"><span class="sublbl" id="lpMicLbl">Mic off</span><div class="lp-level" aria-hidden="true"><i id="lpLevel"></i></div></div>
+    </div>
+    <p class="lp-note">Wear wired headphones if you can. Through the speaker, the mic records your loops along with you, and Bluetooth headphones drop to phone-call sound while the mic is on.</p>
+
+    <details class="mix" id="lpMore">
+      <summary><span>Looper settings</span></summary>
+      <div class="lp-settings">
+        <div class="bgrow">
+          <button type="button" class="toggle" id="lpMonitor" aria-pressed="false" aria-describedby="lpMonNote">Hear yourself</button>
+          <span class="bgnote" id="lpMonNote">Plays the mic in your headphones while you record. Leave it off with the speaker, or it will howl.</span>
+        </div>
+        <label class="lp-slider"><span>Click volume</span><input type="range" id="lpClickVol" min="0" max="100" step="1"></label>
+        <div class="lp-sync">
+          <span class="sublbl" id="lpSyncLbl">Timing fix: <output id="lpSyncOut"></output></span>
+          <input type="range" id="lpSync" min="0" max="400" step="1" aria-labelledby="lpSyncLbl">
+          <div class="lp-edrow"><button type="button" class="btn" id="lpMeasure">Measure it</button><button type="button" class="textbtn" id="lpSyncAuto">Use the phone's guess</button></div>
+          <p class="stem-note">Sound takes a moment to come out of the speaker and back into the mic, so each recording is moved back by this much to land on the beat. To measure it, unplug headphones, turn the volume up and stay quiet while it plays six clicks. Bluetooth headphones add roughly 150 to 250 ms, so if your loops come back late, raise it.</p>
+        </div>
+        <p class="stem-note">Loops stay until you clear them or close the page. They aren't saved.</p>
+      </div>
+    </details>
+
+    <div class="lp-drums">
+      <span class="sublbl">Drums</span>
+      <div class="lp-drumrow">
+        <div class="layercombo" id="lpDrumCombo">
+          <button type="button" class="tile layerchip" id="lpDrums" aria-pressed="false"><span class="ln">Drums</span><span class="lf" id="lpKitName">Rock</span></button>
+          <select class="kitsel" id="lpKit" aria-label="Drum beat"></select>
+        </div>
+        <input type="range" id="lpDrumVol" min="0" max="100" step="1" aria-label="Drum volume">
+      </div>
+      <p class="stem-note">Plays under your loops at the tempo and time above, starting on the first beat.</p>
+    </div>
+
+    <div class="lp-modal" id="lpEditor" hidden role="dialog" aria-modal="true" aria-labelledby="lpEdTitle">
+      <div class="lp-sheet">
+        <div class="lp-sheet-head"><strong id="lpEdTitle">Edit loop 1</strong><button type="button" class="btn primary" id="lpEdDone">Done</button></div>
+        <canvas class="trim lp-trim" id="lpEdCanvas" role="img" aria-label="The loop's waveform. Drag either gold end to trim it."></canvas>
+        <div class="trim-scale"><span id="lpEdL"></span><span id="lpEdSpan"></span><span id="lpEdR"></span></div>
+        <div class="trim-tools">
+          <div class="zoomgrp" role="group" aria-label="Zoom">
+            <button type="button" id="lpZoomOut" aria-label="Zoom out">−</button>
+            <button type="button" id="lpZoomFit">Fit</button>
+            <button type="button" id="lpZoomIn" aria-label="Zoom in">+</button>
+          </div>
+          <div class="seg small two lp-focus" id="lpEdFocus" role="group" aria-label="Zoom in on">
+            <button type="button" data-e="a" aria-pressed="false">Start</button><button type="button" data-e="b" aria-pressed="true">End</button>
+          </div>
+        </div>
+        <div class="trim-ends">
+          <div class="trim-end">
+            <span class="sublbl">Start</span>
+            <div class="nudge2"><button type="button" data-e="a" data-d="-1" aria-label="Move the start earlier">‹</button><output id="lpEdA"></output><button type="button" data-e="a" data-d="1" aria-label="Move the start later">›</button></div>
+          </div>
+          <div class="trim-end">
+            <span class="sublbl">End</span>
+            <div class="nudge2"><button type="button" data-e="b" data-d="-1" aria-label="Move the end earlier">‹</button><output id="lpEdB"></output><button type="button" data-e="b" data-d="1" aria-label="Move the end later">›</button></div>
+          </div>
+        </div>
+        <p class="caption" id="lpEdLen"></p>
+        <div class="lp-edrow">
+          <button type="button" class="btn" id="lpEdFit">Fit to the beat</button>
+          <button type="button" class="textbtn" id="lpEdReset">Undo all trims</button>
+        </div>
+        <label class="lp-slider"><span>Loop volume <output id="lpEdVolOut"></output></span><input type="range" id="lpEdVol" min="0" max="200" step="1"></label>
+        <p class="caption">Drag the gold ends, or pick Start or End and tap + to zoom in on it; ‹ › move it one step at the current zoom. Faint lines are the beats. The loop keeps playing, so you hear each change.</p>
+      </div>
+    </div>
+    <div class="lp-modal lp-center" id="lpConfirm" hidden role="alertdialog" aria-modal="true" aria-labelledby="lpCfText">
+      <div class="lp-sheet lp-small">
+        <p id="lpCfText">Clear loop 1?</p>
+        <div class="actions"><button type="button" class="btn" id="lpCfNo">Keep it</button><button type="button" class="btn primary" id="lpCfYes">Clear it</button></div>
+      </div>
+    </div>
   </section>
 
   <div class="toast" id="toast" role="status" hidden></div>
@@ -2056,8 +2250,10 @@ function compilePattern(preset, meter) {
 
   /* ---------- State ---------- */
   const STORE = 'backing-track-builder-v1';
-  const TABS = ['track', 'map', 'lab', 'drills', 'saved', 'stems'];
-  const TAB_TITLES = { track: 'Backing Track', map: 'Key Map', lab: 'Chord Lab', drills: 'Drills', saved: 'Saved Setups', stems: 'Song Splitter' };
+  const TABS = ['track', 'map', 'lab', 'drills', 'saved', 'stems', 'looper'];
+  const TAB_TITLES = { track: 'Backing Track', map: 'Key Map', lab: 'Chord Lab', drills: 'Drills', saved: 'Saved Setups', stems: 'Song Splitter', looper: 'Looper' };
+  const LP_BARS = [1, 2, 4, 8, 16];
+  const LP_METRO = ['off', 'count', 'always'];
   const DRILL_MODES = ['spell', 'chords', 'hearChord', 'hearDegree', 'intervals'];
   const MODE_NAMES = { spell: 'Spell scales', chords: 'Chords in key', hearChord: 'Hear chords', hearDegree: 'Hear degrees', intervals: 'Intervals' };
   const MAX_CHORDS = 16;
@@ -2105,6 +2301,9 @@ function compilePattern(preset, meter) {
     spell: {}, // root -> 'sharp' | 'flat', for the five keys with two names
     lab: { d: 0, sev: false },
     drill: { mode: 'spell', scope: 'key', sev: false, best: {} },
+    // Looper settings (the recordings themselves only live while the page is open).
+    // sync: the speaker-to-mic delay in ms, or null to use the phone's own figure.
+    looper: { bpm: 92, meter: '4/4', bars: 2, metro: 'count', click: 70, drums: { on: false, kit: 'rock', vol: 70 }, monitor: false, sync: null, syncSrc: '' },
   };
   load();
   const hash = (location.hash || '').slice(1);
@@ -2185,6 +2384,29 @@ function compilePattern(preset, meter) {
       if (s.lab && typeof s.lab === 'object') {
         if (Number.isInteger(s.lab.d) && s.lab.d >= 0 && s.lab.d < 7) state.lab.d = s.lab.d;
         state.lab.sev = !!s.lab.sev;
+      }
+      if (s.looper && typeof s.looper === 'object') {
+        const l = s.looper, d = state.looper;
+        const pct = (v, def) => (Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : def);
+        if (Number.isFinite(l.bpm)) d.bpm = Math.max(40, Math.min(250, Math.round(l.bpm)));
+        if (METERS.includes(l.meter)) d.meter = l.meter;
+        if (LP_BARS.includes(l.bars)) d.bars = l.bars;
+        if (LP_METRO.includes(l.metro)) d.metro = l.metro;
+        d.click = pct(l.click, 70);
+        if (l.drums && typeof l.drums === 'object') {
+          d.drums.on = l.drums.on === true;
+          if (DRUM_KITS.some((k) => k.id === l.drums.kit)) d.drums.kit = l.drums.kit;
+          d.drums.vol = pct(l.drums.vol, 70);
+        }
+        d.monitor = l.monitor === true;
+        if (Number.isFinite(l.sync) && l.sync >= 0 && l.sync <= 400) {
+          d.sync = Math.round(l.sync);
+          d.syncSrc = l.syncSrc === 'measured' ? 'measured' : 'manual';
+        }
+      } else {
+        // First visit to the Looper: start from the backing track's tempo and time.
+        state.looper.bpm = state.bpm;
+        state.looper.meter = state.meter;
       }
       if (s.drill && typeof s.drill === 'object') {
         if (DRILL_MODES.includes(s.drill.mode)) state.drill.mode = s.drill.mode;
@@ -3116,6 +3338,7 @@ function compilePattern(preset, meter) {
   /* ---------- Tabs ---------- */
   function setTab(t, focusTab) {
     if (!TABS.includes(t)) return;
+    const was = state.tab;
     if (t !== state.tab) stopRun();
     state.tab = t;
     save();
@@ -3136,6 +3359,8 @@ function compilePattern(preset, meter) {
     }
     if (t === 'saved') renderSaved();
     if (t === 'stems') renderStems();
+    if (t === 'looper') lpShow();
+    else if (was === 'looper') lpLeave();
   }
   tabBtns.forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
   $('tabs').addEventListener('keydown', (e) => {
@@ -4364,6 +4589,7 @@ function compilePattern(preset, meter) {
       return;
     }
     stemHalt(); // one thing playing at a time
+    lpHalt();
     stopRun();
     stopScaleRun();
     killBus(earBus);
@@ -4596,6 +4822,8 @@ function compilePattern(preset, meter) {
     const wasLive = playing && !bgActive;
     if (wasLive) stop();
     const wasStems = stemHalt(); // the split song picks up where it was, on the fresh engine
+    lpHalt(); // the looper stops; its recordings stay and play again on the fresh engine
+    lpCloseMic();
     wa = null;
     const old = ctx;
     ctx = null;
@@ -6858,7 +7086,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-10-19d';
+  const APP_VERSION = '2026-10-23a';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;
@@ -6946,6 +7174,7 @@ function compilePattern(preset, meter) {
   function stemPlay(opts) {
     if (!sp.bufs || !ensureCtx()) return;
     if (playing) stop();
+    lpHalt();
     stopRun();
     stopScaleRun();
     if (sp.playing) stemHalt();
@@ -8633,14 +8862,1414 @@ self.onmessage = async (e) => {
   });
   renderLibrary();
 
+  /* ---------- Looper ----------
+     Four loops recorded from the mic, kept in step on one clock (the transport) along with the
+     metronome and the drums. Times are seconds on the audio engine's clock. Each loop remembers where
+     its first beat sits relative to the transport's first downbeat, so stopping and starting again
+     brings every loop back in step.
+     Mic audio arrives in chunks stamped with the engine time it reached the page. Sound takes a
+     moment to come out of the speaker and back into the mic, so a note played in time with a click
+     arrives that much after the click; each recording is read from that much later so it lands on the
+     beat. Loops play from AudioBuffers looped by the engine itself, which never drift. */
+  const LP = state.looper;
+  const LP_COLORS = ['#ff9b3d', '#ffd23f', '#9cf04a', '#47c2ff'];
+  const LP_REC = '#ff4d4d';
+  const LP_PRE = 1, LP_POST = 1; // seconds kept either side of a recording, so the trimmer can reach them
+  const LP_XF = 0.008;           // crossfade where a loop wraps round
+  const LP_RAMP = 0.006;         // fades happen just before a downbeat, so its attack plays in full
+  const LP_BINS = 120;           // waveform bars round a circle
+  const LP_GRACE = 0.15;         // a tap this soon after a downbeat starts the recording on that downbeat
+  const LP_RING = 3;             // seconds of mic audio kept for that, and for the bit before each recording
+  const LP_MIN = 0.05;           // shortest loop the trimmer allows, in seconds
+  // The drums' mix bus holds sound back a few ms (its two compressors look ahead), so drum hits
+  // are sent that much early to land with the clicks and the loops.
+  const LP_DRUM_LAT = 0.012;
+  const lx = {
+    run: false, t0: 0, next: 0, pos: 0, timer: null,
+    busObj: null, drumG: null, clickG: null, loopOut: null, loopComp: null,
+    loops: [null, null, null, null],
+    rec: null,     // the recording that's counting in or under way
+    caps: [],      // everything collecting mic audio: { from, data, got, env? }
+    mic: null, opening: false, wkCtx: null,
+    level: 0, anim: false, measuring: false, closeWanted: false,
+    msg: '', shown: {},
+  };
+  if (window.__LP_TEST) window.__LP_TEST.lx = lx; // lets the automated tests look inside
+
+  const lpN = () => (LP.meter === '4/4' ? 16 : 12); // steps in a bar
+  const lpSD = () => (LP.meter === '6/8' ? 60 / LP.bpm / 6 : 60 / LP.bpm / 4);
+  const lpBeatSteps = () => (LP.meter === '6/8' ? 2 : 4); // 6/8 clicks every eighth note
+  const lpBar = () => lpN() * lpSD();
+  const lpBeat = () => lpBeatSteps() * lpSD();
+  const lpBeatsPerBar = () => lpN() / lpBeatSteps();
+  const lpMod = (x, m) => ((x % m) + m) % m;
+  const lpLocked = () => lx.loops.some(Boolean) || !!lx.rec;
+  const lpHasSound = () => lx.loops.some(Boolean) || LP.drums.on || LP.metro === 'always';
+  const lpLoopLen = (l) => (l.b - l.a) / l.sr;
+
+  // "2 measures", "1 measure + 3 beats", "5 eighths"
+  function lpBeatsText(k) {
+    const bpb = lpBeatsPerBar(), bars = Math.floor(k / bpb), rem = k - bars * bpb;
+    const unit = LP.meter === '6/8' ? 'eighth' : 'beat';
+    const parts = [];
+    if (bars) parts.push(bars + (bars === 1 ? ' measure' : ' measures'));
+    if (rem) parts.push(rem + ' ' + unit + (rem === 1 ? '' : 's'));
+    return parts.join(' + ') || '0 beats';
+  }
+  const lpBarsText = (n) => (n === 1 ? '1 measure' : n + ' measures');
+
+  /* Speaker-to-mic delay: what you set or measured, or what the browser reports. */
+  function lpAutoLat() {
+    let out = 0, inp = 0.01;
+    try { out = ctx ? (ctx.outputLatency || 0) + (ctx.baseLatency || 0) : 0; } catch (e) { out = 0; }
+    try {
+      const st = lx.mic && lx.mic.track && lx.mic.track.getSettings ? lx.mic.track.getSettings() : null;
+      if (st && Number.isFinite(st.latency) && st.latency > 0) inp = st.latency;
+    } catch (e) { /* not reported */ }
+    return Math.max(0, Math.min(0.4, out + inp));
+  }
+  const lpRTL = () => (LP.sync != null ? LP.sync / 1000 : lpAutoLat());
+
+  /* ---------- Mic ---------- */
+  // Runs on the audio thread: hands the mic's samples over in 1024-sample chunks, each stamped with
+  // the engine frame its first sample belongs to.
+  const LP_TAP_SRC = [
+    'class LpTap extends AudioWorkletProcessor {',
+    '  constructor() { super(); this.b = new Float32Array(1024); this.n = 0; this.f = 0; this.pk = 0; }',
+    '  flush() {',
+    '    if (!this.n) return;',
+    '    const x = this.b.slice(0, this.n);',
+    '    this.port.postMessage({ f: this.f, x: x, pk: this.pk }, [x.buffer]);',
+    '    this.n = 0; this.pk = 0;',
+    '  }',
+    '  process(inputs) {',
+    '    const inp = inputs[0], c0 = inp && inp[0];',
+    '    if (c0 && c0.length) {',
+    '      const c1 = inp.length > 1 ? inp[1] : null, len = c0.length;',
+    '      if (this.n && (currentFrame !== this.f + this.n || this.n + len > this.b.length)) this.flush();',
+    '      if (!this.n) this.f = currentFrame;',
+    '      for (let i = 0; i < len; i++) {',
+    '        const v = c1 ? 0.5 * (c0[i] + c1[i]) : c0[i];',
+    '        this.b[this.n++] = v;',
+    '        const a = v < 0 ? -v : v;',
+    '        if (a > this.pk) this.pk = a;',
+    '      }',
+    '      if (this.n >= this.b.length) this.flush();',
+    '    }',
+    '    return true;',
+    '  }',
+    '}',
+    "registerProcessor('lp-tap', LpTap);",
+  ].join('\n');
+
+  function lpSessionPlayback() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* not supported */ }
+  }
+
+  async function lpOpenMic() {
+    if (lx.mic) return true;
+    if (lx.opening) return false;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      lpSay(inClaude
+        ? 'The microphone isn\'t available inside the Claude app. Open your GitHub page in Safari to use the looper.'
+        : 'This browser won\'t share the microphone with this page. Open it from its https web address in Safari or Chrome.');
+      return false;
+    }
+    if (!ensureCtx()) { lpSay('This browser does not support Web Audio, so the looper can\'t run here.'); return false; }
+    lx.opening = true;
+    lpSay('');
+    lpRender();
+    // iPhone: let the page record and play at once (and keep ignoring the silent switch).
+    try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) { /* not supported */ }
+    let stream = null;
+    try {
+      // Music, not a phone call: no echo cancelling, noise gating or automatic volume.
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    } catch (e) {
+      lx.opening = false;
+      lpSessionPlayback();
+      const name = e && e.name;
+      lpSay(name === 'NotAllowedError' || name === 'SecurityError'
+        ? (inClaude
+          ? 'The microphone isn\'t available inside the Claude app. Open your GitHub page in Safari to use the looper.'
+          : 'The looper needs the microphone. Allow it for this site (on iPhone: tap "aA" in the address bar, then Website Settings, then Microphone), then tap the circle again.')
+        : name === 'NotFoundError' ? 'No microphone was found.'
+        : 'Couldn\'t open the microphone' + (name ? ' (' + name + ')' : '') + '.');
+      return false;
+    }
+    try {
+      if (ctx.state !== 'running') { try { await ctx.resume(); } catch (e) { /* retried on the next tap */ } }
+      const sr = ctx.sampleRate;
+      const src = ctx.createMediaStreamSource(stream);
+      const sink = ctx.createGain();
+      sink.gain.value = 0; // keeps the tap running; makes no sound
+      sink.connect(ctx.destination);
+      const mon = ctx.createGain();
+      mon.gain.value = LP.monitor ? 1 : 0;
+      src.connect(mon);
+      mon.connect(ctx.destination);
+      let node = null, kind = 'worklet';
+      if (window.AudioWorkletNode && ctx.audioWorklet) {
+        try {
+          if (lx.wkCtx !== ctx) {
+            const url = URL.createObjectURL(new Blob([LP_TAP_SRC], { type: 'application/javascript' }));
+            try { await ctx.audioWorklet.addModule(url); } finally { URL.revokeObjectURL(url); }
+            lx.wkCtx = ctx;
+          }
+          node = new AudioWorkletNode(ctx, 'lp-tap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+          node.port.onmessage = (ev) => lpChunk(ev.data.f, ev.data.x, ev.data.pk);
+        } catch (e) { node = null; }
+      }
+      if (!node) {
+        // Older browsers: the same job on the page itself, timed less exactly ("Measure it" makes up for that).
+        kind = 'script';
+        node = ctx.createScriptProcessor(2048, 1, 1);
+        node.onaudioprocess = (ev) => {
+          const x = ev.inputBuffer.getChannelData(0).slice();
+          let pk = 0;
+          for (let i = 0; i < x.length; i++) { const a = x[i] < 0 ? -x[i] : x[i]; if (a > pk) pk = a; }
+          lpChunk(Math.round(ev.playbackTime * sr) - 2 * x.length, x, pk);
+        };
+      }
+      src.connect(node);
+      node.connect(sink);
+      const track = stream.getAudioTracks()[0];
+      lx.mic = { stream, track, src, node, sink, mon, sr, kind, ring: new Float32Array(Math.round(LP_RING * sr)), ringEnd: 0, opened: ctx.currentTime };
+      if (track) track.addEventListener('ended', () => {
+        if (!lx.mic || lx.mic.track !== track) return;
+        if (lx.rec) lpCancelRec();
+        lpCloseMic();
+        lpSay('The microphone stopped (another app may be using it). Tap a circle to start it again.');
+      });
+      lx.opening = false;
+      lx.closeWanted = state.tab !== 'looper';
+      lpRender();
+      lpAnimate();
+      return true;
+    } catch (e) {
+      lx.opening = false;
+      try { stream.getTracks().forEach((t) => t.stop()); } catch (e2) { /* already stopped */ }
+      lpSessionPlayback();
+      lpSay('Couldn\'t start recording here (' + ((e && e.message) || e) + ').');
+      return false;
+    }
+  }
+
+  function lpCloseMic() {
+    const m = lx.mic;
+    if (!m) return;
+    lx.mic = null;
+    lx.closeWanted = false;
+    try { m.stream.getTracks().forEach((t) => t.stop()); } catch (e) { /* already stopped */ }
+    try {
+      if (m.node.port) m.node.port.onmessage = null;
+      m.node.onaudioprocess = null;
+      m.src.disconnect(); m.node.disconnect(); m.mon.disconnect(); m.sink.disconnect();
+    } catch (e) { /* engine already closed */ }
+    // Anything still being recorded ends with what arrived.
+    if (lx.rec) { lx.rec = null; }
+    lx.loops.forEach((l, i) => {
+      if (!l || !l.cap) return;
+      const got = l.cap.got;
+      if (got < l.b) { lx.loops[i] = null; return; }
+      l.need = Math.min(l.need, got);
+      if (!l.ready) { l.norm = lpNorm(l, l.b); l.normSet = true; if (ctx) lpBake(l); l.ready = true; }
+      l.data = l.cap.data.slice(0, l.need);
+      l.cap = null;
+    });
+    lx.caps.length = 0;
+    lx.level = 0;
+    lpSessionPlayback();
+    lpRender();
+  }
+
+  // A stretch of mic audio to collect: frames [from, from + len) of the engine's clock. Whatever the
+  // mic already delivered (the last few seconds) is copied in straight away.
+  function lpCapture(from, len, envFrom, envLen) {
+    const c = { from, data: new Float32Array(Math.max(1, len)), got: 0, env: envLen ? new Float32Array(LP_BINS) : null, envFrom, envLen };
+    const m = lx.mic;
+    if (m && m.ringEnd > 0) {
+      const RL = m.ring.length, s0 = Math.max(from, m.ringEnd - RL), e0 = Math.min(m.ringEnd, from + len);
+      if (e0 > s0) {
+        const tmp = new Float32Array(e0 - s0);
+        for (let f = s0; f < e0; f++) tmp[f - s0] = m.ring[f % RL];
+        lpFill(c, s0, tmp);
+      }
+    }
+    lx.caps.push(c);
+    return c;
+  }
+  function lpDropCap(c) {
+    const k = lx.caps.indexOf(c);
+    if (k >= 0) lx.caps.splice(k, 1);
+  }
+  function lpFill(c, f0, x) {
+    const s0 = Math.max(0, c.from - f0), e0 = Math.min(x.length, c.from + c.data.length - f0);
+    if (e0 <= s0) return;
+    const at = f0 + s0 - c.from;
+    c.data.set(x.subarray(s0, e0), at);
+    c.got = Math.max(c.got, at + e0 - s0);
+    if (c.env) {
+      const env = c.env, scale = LP_BINS / c.envLen;
+      for (let j = at, i = s0; i < e0; j++, i++) {
+        const k = Math.floor((j - c.envFrom) * scale);
+        if (k < 0 || k >= LP_BINS) continue;
+        const v = x[i] < 0 ? -x[i] : x[i];
+        if (v > env[k]) env[k] = v;
+      }
+    }
+  }
+  function lpChunk(f0, x, pk) {
+    const m = lx.mic;
+    if (!m || !x || !x.length) return;
+    if (pk > lx.level) lx.level = pk;
+    const R = m.ring, RL = R.length;
+    for (let i = 0; i < x.length; i++) R[(f0 + i) % RL] = x[i];
+    m.ringEnd = f0 + x.length;
+    for (let i = 0; i < lx.caps.length; i++) lpFill(lx.caps[i], f0, x);
+    lpTick();
+  }
+
+  /* ---------- Transport: metronome and drums ---------- */
+  const lpGain2 = (v, unity) => { const x = v / unity; return x * x; };
+  const lpDrumGain = () => lpGain2(LP.drums.vol, 80);
+  const lpClickGain = () => lpGain2(LP.click, 70);
+  const lpPatCache = {};
+  function lpDrumPat() {
+    const k = DRUM_KITS.find((x) => x.id === LP.drums.kit) || DRUM_KITS[0];
+    const key = k.id + '|' + LP.meter;
+    return lpPatCache[key] || (lpPatCache[key] = compilePattern(k, LP.meter));
+  }
+  function lpClick(t, lvl) {
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = lvl === 2 ? 1760 : lvl === 1 ? 1520 : 1320;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(lvl === 2 ? 0.5 : lvl === 1 ? 0.4 : 0.32, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    o.connect(g);
+    g.connect(lx.clickG);
+    o.start(t);
+    o.stop(t + 0.09);
+  }
+  // Clicks: every beat when always on; with count-in only, just the bar before a recording starts.
+  function lpClickWanted(t) {
+    if (LP.metro === 'always') return true;
+    if (LP.metro !== 'count') return false;
+    const r = lx.rec;
+    return !!r && t >= r.S - lpBar() - 0.001 && t < r.S - 0.001;
+  }
+  function lpBuild() {
+    lpTear();
+    lx.busObj = makeBus();
+    lx.drumG = ctx.createGain();
+    lx.drumG.gain.value = lpDrumGain();
+    lx.drumG.connect(lx.busObj.input);
+    lx.clickG = ctx.createGain();
+    lx.clickG.gain.value = lpClickGain();
+    lx.clickG.connect(ctx.destination);
+    // The loops go out on their own, rounded off gently if four loud ones add up past full scale.
+    // (No compressor here: one would hold them back a few ms behind the beat.)
+    const soft = ctx.createWaveShaper();
+    soft.curve = softClipCurve();
+    lx.loopOut = ctx.createGain();
+    lx.loopOut.connect(soft);
+    soft.connect(ctx.destination);
+    lx.loopComp = soft;
+  }
+  function lpTear() {
+    try { if (lx.busObj) killBus(lx.busObj); } catch (e) { /* engine already closed */ }
+    const old = [lx.drumG, lx.clickG, lx.loopOut, lx.loopComp];
+    [lx.clickG, lx.loopOut].forEach((g) => { try { if (g) g.gain.setTargetAtTime(0, ctx.currentTime, 0.01); } catch (e) { /* closed */ } });
+    setTimeout(() => old.forEach((n) => { try { if (n) n.disconnect(); } catch (e) { /* closed */ } }), 250);
+    lx.busObj = lx.drumG = lx.clickG = lx.loopOut = lx.loopComp = null;
+  }
+  function lpSched() {
+    if (!lx.run) return;
+    const ahead = document.hidden ? 1.1 : 0.12, n = lpN(), bs = lpBeatSteps(), sd = lpSD();
+    while (lx.next < ctx.currentTime + ahead) {
+      const p = lx.pos, t = lx.next, inBar = lpMod(p, n);
+      if (inBar % bs === 0 && lpClickWanted(t)) lpClick(t, inBar === 0 ? 2 : LP.meter === '6/8' && inBar === 6 ? 1 : 0);
+      if (p >= 0 && LP.drums.on) {
+        const P = lpDrumPat();
+        for (const k in DRUMS) {
+          const ch = P.tracks[k] && P.tracks[k][inBar];
+          if (ch && ch !== '-') DRUMS[k](Math.max(ctx.currentTime, t - LP_DRUM_LAT), VEL[ch] || 0.7, lx.drumG);
+        }
+      }
+      lx.next += sd;
+      lx.pos++;
+    }
+    lpTick();
+    lx.timer = setTimeout(lpSched, 25);
+  }
+  // Starts the clock with its first downbeat `delay` seconds from now (a bar's count-in comes before it).
+  function lpStartTransport(delay) {
+    if (!ensureCtx()) { lpSay('This browser does not support Web Audio, so the looper can\'t run here.'); return false; }
+    if (playing) stop(); // one thing playing at a time
+    stemHalt();
+    stopRun();
+    stopScaleRun();
+    killBus(earBus);
+    earBus = null;
+    lpBuild();
+    const t0 = ctx.currentTime + delay, sd = lpSD();
+    lx.run = true;
+    lx.t0 = t0;
+    lx.pos = Math.ceil((ctx.currentTime + 0.02 - t0) / sd - 1e-6);
+    lx.next = t0 + lx.pos * sd;
+    const at = Math.max(t0, ctx.currentTime + 0.05);
+    lx.loops.forEach((l) => { if (l && l.ready && !l.muted) lpLoopStart(l, at); });
+    clearTimeout(lx.timer);
+    lpSched();
+    requestWake();
+    lpRender();
+    lpAnimate();
+    return true;
+  }
+  function lpStop() {
+    if (lx.rec) lpRecTap(true);
+    lx.run = false;
+    clearTimeout(lx.timer);
+    lx.timer = null;
+    lx.loops.forEach((l) => { if (l) lpLoopKill(l); });
+    lpTear();
+    if (!playing && !sp.playing) releaseWake();
+    lpRender();
+  }
+  // Called when something else starts playing. True if the looper was going.
+  function lpHalt() {
+    if (!lx.run && !lx.rec) return false;
+    lpStop();
+    return true;
+  }
+  function lpPlayToggle() {
+    if (lx.run) { lpStop(); return; }
+    if (lx.opening || lx.measuring) return;
+    if (!lpHasSound()) { toast('Record a loop, or turn on the drums or the metronome'); return; }
+    lpStartTransport(0.08);
+  }
+  // Tempo or time changed while only the drums or clicks are going: carry on from the next step.
+  function lpRetime(meterChanged) {
+    if (!lx.run) return;
+    if (meterChanged) { lx.t0 = lx.next; lx.pos = 0; }
+    else lx.t0 = lx.next - lx.pos * lpSD();
+  }
+
+  /* ---------- Recording ---------- */
+  async function lpArm(i) {
+    if (lx.opening || lx.measuring) return;
+    if (!(await lpOpenMic())) { lpRender(); return; }
+    if (lx.rec || lx.loops[i]) return; // something changed while the mic was starting
+    const now = ctx.currentTime, bar = lpBar();
+    let S;
+    if (!lx.run) {
+      // From a standstill: a bar of clicks first unless the metronome is off.
+      if (!lpStartTransport(0.1 + (LP.metro === 'off' ? 0 : bar))) return;
+      S = lx.t0;
+    } else if (LP.metro === 'count') {
+      // A full bar of clicks before the downbeat it starts on.
+      S = lx.t0 + Math.ceil((now + 0.05 + bar - lx.t0) / bar - 1e-6) * bar;
+    } else {
+      // The next downbeat, or the one just gone if you tapped a moment late.
+      const prev = lx.t0 + Math.floor((now - lx.t0) / bar + 1e-6) * bar;
+      S = now - prev <= LP_GRACE && prev >= lx.mic.opened + 0.05 ? prev : prev + bar;
+    }
+    const sr = lx.mic.sr, len = LP.bars * bar, pre = Math.round(LP_PRE * sr);
+    const from = Math.round((S + lpRTL()) * sr) - pre;
+    const cap = lpCapture(from, pre + Math.ceil((len + LP_POST + 0.1) * sr), pre, Math.round(len * sr));
+    lx.rec = { i, S, E: null, len, sr, cap };
+    lpSay('');
+    lpTick();
+    lpRender();
+    lpAnimate();
+  }
+  function lpCancelRec(msg) {
+    const r = lx.rec;
+    if (!r) return;
+    lx.rec = null;
+    lpDropCap(r.cap);
+    if (msg) lpSay(msg);
+    if (lx.run && !lpHasSound()) lpStop();
+    lpRender();
+  }
+  // Tapping the circle that's recording: stop on the nearest beat (it carries on to that beat if
+  // it's still to come). During the count-in, the tap cancels.
+  function lpRecTap(stopping) {
+    const r = lx.rec;
+    if (!r) return;
+    const now = ctx.currentTime;
+    if (now < r.S) { lpCancelRec(); return; }
+    const beat = lpBeat();
+    let Q = lx.t0 + Math.round((now - lx.t0) / beat) * beat;
+    if (Q <= r.S + 1e-4) {
+      if (now - r.S < beat * 0.5) { lpCancelRec(stopping ? '' : 'That was too short to keep. Tap the circle again to record.'); return; }
+      Q = r.S + beat;
+    }
+    if (stopping) Q = Math.min(Q, Math.max(r.S + beat, lx.t0 + Math.floor((now - lx.t0) / beat + 1e-6) * beat));
+    r.E = Math.min(Q, r.S + r.len);
+    lpTick();
+    lpRender();
+  }
+  // Moves recordings along: the auto stop at the end of the measures, then each new loop's
+  // first pass, final looping buffer and clean-up.
+  function lpTick() {
+    if (!ctx) return;
+    const now = ctx.currentTime, r = lx.rec;
+    if (r && r.E == null && now >= r.S + r.len - 0.15) r.E = r.S + r.len;
+    if (r && r.E != null) {
+      lx.rec = null;
+      lpNewLoop(r);
+      lpRender();
+    }
+    lx.loops.forEach((l) => { if (l && l.cap) lpFinish(l, now); });
+    if (lx.closeWanted && !lx.rec && !lx.caps.length && !lx.measuring && !lx.opening) lpCloseMic();
+  }
+  function lpNewLoop(r) {
+    const sr = r.sr, a = Math.round(LP_PRE * sr), b = a + Math.round((r.E - r.S) * sr);
+    lx.loops[r.i] = {
+      i: r.i, sr, data: r.cap.data, a, b, a0: a, b0: b, S: r.S, E: r.E, planLen: r.len, Grel: r.S - lx.t0,
+      need: Math.min(r.cap.data.length, b + Math.round(LP_POST * sr)),
+      muted: false, vol: 1, norm: 1, normSet: false, env: null, recEnv: r.cap.env,
+      ready: false, cap: r.cap, prov: null, src: null, g: null, buf: null, bufCtx: null,
+    };
+  }
+  function lpFinish(l, now) {
+    const c = l.cap;
+    if (!l.ready) {
+      if (c.got >= l.b) {
+        if (!l.normSet) { l.norm = lpNorm(l, l.b); l.normSet = true; }
+        lpBake(l);
+        l.ready = true;
+        if (lx.run && !l.muted) lpLoopStart(l, Math.max(now + 0.03, l.E));
+        lpRender();
+      } else if (!l.prov && lx.run && now >= l.E - 0.12) {
+        lpProvisional(l, now);
+      }
+    }
+    if (l.ready && c.got >= l.need) {
+      lpDropCap(c);
+      l.data = c.data.slice(0, l.need); // let the unused rest go
+      l.cap = null;
+      lpRender();
+    }
+  }
+  // The newest bit of a recording reaches the page a moment after it's played, so the loop's first
+  // time round starts from what's already in; the full loop takes over as soon as the end arrives.
+  function lpProvisional(l, now) {
+    const c = l.cap, sr = l.sr, r = Math.round(LP_RAMP * sr);
+    const at = Math.max(now + 0.03, l.E), off = Math.round((at - l.E) * sr);
+    // It fades in over the few ms of recording just before the loop's start, so the first
+    // downbeat's attack comes through whole.
+    const s0 = Math.max(0, l.a + off - r), lead = l.a + off - s0, end = Math.min(c.got, l.b);
+    l.prov = 'none';
+    if (end - s0 < 0.05 * sr || !lx.loopOut) return;
+    if (!l.normSet) { l.norm = lpNorm(l, end); l.normSet = true; }
+    const n = end - s0, buf = ctx.createBuffer(1, n, sr), d = buf.getChannelData(0);
+    d.set(c.data.subarray(s0, end));
+    const f = Math.min(Math.round(0.003 * sr), n >> 2);
+    for (let k = 0; k < lead; k++) d[k] *= (k + 0.5) / lead;
+    for (let k = 0; k < f; k++) d[n - 1 - k] *= k / f;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = lpGainOf(l);
+    src.connect(g);
+    g.connect(lx.loopOut);
+    src.start(at - lead / sr);
+    l.prov = { src, g };
+  }
+  // Recordings from a phone mic come in quiet; bring each up (by up to 4 times) toward a steady level.
+  function lpNorm(l, end) {
+    const d = l.data;
+    let pk = 0;
+    for (let i = l.a; i < end; i++) { const v = d[i] < 0 ? -d[i] : d[i]; if (v > pk) pk = v; }
+    return pk > 1e-4 ? Math.max(1, Math.min(4, 0.45 / pk)) : 1;
+  }
+  const lpGainOf = (l) => (l.muted ? 0 : l.norm * l.vol);
+  // The loop's sound: from its start to its end. In the last few ms the end fades into the sound
+  // that came just before the start, so the join is seamless and the downbeat's attack is untouched.
+  function lpBake(l) {
+    const sr = l.sr, d = l.data, n = Math.max(1, l.b - l.a);
+    const buf = ctx.createBuffer(1, n, sr), out = buf.getChannelData(0);
+    out.set(d.subarray(l.a, l.b));
+    const xf = Math.min(Math.round(LP_XF * sr), n >> 2);
+    for (let k = 0; k < xf; k++) {
+      const w = (k + 0.5) / xf;
+      if (l.a >= xf) out[n - xf + k] = out[n - xf + k] * (1 - w) + d[l.a - xf + k] * w;
+      else { out[k] *= w; out[n - 1 - k] *= w; }
+    }
+    l.buf = buf;
+    l.bufCtx = ctx;
+    l.env = lpEnv(d, l.a, l.b);
+  }
+  function lpEnv(d, a, b) {
+    const env = new Float32Array(LP_BINS), per = (b - a) / LP_BINS;
+    for (let k = 0; k < LP_BINS; k++) {
+      let pk = 0;
+      const e = Math.min(b, Math.floor(a + (k + 1) * per));
+      for (let i = Math.floor(a + k * per); i < e; i++) { const v = d[i] < 0 ? -d[i] : d[i]; if (v > pk) pk = v; }
+      env[k] = pk;
+    }
+    return env;
+  }
+  // Seconds into the loop at engine time t. The loop's start always lands on its first beat.
+  const lpPhase = (l, t) => lpMod(t - (lx.t0 + l.Grel), lpLoopLen(l));
+  // Silent from `at` on, fading over the moment before it.
+  function lpFadeOut(o, at) {
+    try {
+      const from = Math.max(ctx.currentTime, at - LP_RAMP);
+      o.g.gain.cancelScheduledValues(from);
+      o.g.gain.setValueAtTime(o.g.gain.value, from);
+      o.g.gain.linearRampToValueAtTime(0, Math.max(at, from + 0.002));
+      o.src.stop(at + 0.02);
+    } catch (e) { /* already stopped */ }
+  }
+  // Starts the loop so it's at full level from `at`, fading in over the moment before (so a
+  // downbeat at `at` keeps its attack, and anything it replaces crossfades out at the same time).
+  function lpLoopStart(l, at) {
+    if (!l.ready || !lx.loopOut) return;
+    if (l.bufCtx !== ctx) lpBake(l);
+    const old = l.src ? { src: l.src, g: l.g } : null, prov = l.prov && l.prov.src ? l.prov : null;
+    const src = ctx.createBufferSource();
+    src.buffer = l.buf;
+    src.loop = true;
+    const g = ctx.createGain();
+    const s0 = Math.max(ctx.currentTime + 0.005, at - LP_RAMP);
+    g.gain.setValueAtTime(0, s0);
+    g.gain.linearRampToValueAtTime(lpGainOf(l), Math.max(at, s0 + 0.002));
+    src.connect(g);
+    g.connect(lx.loopOut);
+    src.start(s0, Math.min(lpMod(lpPhase(l, at) - (at - s0), lpLoopLen(l)), Math.max(0, l.buf.duration - 1e-4)));
+    l.src = src;
+    l.g = g;
+    if (l.prov) l.prov = 'none';
+    if (old) lpFadeOut(old, at);
+    if (prov) lpFadeOut(prov, at);
+  }
+  function lpLoopKill(l) {
+    const now = ctx ? ctx.currentTime + LP_RAMP : 0;
+    if (l.src) lpFadeOut({ src: l.src, g: l.g }, now);
+    if (l.prov && l.prov.src) lpFadeOut(l.prov, now);
+    l.src = null;
+    l.g = null;
+    l.prov = null;
+  }
+  function lpSetMute(l, m) {
+    l.muted = m;
+    if (!lx.run || !ctx) return;
+    const now = ctx.currentTime;
+    if (l.g) { l.g.gain.cancelScheduledValues(now); l.g.gain.setTargetAtTime(lpGainOf(l), now, 0.012); }
+    if (m && l.prov && l.prov.src) { lpFadeOut(l.prov, now + LP_RAMP); l.prov = 'none'; }
+    if (!m && l.ready && !l.src) lpLoopStart(l, now + 0.03);
+  }
+  function lpApplyVol(l) {
+    if (l.g && ctx) l.g.gain.setTargetAtTime(lpGainOf(l), ctx.currentTime, 0.02);
+  }
+  // A new start or end: rebuild the loop. Its new start lands on the beat where the round now
+  // playing began, so a loop that's no longer a whole number of beats drifts from here, not from
+  // when the transport started.
+  function lpRetrim(l) {
+    if (!ctx) return;
+    const oldLen = l.buf ? l.buf.length / l.buf.sampleRate : lpLoopLen(l), beat = lpBeat();
+    let C = l.Grel;
+    if (lx.run) C = l.Grel + Math.floor((ctx.currentTime - (lx.t0 + l.Grel)) / oldLen) * oldLen;
+    else C = lpMod(l.Grel, oldLen);
+    l.Grel = Math.round(C / beat) * beat;
+    lpBake(l);
+    if (lx.run && l.src) lpLoopStart(l, ctx.currentTime + 0.03);
+  }
+  function lpClear(i) {
+    const l = lx.loops[i];
+    if (!l) return;
+    if (ed.i === i) lpEdClose();
+    lpLoopKill(l);
+    if (l.cap) lpDropCap(l.cap);
+    lx.loops[i] = null;
+    if (lx.run && !lpHasSound() && !lx.rec) lpStop();
+    lpRender();
+  }
+
+  /* ---------- Tapping a circle ---------- */
+  function lpTap(i) {
+    if (lx.measuring || lx.opening) return;
+    const l = lx.loops[i], r = lx.rec;
+    if (r && r.i === i) { lpRecTap(false); return; }
+    if (l) {
+      if (l.cap && ctx && ctx.currentTime < l.E) return; // still finishing its recording
+      if (!lx.run) { l.muted = false; lpStartTransport(0.08); }
+      else lpSetMute(l, !l.muted);
+      lpRender();
+      return;
+    }
+    // An empty circle. If another one is recording, that one stops and this one starts after it.
+    if (r) { if (ctx.currentTime < r.S) lpCancelRec(); else lpRecTap(false); }
+    lpArm(i);
+  }
+
+  /* ---------- Measuring the speaker-to-mic delay ---------- */
+  // Six clicks through the speaker; the delay is how long each takes to show up in the mic.
+  async function lpMeasure() {
+    if (lx.measuring || lx.rec || lx.opening) return;
+    if (!(await lpOpenMic())) { lpRender(); return; }
+    if (lx.run) lpStop();
+    lx.measuring = true;
+    lpSay('');
+    lpRender();
+    lpAnimate();
+    const sr = lx.mic.sr, N = 6, gap = 0.7, lead = 0.3, t1 = ctx.currentTime + 0.4;
+    const out = ctx.createGain();
+    out.connect(ctx.destination);
+    for (let k = 0; k < N; k++) {
+      const t = t1 + k * gap, o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'square';
+      o.frequency.value = 2000;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.7, t + 0.0005);
+      g.gain.setValueAtTime(0.7, t + 0.006);
+      g.gain.linearRampToValueAtTime(0, t + 0.012);
+      o.connect(g); g.connect(out);
+      o.start(t); o.stop(t + 0.02);
+    }
+    const len = Math.round((lead + N * gap + 0.1) * sr);
+    const cap = lpCapture(Math.round((t1 - lead) * sr), len);
+    const done = await new Promise((res) => {
+      const t0 = Date.now();
+      const chk = () => {
+        if (!lx.mic) res(false);
+        else if (cap.got >= len) res(true);
+        else if (Date.now() - t0 > N * gap * 1000 + 4000) res(false);
+        else setTimeout(chk, 60);
+      };
+      chk();
+    });
+    lpDropCap(cap);
+    setTimeout(() => { try { out.disconnect(); } catch (e) { /* closed */ } }, 100);
+    lx.measuring = false;
+    const ms = done ? lpFindDelay(cap.data, sr, Math.round(lead * sr), Math.round(gap * sr), N) : null;
+    if (ms == null) lpSay('Couldn\'t hear the clicks clearly. Unplug headphones, turn the volume up, keep the room quiet and try again.');
+    else {
+      LP.sync = Math.max(0, Math.min(400, ms));
+      LP.syncSrc = 'measured';
+      save();
+      lpSay('Measured ' + ms + ' ms. New recordings will use it.');
+    }
+    lpTick();
+    lpRender();
+  }
+  function lpFindDelay(d, sr, first, gapN, N) {
+    const found = [];
+    for (let k = 0; k < N; k++) {
+      const base = first + k * gapN;
+      let noise = 0;
+      for (let i = Math.max(0, base - Math.round(0.1 * sr)); i < base; i++) { const v = Math.abs(d[i]); if (v > noise) noise = v; }
+      let pk = 0, pi = -1;
+      const end = Math.min(d.length, base + Math.round(0.5 * sr));
+      for (let i = base; i < end; i++) { const v = Math.abs(d[i]); if (v > pk) { pk = v; pi = i; } }
+      if (pk < 0.01 || pk < noise * 4) continue;
+      const thr = Math.max(noise * 2.5, pk * 0.3);
+      let on = base;
+      while (on < pi && Math.abs(d[on]) < thr) on++;
+      found.push((on - base) / sr);
+    }
+    if (found.length < 4) return null;
+    found.sort((a, b) => a - b);
+    const med = found[found.length >> 1];
+    const close = found.filter((x) => Math.abs(x - med) < 0.004);
+    if (close.length < 3) return null;
+    return Math.round((close.reduce((s, x) => s + x, 0) / close.length) * 1000);
+  }
+
+  /* ---------- Circles ---------- */
+  const lpGrid = $('lpGrid');
+  const ICON_STOP = '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor"/></svg>';
+  const ICON_PENCIL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5l1-4.4L15.6 5a2.1 2.1 0 0 1 3 0l.4.4a2.1 2.1 0 0 1 0 3L8.9 18.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.6 7l3.4 3.4" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+  const ICON_X = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  const lpCells = [0, 1, 2, 3].map((i) => {
+    const cell = el('div', 'lp-cell');
+    const circ = el('div', 'lp-circle');
+    circ.style.setProperty('--lpc', LP_COLORS[i]);
+    const cv = document.createElement('canvas');
+    cv.setAttribute('aria-hidden', 'true');
+    const hit = el('button', 'lp-hit');
+    hit.type = 'button';
+    hit.addEventListener('click', () => lpTap(i));
+    const edit = el('button', 'lp-edit');
+    edit.type = 'button';
+    edit.innerHTML = ICON_PENCIL;
+    edit.setAttribute('aria-label', 'Edit loop ' + (i + 1));
+    edit.hidden = true;
+    edit.addEventListener('click', () => lpEdOpen(i));
+    circ.append(cv, hit, edit);
+    const foot = el('div', 'lp-foot');
+    const clr = el('button', 'lp-clear');
+    clr.type = 'button';
+    clr.innerHTML = ICON_X;
+    clr.setAttribute('aria-label', 'Clear loop ' + (i + 1));
+    clr.addEventListener('click', () => lpAskClear(i));
+    const capEl = el('span', 'lp-cap');
+    foot.append(clr, capEl);
+    cell.append(circ, foot);
+    lpGrid.appendChild(cell);
+    return { cv, hit, edit, clr, capEl, last: '' };
+  });
+
+  // What a circle shows: [caption, label for screen readers].
+  function lpCellText(i, now) {
+    const l = lx.loops[i], r = lx.rec && lx.rec.i === i ? lx.rec : null, n = 'Loop ' + (i + 1);
+    if (r) {
+      if (now < r.S) {
+        const left = Math.max(1, Math.ceil((r.S - now) / lpBeat() - 1e-3));
+        return ['Starts in ' + left, n + ': about to record. Tap to cancel.'];
+      }
+      return ['Recording · tap to stop', n + ': recording. Tap to stop.'];
+    }
+    if (l && l.cap && now < l.E) return ['Finishing…', n + ': finishing its recording.'];
+    if (l) {
+      const L = lpLoopLen(l), k = Math.round(L / lpBeat());
+      const len = k >= 1 && Math.abs(L - k * lpBeat()) < 0.0006 ? lpBeatsText(k) : L.toFixed(2) + ' s';
+      return [len + (l.muted ? ' · muted' : ''), n + ', ' + len + (l.muted ? ', muted. Tap to unmute.' : lx.run ? ', playing. Tap to mute.' : '. Tap to play.')];
+    }
+    return [lx.rec ? 'Tap to record next' : 'Tap to record', n + ': empty. Tap to record ' + lpBarsText(LP.bars) + '.'];
+  }
+
+  function lpDrawCircle(i, now) {
+    const C = lpCells[i], cv = C.cv, css = cv.clientWidth;
+    if (!css) return;
+    const dpr = Math.min(3, window.devicePixelRatio || 1), W = Math.round(css * dpr);
+    if (cv.width !== W) { cv.width = W; cv.height = W; }
+    const g = cv.getContext('2d');
+    if (!g) return;
+    g.clearRect(0, 0, W, W);
+    const c = W / 2, h = W / 2, TOP = -Math.PI / 2, TAU = Math.PI * 2;
+    const Ro = h * 0.8, Ri = h * 0.39, Rm = (Ro + Ri) / 2, Rh = (Ro - Ri) / 2 - 3 * dpr, Rp = h * 0.91;
+    const l = lx.loops[i], r = lx.rec && lx.rec.i === i ? lx.rec : null;
+    const col = LP_COLORS[i];
+    const ring = (rad, color, w, alpha, glow) => {
+      g.save();
+      g.globalAlpha = alpha;
+      g.strokeStyle = color;
+      g.lineWidth = w;
+      if (glow) { g.shadowColor = color; g.shadowBlur = glow; }
+      g.beginPath();
+      g.arc(c, c, rad, 0, TAU);
+      g.stroke();
+      g.restore();
+    };
+    const bars = (env, upto, color, aOn, aOff, phase) => {
+      if (!env) return;
+      let peak = 0.02;
+      for (let k = 0; k < env.length; k++) if (env[k] > peak) peak = env[k];
+      const n = env.length;
+      g.save();
+      g.lineCap = 'round';
+      g.lineWidth = Math.max(1.4 * dpr, ((TAU * Rm) / n) * 0.48);
+      g.strokeStyle = color;
+      for (let k = 0; k < Math.min(n, upto); k++) {
+        const v = env[k] / peak, len = Rh * (0.06 + 0.94 * Math.pow(v, 0.6));
+        const f = (k + 0.5) / n, ang = TOP + f * TAU, cs = Math.cos(ang), sn = Math.sin(ang);
+        g.globalAlpha = phase == null || f <= phase ? aOn : aOff;
+        g.beginPath();
+        g.moveTo(c + cs * (Rm - len), c + sn * (Rm - len));
+        g.lineTo(c + cs * (Rm + len), c + sn * (Rm + len));
+        g.stroke();
+      }
+      g.restore();
+    };
+    const label = (txt, color) => {
+      g.save();
+      g.fillStyle = color;
+      g.font = '600 ' + Math.round(h * 0.34) + 'px "Helvetica Neue", Helvetica, Arial, sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(txt, c, c + h * 0.02);
+      g.restore();
+    };
+    const dot = (rad, color, alpha) => {
+      g.save();
+      g.globalAlpha = alpha;
+      g.fillStyle = color;
+      g.beginPath();
+      g.arc(c, c, rad, 0, TAU);
+      g.fill();
+      g.restore();
+    };
+    const recLike = (S, len, env, endAt) => {
+      const frac = Math.max(0, Math.min(1, (now - S) / len));
+      ring(Ro + 4 * dpr, LP_REC, 2.5 * dpr, 0.22);
+      g.save();
+      g.strokeStyle = LP_REC;
+      g.lineWidth = 3.5 * dpr;
+      g.lineCap = 'round';
+      g.shadowColor = LP_REC;
+      g.shadowBlur = 10 * dpr;
+      g.beginPath();
+      g.arc(c, c, Ro + 4 * dpr, TOP, TOP + Math.max(0.001, (endAt != null ? Math.min(frac, endAt) : frac)) * TAU);
+      g.stroke();
+      g.restore();
+      ring(Ri - 4 * dpr, LP_REC, 1.4 * dpr, 0.4);
+      bars(env, Math.floor(frac * LP_BINS) + 1, LP_REC, 0.9, 0.9, null);
+      dot(h * 0.1, LP_REC, 0.55 + 0.45 * Math.abs(Math.sin(now * 4)));
+    };
+    if (r) {
+      if (now < r.S) {
+        const beat = lpBeat(), left = Math.max(1, Math.ceil((r.S - now) / beat - 1e-3));
+        const pulse = lpMod((r.S - now) / beat, 1);
+        ring(Ro + 4 * dpr, col, 2.5 * dpr, 0.3 + 0.6 * pulse, 12 * dpr * pulse);
+        ring(Ri - 4 * dpr, col, 1.4 * dpr, 0.35);
+        label(String(left), col);
+      } else {
+        recLike(r.S, r.len, r.cap.env, null);
+      }
+    } else if (l && l.cap && now < l.E) {
+      recLike(l.S, l.planLen, l.recEnv, null);
+    } else if (l) {
+      const muted = l.muted, cc = muted ? '#bdb3a4' : col;
+      const ph = lx.run && now >= l.E ? lpPhase(l, now) / lpLoopLen(l) : null;
+      ring(Ro + 4 * dpr, cc, 2.5 * dpr, muted ? 0.3 : 0.95, muted ? 0 : 10 * dpr);
+      ring(Ri - 4 * dpr, cc, 1.4 * dpr, muted ? 0.2 : 0.5);
+      bars(l.env || l.recEnv, LP_BINS, cc, muted ? 0.32 : 1, muted ? 0.32 : 0.5, ph);
+      if (ph != null) {
+        const ang = TOP + ph * TAU;
+        g.save();
+        g.strokeStyle = cc;
+        g.globalAlpha = muted ? 0.45 : 1;
+        g.lineWidth = 3.5 * dpr;
+        g.lineCap = 'round';
+        if (!muted) { g.shadowColor = cc; g.shadowBlur = 8 * dpr; }
+        g.beginPath();
+        g.arc(c, c, Rp, ang - 0.32, ang);
+        g.stroke();
+        g.beginPath();
+        g.fillStyle = cc;
+        g.arc(c + Math.cos(ang) * Rp, c + Math.sin(ang) * Rp, 3.2 * dpr, 0, TAU);
+        g.fill();
+        g.restore();
+      }
+    } else {
+      ring(Ro + 4 * dpr, col, 2 * dpr, 0.45, 6 * dpr);
+      ring(Ri - 4 * dpr, col, 1.2 * dpr, 0.18);
+      dot(h * 0.11, col, lx.rec ? 0.35 : 0.6);
+    }
+  }
+
+  function lpStatusText() {
+    if (lx.msg) return lx.msg;
+    if (lx.opening) return 'Starting the microphone…';
+    if (lx.measuring) return 'Listening for the clicks… keep quiet for a few seconds.';
+    const r = lx.rec, now = ctx ? ctx.currentTime : 0;
+    if (r) {
+      if (now < r.S) return LP.metro === 'off' && !LP.drums.on && !lx.loops.some(Boolean)
+        ? 'Get ready…'
+        : 'Get ready: loop ' + (r.i + 1) + ' starts recording on the next downbeat.';
+      return 'Recording loop ' + (r.i + 1) + ' for ' + lpBarsText(Math.round(r.len / lpBar())) + '. Tap it again to stop sooner.';
+    }
+    const any = lx.loops.some(Boolean);
+    if (!any) return 'Tap a circle to record ' + lpBarsText(LP.bars) + (LP.metro === 'off' ? ', starting right away.' : ', after a bar of clicks.');
+    if (lx.run) return 'Tap a loop to mute or unmute it, or an empty circle to add one.';
+    return 'Tap play, or a loop, to hear your loops.';
+  }
+
+  // Per-frame bits: the circles, their captions, the status line and the mic level.
+  function lpDrawAll() {
+    const now = ctx ? ctx.currentTime : 0;
+    for (let i = 0; i < 4; i++) {
+      lpDrawCircle(i, now);
+      const C = lpCells[i], [cap, aria] = lpCellText(i, now);
+      if (C.last !== cap + aria) {
+        C.last = cap + aria;
+        C.capEl.textContent = cap;
+        C.hit.setAttribute('aria-label', aria);
+      }
+      const l = lx.loops[i], canEdit = !!l && !l.cap;
+      if (C.edit.hidden === canEdit) C.edit.hidden = !canEdit;
+      C.edit.classList.toggle('muted', !!l && l.muted);
+      const canClear = !!l;
+      if (C.clr.disabled === canClear) C.clr.disabled = !canClear;
+    }
+    const st = lpStatusText();
+    if (lx.shown.status !== st) { lx.shown.status = st; $('lpStatus').textContent = st; }
+    const lvl = lx.mic ? Math.min(1, Math.sqrt(lx.level)) : 0;
+    const lv = $('lpLevel');
+    lv.style.width = (lvl * 100).toFixed(1) + '%';
+    lv.classList.toggle('hot', lx.level > 0.9);
+    lx.level *= 0.86;
+    const ml = lx.mic ? 'Mic' : 'Mic off';
+    if (lx.shown.mic !== ml) { lx.shown.mic = ml; $('lpMicLbl').textContent = ml; }
+  }
+  function lpAnimate() {
+    if (lx.anim) return;
+    lx.anim = true;
+    requestAnimationFrame(lpFrame);
+  }
+  function lpFrame() {
+    if (state.tab !== 'looper' || document.hidden) { lx.anim = false; return; }
+    lpDrawAll();
+    if (ed.i >= 0) lpEdDraw();
+    const busy = lx.run || lx.rec || lx.mic || lx.opening || lx.measuring || lx.loops.some((l) => l && l.cap) || lx.level > 0.002;
+    if (busy) requestAnimationFrame(lpFrame);
+    else lx.anim = false;
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      // A phone stops page audio in the background: wrap up any recording now.
+      if (IOS && lx.rec) lpRecTap(true);
+    } else if (state.tab === 'looper') lpAnimate();
+  });
+  window.addEventListener('resize', () => { if (state.tab === 'looper') { lpDrawAll(); if (ed.i >= 0) { ed.colsKey = ''; lpEdDraw(); } } });
+
+  /* ---------- Controls ---------- */
+  const lpPlayBtn = $('lpPlay');
+  const lpTempoBtns = Array.from(document.querySelectorAll('#lpTempo button'));
+  const lpMeterBtns = Array.from(document.querySelectorAll('#lpMeter button'));
+  const lpBarsBtns = Array.from(document.querySelectorAll('#lpBars button'));
+  const lpMetroBtns = Array.from(document.querySelectorAll('#lpMetro button'));
+  const lpKitSel = $('lpKit');
+  DRUM_KITS.forEach((k) => lpKitSel.add(new Option(k.name, k.id)));
+  function lpSay(msg) { lx.msg = msg || ''; lx.shown.status = null; }
+  function lpRender() {
+    const locked = lpLocked();
+    lpPlayBtn.innerHTML = lx.run ? ICON_STOP : ICON_PLAY;
+    lpPlayBtn.setAttribute('aria-label', lx.run ? 'Stop the loops' : 'Play the loops');
+    $('lpBpm').textContent = (LP.meter === '6/8' ? '♩. = ' : '♩ = ') + LP.bpm;
+    lpTempoBtns.forEach((b) => {
+      const d = Number(b.dataset.d);
+      b.disabled = locked || (d < 0 ? LP.bpm <= 40 : LP.bpm >= 250);
+    });
+    lpMeterBtns.forEach((b) => { b.setAttribute('aria-pressed', String(b.dataset.m === LP.meter)); b.disabled = locked && b.dataset.m !== LP.meter; });
+    $('lpLock').hidden = !lx.loops.some(Boolean);
+    lpBarsBtns.forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.b) === LP.bars)));
+    lpMetroBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === LP.metro)));
+    const kit = DRUM_KITS.find((k) => k.id === LP.drums.kit) || DRUM_KITS[0];
+    $('lpDrums').setAttribute('aria-pressed', String(LP.drums.on));
+    $('lpDrums').setAttribute('aria-label', 'Drums, ' + kit.name + ' beat');
+    $('lpDrumCombo').classList.toggle('on', LP.drums.on);
+    $('lpKitName').textContent = kit.name;
+    lpKitSel.value = kit.id;
+    $('lpDrumVol').value = String(LP.drums.vol);
+    $('lpMonitor').setAttribute('aria-pressed', String(LP.monitor));
+    $('lpClickVol').value = String(LP.click);
+    const ms = Math.round(lpRTL() * 1000);
+    $('lpSync').value = String(ms);
+    $('lpSyncOut').textContent = ms + ' ms' + (LP.sync == null ? ' (the phone\'s guess)' : LP.syncSrc === 'measured' ? ' (measured)' : ' (set by you)');
+    $('lpSyncAuto').hidden = LP.sync == null;
+    const mb = $('lpMeasure');
+    mb.disabled = lx.measuring || !!lx.rec || lx.opening;
+    mb.textContent = lx.measuring ? 'Listening…' : 'Measure it';
+    lx.shown.status = null;
+    lpDrawAll();
+    if (ed.i >= 0) lpEdRender();
+  }
+  function lpShow() {
+    lx.closeWanted = false;
+    lpRender();
+    lpAnimate();
+  }
+  // Leaving the tab: loops keep playing, but a recording wraps up and the mic closes, so the
+  // rest of the app plays through the phone as normal.
+  function lpLeave() {
+    if (lx.rec) lpRecTap(true);
+    lpCloseModals();
+    lx.closeWanted = true;
+    lpTick();
+  }
+
+  lpPlayBtn.addEventListener('click', lpPlayToggle);
+  lpTempoBtns.forEach((b) => b.addEventListener('click', () => {
+    if (lpLocked()) return;
+    LP.bpm = Math.max(40, Math.min(250, LP.bpm + Number(b.dataset.d)));
+    lpRetime(false);
+    save();
+    lpRender();
+  }));
+  lpMeterBtns.forEach((b) => b.addEventListener('click', () => {
+    if (lpLocked() || LP.meter === b.dataset.m) return;
+    LP.meter = b.dataset.m;
+    lpRetime(true);
+    save();
+    lpRender();
+  }));
+  lpBarsBtns.forEach((b) => b.addEventListener('click', () => { LP.bars = Number(b.dataset.b); save(); lpRender(); }));
+  lpMetroBtns.forEach((b) => b.addEventListener('click', () => {
+    LP.metro = b.dataset.v;
+    save();
+    if (lx.run && !lpHasSound() && !lx.rec) lpStop();
+    lpRender();
+  }));
+  $('lpDrums').addEventListener('click', () => {
+    LP.drums.on = !LP.drums.on;
+    save();
+    if (lx.run && !lpHasSound() && !lx.rec) lpStop();
+    lpRender();
+  });
+  lpKitSel.addEventListener('change', () => { LP.drums.kit = lpKitSel.value; LP.drums.on = true; save(); lpRender(); });
+  $('lpDrumVol').addEventListener('input', (e) => {
+    LP.drums.vol = Number(e.target.value);
+    if (lx.drumG) lx.drumG.gain.setTargetAtTime(lpDrumGain(), ctx.currentTime, 0.03);
+    save();
+  });
+  $('lpClickVol').addEventListener('input', (e) => {
+    LP.click = Number(e.target.value);
+    if (lx.clickG) lx.clickG.gain.setTargetAtTime(lpClickGain(), ctx.currentTime, 0.03);
+    save();
+  });
+  $('lpMonitor').addEventListener('click', () => {
+    LP.monitor = !LP.monitor;
+    if (lx.mic) lx.mic.mon.gain.setTargetAtTime(LP.monitor ? 1 : 0, ctx.currentTime, 0.02);
+    save();
+    lpRender();
+  });
+  $('lpSync').addEventListener('input', (e) => {
+    LP.sync = Number(e.target.value);
+    LP.syncSrc = 'manual';
+    save();
+    lpRender();
+  });
+  $('lpSyncAuto').addEventListener('click', () => { LP.sync = null; LP.syncSrc = ''; save(); lpRender(); });
+  $('lpMeasure').addEventListener('click', lpMeasure);
+
+  /* ---------- Clearing, with a check first ---------- */
+  let lpCfI = -1;
+  function lpAskClear(i) {
+    if (!lx.loops[i]) return;
+    lpCfI = i;
+    $('lpCfText').textContent = 'Clear loop ' + (i + 1) + '? Its recording will be gone for good.';
+    $('lpConfirm').hidden = false;
+    $('lpCfNo').focus();
+  }
+  function lpCfClose() {
+    if ($('lpConfirm').hidden) return;
+    $('lpConfirm').hidden = true;
+    const i = lpCfI;
+    lpCfI = -1;
+    if (i >= 0) { const b = lx.loops[i] ? lpCells[i].clr : lpCells[i].hit; b.focus({ preventScroll: true }); }
+  }
+  $('lpCfYes').addEventListener('click', () => {
+    const i = lpCfI;
+    lpCfClose();
+    if (i >= 0) { lpClear(i); lpCells[i].hit.focus({ preventScroll: true }); }
+  });
+  $('lpCfNo').addEventListener('click', lpCfClose);
+  $('lpConfirm').addEventListener('click', (e) => { if (e.target === $('lpConfirm')) lpCfClose(); });
+  const lpModalOpen = () => !$('lpConfirm').hidden || !$('lpEditor').hidden;
+  function lpCloseModals() { lpCfClose(); lpEdClose(); }
+
+  /* ---------- Loop editor: trim both ends, zoomed in as close as single samples ---------- */
+  const edCanvas = $('lpEdCanvas');
+  const ed = { i: -1, s: 0, e: 1, focus: 'b', drag: null, ptrs: new Map(), cols: null, colsKey: '', timer: null };
+  const edLoop = () => (ed.i >= 0 ? lx.loops[ed.i] : null);
+  const LP_VIEW_MIN = 160; // samples across the whole trimmer at the closest zoom
+  function lpEdOpen(i) {
+    const l = lx.loops[i];
+    if (!l || l.cap) return;
+    ed.i = i;
+    ed.focus = 'b';
+    ed.colsKey = '';
+    $('lpEdTitle').textContent = 'Edit loop ' + (i + 1);
+    $('lpEdTitle').style.color = LP_COLORS[i];
+    $('lpEditor').hidden = false;
+    lpEdFitView();
+    lpEdRender();
+    $('lpEdDone').focus();
+    lpAnimate();
+  }
+  function lpEdClose() {
+    if (ed.i < 0) return;
+    const i = ed.i, l = edLoop();
+    clearTimeout(ed.timer);
+    if (ed.timer && l) { ed.timer = null; lpRetrim(l); }
+    ed.i = -1;
+    ed.drag = null;
+    ed.ptrs.clear();
+    ed.cols = null;
+    $('lpEditor').hidden = true;
+    if (lpCells[i].edit && !lpCells[i].edit.hidden) lpCells[i].edit.focus({ preventScroll: true });
+  }
+  function lpEdView(s, e) {
+    const n = edLoop().data.length;
+    const span = Math.max(LP_VIEW_MIN, Math.min(n, e - s));
+    s = Math.max(0, Math.min(n - span, s));
+    ed.s = s;
+    ed.e = s + span;
+  }
+  function lpEdFitView() {
+    const l = edLoop(), len = l.b - l.a, pad = Math.max(len * 0.08, 0.12 * l.sr);
+    lpEdView(l.a - pad, l.b + pad);
+  }
+  // Sound follows the picture a moment later, so a run of taps on ‹ › rebuilds the loop once.
+  function lpEdApply(now) {
+    const l = edLoop();
+    if (!l) return;
+    clearTimeout(ed.timer);
+    if (now) { ed.timer = null; lpRetrim(l); }
+    else ed.timer = setTimeout(() => { ed.timer = null; if (edLoop() === l) lpRetrim(l); }, 90);
+    lpEdRender();
+  }
+  const lpFmtShift = (sec, zero) => {
+    const ms = sec * 1000, a = Math.abs(ms);
+    if (a < 0.05) return zero;
+    const sign = ms > 0 ? '+' : '−';
+    return sign + (a >= 1000 ? (a / 1000).toFixed(2) + ' s' : a >= 10 ? Math.round(a) + ' ms' : a.toFixed(1) + ' ms');
+  };
+  const lpFmtT = (sec) => (sec < 0 ? '−' : '') + Math.abs(sec).toFixed(Math.abs(sec) < 10 ? 2 : 1) + ' s';
+  function lpEdRender() {
+    const l = edLoop();
+    if (!l) return;
+    $('lpEdA').textContent = lpFmtShift((l.a - l.a0) / l.sr, 'On the beat');
+    $('lpEdB').textContent = lpFmtShift((l.b - l.b0) / l.sr, 'As recorded');
+    const L = lpLoopLen(l), beat = lpBeat(), k = Math.round(L / beat), off = L - k * beat;
+    const lenEl = $('lpEdLen');
+    if (k >= 1 && Math.abs(off) < 0.0006) lenEl.innerHTML = 'Loop length: <b>' + lpBeatsText(k) + '</b>, right on the beat.';
+    else lenEl.innerHTML = 'Loop length: <b>' + (k >= 1 ? lpBeatsText(k) + ' ' + lpFmtShift(off, '') : L.toFixed(3) + ' s') + '</b>. A loop that isn\'t a whole number of beats slowly drifts off the drums and your other loops; tap Fit to the beat to fix it.';
+    $('lpEdL').textContent = lpFmtT((ed.s - l.a0) / l.sr);
+    $('lpEdR').textContent = lpFmtT((ed.e - l.a0) / l.sr);
+    const span = (ed.e - ed.s) / l.sr;
+    $('lpEdSpan').textContent = span >= 1 ? span.toFixed(1) + ' s shown' : span >= 0.01 ? Math.round(span * 1000) + ' ms shown' : (span * 1000).toFixed(1) + ' ms shown';
+    document.querySelectorAll('#lpEdFocus button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.e === ed.focus)));
+    $('lpEdVol').value = String(Math.round(l.vol * 100));
+    $('lpEdVolOut').textContent = Math.round(l.vol * 100) + '%';
+    $('lpZoomIn').disabled = ed.e - ed.s <= LP_VIEW_MIN + 1;
+    lpEdDraw();
+  }
+  // Loudest and quietest sample under each pixel column (cached until the view moves).
+  function lpEdCols(W) {
+    const l = edLoop(), key = ed.s.toFixed(2) + '|' + ed.e.toFixed(2) + '|' + W + '|' + l.data.length;
+    if (ed.colsKey === key) return ed.cols;
+    const d = l.data, per = (ed.e - ed.s) / W, cols = new Float32Array(W * 2);
+    let peak = 1e-4;
+    for (let x = 0; x < W; x++) {
+      const a = Math.max(0, Math.floor(ed.s + x * per)), b = Math.min(d.length, Math.max(a + 1, Math.floor(ed.s + (x + 1) * per)));
+      let lo = 0, hi = 0;
+      for (let i = a; i < b; i++) { const v = d[i]; if (v < lo) lo = v; else if (v > hi) hi = v; }
+      cols[2 * x] = lo;
+      cols[2 * x + 1] = hi;
+      if (-lo > peak) peak = -lo;
+      if (hi > peak) peak = hi;
+    }
+    if (!l.peak) { let p = 1e-4; for (let i = 0; i < d.length; i++) { const v = d[i] < 0 ? -d[i] : d[i]; if (v > p) p = v; } l.peak = p; }
+    ed.cols = { cols, peak: Math.max(peak, l.peak * 0.15), per };
+    ed.colsKey = key;
+    return ed.cols;
+  }
+  let edColors = null;
+  function lpEdDraw() {
+    const l = edLoop();
+    if (!l) return;
+    const cssW = edCanvas.clientWidth, cssH = edCanvas.clientHeight;
+    if (!cssW) return;
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    const W = Math.round(cssW * dpr), H = Math.round(cssH * dpr);
+    if (edCanvas.width !== W || edCanvas.height !== H) { edCanvas.width = W; edCanvas.height = H; }
+    const g = edCanvas.getContext('2d');
+    if (!g) return;
+    if (!edColors) edColors = { brass: colorOf('--brass-bright') || '#e8b45c', ink: colorOf('--ink') || '#2b1c14' };
+    const span = ed.e - ed.s, X = (i) => ((i - ed.s) / span) * W;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    g.fillRect(0, 0, W, H);
+    // Beats where the recording's clicks were, brighter on each bar's first beat.
+    const bs = lpBeat() * l.sr, bpb = lpBeatsPerBar();
+    if ((W / span) * bs > 6 * dpr) {
+      const k0 = Math.ceil((ed.s - l.a0) / bs), k1 = Math.floor((ed.e - l.a0) / bs);
+      for (let k = k0; k <= k1; k++) {
+        g.fillStyle = lpMod(k, bpb) === 0 ? 'rgba(237, 226, 208, 0.26)' : 'rgba(237, 226, 208, 0.1)';
+        g.fillRect(Math.round(X(l.a0 + k * bs)), 0, Math.max(1, dpr), H);
+      }
+    }
+    const mid = H / 2;
+    const { cols, peak, per } = lpEdCols(W);
+    const amp = (H / 2 - 8 * dpr) / peak;
+    const xa = X(l.a), xb = X(l.b);
+    const col = LP_COLORS[ed.i];
+    g.fillStyle = 'rgba(237, 226, 208, 0.12)';
+    g.fillRect(0, mid, W, Math.max(1, dpr * 0.5));
+    if (per < 1.5) {
+      // Close enough to see single samples: draw the wave itself, with a dot on each sample.
+      const d = l.data, i0 = Math.max(0, Math.floor(ed.s) - 1), i1 = Math.min(d.length - 1, Math.ceil(ed.e) + 1);
+      g.save();
+      g.lineWidth = 1.5 * dpr;
+      g.strokeStyle = col;
+      g.beginPath();
+      for (let i = i0; i <= i1; i++) { const x = X(i), y = mid - d[i] * amp; if (i === i0) g.moveTo(x, y); else g.lineTo(x, y); }
+      g.stroke();
+      if (per < 0.25) { g.fillStyle = col; for (let i = i0; i <= i1; i++) { g.beginPath(); g.arc(X(i), mid - d[i] * amp, 1.8 * dpr, 0, Math.PI * 2); g.fill(); } }
+      g.restore();
+    } else {
+      for (let x = 0; x < W; x++) {
+        g.fillStyle = x >= xa && x <= xb ? col : 'rgba(237, 226, 208, 0.35)';
+        const y1 = mid - cols[2 * x + 1] * amp, y2 = mid - cols[2 * x] * amp;
+        g.fillRect(x, y1, 1, Math.max(1, y2 - y1));
+      }
+    }
+    // Shade what's trimmed off, then the gold frame and its two handles.
+    g.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    if (xa > 0) g.fillRect(0, 0, Math.min(W, xa), H);
+    if (xb < W) g.fillRect(Math.max(0, xb), 0, W - Math.max(0, xb), H);
+    const hw = 13 * dpr, bar = 3 * dpr;
+    g.fillStyle = edColors.brass;
+    const fx1 = Math.max(-hw, xa), fx2 = Math.min(W + hw, xb);
+    if (fx2 > fx1) { g.fillRect(fx1, 0, fx2 - fx1, bar); g.fillRect(fx1, H - bar, fx2 - fx1, bar); }
+    const handle = (x0, left, focused) => {
+      if (x0 + hw < 0 || x0 - hw > W) return;
+      const hx = left ? x0 : x0 - hw;
+      g.fillStyle = edColors.brass;
+      g.beginPath();
+      if (g.roundRect) g.roundRect(hx, 0, hw, H, left ? [5 * dpr, 0, 0, 5 * dpr] : [0, 5 * dpr, 5 * dpr, 0]);
+      else g.rect(hx, 0, hw, H);
+      g.fill();
+      g.fillRect(Math.round(x0) - (left ? 0 : dpr), 0, Math.max(1, dpr), H);
+      g.strokeStyle = edColors.ink;
+      g.lineWidth = (focused ? 2.6 : 2) * dpr;
+      g.lineCap = 'round';
+      g.beginPath();
+      const cx = hx + hw / 2, dd = 3 * dpr;
+      g.moveTo(cx + (left ? dd : -dd), mid - 6 * dpr);
+      g.lineTo(cx + (left ? -dd : dd), mid);
+      g.lineTo(cx + (left ? dd : -dd), mid + 6 * dpr);
+      g.stroke();
+    };
+    handle(xa, true, ed.focus === 'a');
+    handle(xb, false, ed.focus === 'b');
+    // Where the loop is playing now.
+    if (lx.run && l.src && !ed.drag) {
+      const p = l.a + lpPhase(l, ctx.currentTime) * l.sr;
+      if (p >= ed.s && p <= ed.e) { g.fillStyle = '#fff'; g.fillRect(Math.round(X(p)) - dpr, 0, 2 * dpr, H); }
+    }
+  }
+  function lpEdCentre() {
+    const l = edLoop(), t = ed.focus === 'a' ? l.a : l.b;
+    return t >= ed.s && t <= ed.e ? t : (ed.s + ed.e) / 2;
+  }
+  // Zooming in centres on the end you picked, so you see both sides of the cut as you home in.
+  function lpEdZoom(f) {
+    const l = edLoop();
+    if (!l) return;
+    const c = lpEdCentre(), span = Math.max(LP_VIEW_MIN, (ed.e - ed.s) * f);
+    lpEdView(c - span / 2, c + span / 2);
+    lpEdRender();
+  }
+  $('lpZoomIn').addEventListener('click', () => lpEdZoom(0.5));
+  $('lpZoomOut').addEventListener('click', () => lpEdZoom(2));
+  $('lpZoomFit').addEventListener('click', () => { if (edLoop()) { lpEdFitView(); lpEdRender(); } });
+  document.querySelectorAll('#lpEdFocus button').forEach((b) => b.addEventListener('click', () => {
+    ed.focus = b.dataset.e;
+    const l = edLoop(), t = ed.focus === 'a' ? l.a : l.b, span = ed.e - ed.s;
+    if (t < ed.s || t > ed.e) lpEdView(t - span / 2, t + span / 2); // bring that end into view
+    lpEdRender();
+  }));
+  const lpMinLen = (l) => Math.round(LP_MIN * l.sr);
+  function lpEdSet(end, v) {
+    const l = edLoop();
+    if (end === 'a') l.a = Math.max(0, Math.min(Math.round(v), l.b - lpMinLen(l)));
+    else l.b = Math.min(l.data.length, Math.max(Math.round(v), l.a + lpMinLen(l)));
+  }
+  // ‹ › move an end one screen pixel's worth: a sample at a time when zoomed right in.
+  document.querySelectorAll('#lpEditor .nudge2 button').forEach((btn) => btn.addEventListener('click', () => {
+    const l = edLoop();
+    if (!l) return;
+    const end = btn.dataset.e, dir = Number(btn.dataset.d);
+    ed.focus = end;
+    const step = Math.max(1, Math.round((ed.e - ed.s) / Math.max(1, edCanvas.clientWidth)));
+    lpEdSet(end, (end === 'a' ? l.a : l.b) + dir * step);
+    const t = end === 'a' ? l.a : l.b, span = ed.e - ed.s;
+    if (t < ed.s || t > ed.e) lpEdView(t - span / 2, t + span / 2);
+    lpEdApply(false);
+  }));
+  $('lpEdFit').addEventListener('click', () => {
+    const l = edLoop();
+    if (!l) return;
+    const bs = lpBeat() * l.sr;
+    let k = Math.max(1, Math.round((l.b - l.a) / bs));
+    while (k > 1 && l.a + Math.round(k * bs) > l.data.length) k--;
+    l.b = Math.min(l.data.length, l.a + Math.round(k * bs));
+    lpEdApply(true);
+  });
+  $('lpEdReset').addEventListener('click', () => {
+    const l = edLoop();
+    if (!l) return;
+    l.a = l.a0;
+    l.b = l.b0;
+    lpEdFitView();
+    lpEdApply(true);
+  });
+  $('lpEdVol').addEventListener('input', (e) => {
+    const l = edLoop();
+    if (!l) return;
+    l.vol = Number(e.target.value) / 100;
+    lpApplyVol(l);
+    $('lpEdVolOut').textContent = Math.round(l.vol * 100) + '%';
+  });
+  $('lpEdDone').addEventListener('click', lpEdClose);
+  $('lpEditor').addEventListener('click', (e) => { if (e.target === $('lpEditor')) lpEdClose(); });
+
+  // Touch and mouse on the trimmer: drag an end, drag the waveform to scroll, pinch to zoom.
+  const edAt = (clientX) => {
+    const r = edCanvas.getBoundingClientRect();
+    return ed.s + ((clientX - r.left) / r.width) * (ed.e - ed.s);
+  };
+  edCanvas.addEventListener('pointerdown', (ev) => {
+    const l = edLoop();
+    if (!l) return;
+    try { edCanvas.setPointerCapture(ev.pointerId); } catch (e) { /* synthetic event */ }
+    ed.ptrs.set(ev.pointerId, { x: ev.clientX });
+    if (ed.ptrs.size === 2) {
+      const [p1, p2] = Array.from(ed.ptrs.values());
+      ed.drag = { kind: 'pinch', d0: Math.abs(p1.x - p2.x) || 1, s: ed.s, e: ed.e, c: edAt((p1.x + p2.x) / 2) };
+      return;
+    }
+    const r = edCanvas.getBoundingClientRect(), x = ev.clientX - r.left, span = ed.e - ed.s;
+    const xa = ((l.a - ed.s) / span) * r.width, xb = ((l.b - ed.s) / span) * r.width;
+    const da = x - xa, db = xb - x; // distance into each handle (the handles sit just inside the loop)
+    const nearA = da > -16 && da < 32, nearB = db > -16 && db < 32;
+    if (nearA && (!nearB || Math.abs(da) <= Math.abs(db))) ed.drag = { kind: 'a', grab: edAt(ev.clientX) - l.a };
+    else if (nearB) ed.drag = { kind: 'b', grab: edAt(ev.clientX) - l.b };
+    if (ed.drag) ed.focus = ed.drag.kind;
+    else ed.drag = { kind: 'pan', x0: ev.clientX, s: ed.s };
+    lpEdRender();
+  });
+  edCanvas.addEventListener('pointermove', (ev) => {
+    const l = edLoop();
+    if (!l || !ed.drag || !ed.ptrs.has(ev.pointerId)) return;
+    ed.ptrs.set(ev.pointerId, { x: ev.clientX });
+    const r = edCanvas.getBoundingClientRect();
+    if (ed.drag.kind === 'pinch' && ed.ptrs.size >= 2) {
+      const [p1, p2] = Array.from(ed.ptrs.values());
+      const d = Math.abs(p1.x - p2.x) || 1, span = (ed.drag.e - ed.drag.s) * (ed.drag.d0 / d);
+      const f = ((p1.x + p2.x) / 2 - r.left) / r.width;
+      lpEdView(ed.drag.c - f * span, ed.drag.c - f * span + span);
+    } else if (ed.drag.kind === 'pan') {
+      const span = ed.e - ed.s, s = ed.drag.s - ((ev.clientX - ed.drag.x0) / r.width) * span;
+      lpEdView(s, s + span);
+    } else if (ed.drag.kind === 'a' || ed.drag.kind === 'b') {
+      // While dragging only the picture moves; the sound follows when you let go.
+      lpEdSet(ed.drag.kind, Math.max(ed.s, Math.min(ed.e, edAt(ev.clientX) - ed.drag.grab)));
+    }
+    lpEdRender();
+  });
+  const edEnd = (ev) => {
+    if (!ed.ptrs.has(ev.pointerId)) return;
+    ed.ptrs.delete(ev.pointerId);
+    if (!ed.drag) return;
+    if (ed.drag.kind === 'pinch') { if (ed.ptrs.size === 0) ed.drag = null; return; }
+    const moved = ed.drag.kind === 'a' || ed.drag.kind === 'b';
+    ed.drag = null;
+    if (moved) lpEdApply(true);
+    else lpEdRender();
+  };
+  edCanvas.addEventListener('pointerup', edEnd);
+  edCanvas.addEventListener('pointercancel', edEnd);
+
   /* ---------- Keyboard ---------- */
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && pickerSlot !== null) { closePicker(true); return; }
+    if (e.key === 'Escape' && lpModalOpen()) { lpCloseModals(); return; }
     const tag = e.target && e.target.tagName;
     if (e.code === 'Space' || e.key === ' ') {
       if (['INPUT', 'SELECT', 'BUTTON', 'TEXTAREA', 'OUTPUT'].includes(tag)) return;
       e.preventDefault();
       if (state.tab === 'drills') playDrillSound(false);
+      else if (state.tab === 'looper') { if (!lpModalOpen()) lpPlayToggle(); }
       else toggle();
       return;
     }

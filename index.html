@@ -918,6 +918,21 @@
   .lp-trim { height: 140px; }
   .lp-focus { flex: 0 1 150px; }
   .lp-edrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .lp-saverow { display: flex; gap: 8px; align-items: center; }
+  .lp-saverow input {
+    flex: 1; min-width: 0; font-family: var(--sans); font-size: 16px; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--well); color: var(--parchment);
+  }
+  .lp-saverow input::placeholder { color: var(--parchment-faint); }
+  .lp-saverow .btn { flex-shrink: 0; }
+  .lp-lib { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 6px; }
+  .lp-librows { display: flex; flex-direction: column; gap: 6px; }
+  .lp-librow { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--well); }
+  .lp-libtxt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .lp-libname { font-family: var(--serif); font-size: 15.5px; color: var(--parchment); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lp-libsub { font-family: var(--sans); font-size: 11.5px; color: var(--parchment-faint); }
+  .lp-librow .btn { padding: 7px 14px; flex-shrink: 0; }
+  .lp-librow .lp-clear { width: 28px; height: 28px; }
 
   /* Pill buttons */
   .actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1674,6 +1689,14 @@
     </div>
     <p class="lp-note">Wear wired headphones if you can. Through the speaker, the mic records your loops along with you, and Bluetooth headphones drop to phone-call sound while the mic is on.</p>
 
+    <details class="mix" id="lpLibBox">
+      <summary><span>My loops</span><span class="mixstat" id="lpLibStat"></span></summary>
+      <div class="lp-lib">
+        <div class="lp-librows" id="lpLibRows"></div>
+        <p class="stem-note" id="lpLibNote"></p>
+      </div>
+    </details>
+
     <details class="mix" id="lpMore">
       <summary><span>Looper settings</span></summary>
       <div class="lp-settings">
@@ -1739,6 +1762,11 @@
           <button type="button" class="textbtn" id="lpEdReset">Undo all trims</button>
         </div>
         <label class="lp-slider"><span>Loop volume <output id="lpEdVolOut"></output></span><input type="range" id="lpEdVol" min="0" max="400" step="5"></label>
+        <div class="lp-saverow">
+          <input type="text" id="lpSaveName" maxlength="40" autocomplete="off" enterkeyhint="done" aria-label="Name for this loop" placeholder="Name this loop">
+          <button type="button" class="btn" id="lpSave">Save to My loops</button>
+        </div>
+        <p class="stem-note" id="lpSaveNote" hidden></p>
         <p class="caption">Drag the gold ends, or pick Start or End and tap + to zoom in on it; ‹ › move it one step at the current zoom. Faint lines are the beats. The loop keeps playing, so you hear each change.</p>
       </div>
     </div>
@@ -7091,7 +7119,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-10-24a';
+  const APP_VERSION = '2026-10-24b';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;
@@ -7435,6 +7463,10 @@ function compilePattern(preset, meter) {
   meterBtns.forEach((b) => b.addEventListener('click', () => { sp.meter = b.dataset.m; renderCount(); }));
 
   /* ---------- Loop: a trimmer over the song's waveform ---------- */
+  // Both trimmers (this one and the Looper's) leave this many CSS pixels at each side of the
+  // waveform for the gold handles, which sit outside the loop so they never cover what's kept.
+  const TRIM_M = 13;
+  const trimFrac = (clientX, r) => (clientX - r.left - TRIM_M) / Math.max(1, r.width - 2 * TRIM_M);
   const PEAK_BIN = 256;
   // Loudest and quietest sample in every 256-sample stretch of the whole mix, for drawing.
   function buildPeaks() {
@@ -7522,24 +7554,25 @@ function compilePattern(preset, meter) {
     if (!trimColors) trimColors = { brass: colorOf('--brass-bright') || '#e8b45c', ink: colorOf('--ink') || '#2b1c14' };
     const g = trimCanvas.getContext('2d');
     const { s, e } = sp.view, span = e - s;
-    const X = (t) => ((t - s) / span) * W;
+    const M = TRIM_M * dpr, IW = Math.max(1, W - 2 * M);
+    const X = (t) => M + ((t - s) / span) * IW;
     g.clearRect(0, 0, W, H);
     g.fillStyle = 'rgba(0, 0, 0, 0.32)';
     g.fillRect(0, 0, W, H);
     // Beat lines, once they're far enough apart to read.
     const b = sp.beat && sp.beat.beats;
-    if (b && b.length > 1 && (W / span) * (60 / sp.beat.bpm) > 7 * dpr) {
+    if (b && b.length > 1 && (IW / span) * (60 / sp.beat.bpm) > 7 * dpr) {
       g.fillStyle = 'rgba(237, 226, 208, 0.10)';
       for (let i = 0; i < b.length; i++) if (b[i] >= s && b[i] <= e) g.fillRect(Math.round(X(b[i])), 0, Math.max(1, dpr), H);
     }
     // Waveform: bright inside the loop, faint outside it.
-    const { cols, peak } = viewColumns(W);
+    const iw = Math.round(IW), { cols, peak } = viewColumns(iw);
     const mid = H / 2, amp = (H / 2 - 7 * dpr) / peak;
     const xa = X(sp.A), xb = X(sp.B);
-    for (let x = 0; x < W; x++) {
-      const inside = x >= xa && x <= xb;
+    for (let c = 0; c < iw; c++) {
+      const x = M + c, inside = x >= xa && x <= xb;
       g.fillStyle = inside ? 'rgba(237, 226, 208, 0.78)' : 'rgba(237, 226, 208, 0.28)';
-      const y1 = mid - cols[2 * x + 1] * amp, y2 = mid - cols[2 * x] * amp;
+      const y1 = mid - cols[2 * c + 1] * amp, y2 = mid - cols[2 * c] * amp;
       g.fillRect(x, y1, 1, Math.max(1, y2 - y1));
     }
     // Shade outside the loop, then the gold frame and its two handles.
@@ -7550,14 +7583,16 @@ function compilePattern(preset, meter) {
     g.fillStyle = trimColors.brass;
     const fx1 = Math.max(-hw, xa), fx2 = Math.min(W + hw, xb);
     if (fx2 > fx1) { g.fillRect(fx1, 0, fx2 - fx1, bar); g.fillRect(fx1, H - bar, fx2 - fx1, bar); }
+    // The handles sit outside the loop, so nothing that's kept is hidden; a thin line marks the cut.
     const handle = (x0, left) => {
       if (x0 + hw < 0 || x0 - hw > W) return;
-      const hx = left ? x0 : x0 - hw;
+      const hx = left ? x0 - hw : x0;
       g.fillStyle = trimColors.brass;
       g.beginPath();
       if (g.roundRect) g.roundRect(hx, 0, hw, H, left ? [5 * dpr, 0, 0, 5 * dpr] : [0, 5 * dpr, 5 * dpr, 0]);
       else g.rect(hx, 0, hw, H);
       g.fill();
+      g.fillRect(left ? Math.floor(x0) : Math.ceil(x0) - Math.max(1, dpr), 0, Math.max(1, dpr), H);
       g.strokeStyle = trimColors.ink;
       g.lineWidth = 2 * dpr;
       g.lineCap = 'round';
@@ -7666,10 +7701,7 @@ function compilePattern(preset, meter) {
   // Touch and mouse on the trimmer: drag an end, drag the waveform to scroll, pinch to zoom, tap to jump.
   const ptrs = new Map();
   let drag = null; // { kind: 'a' | 'b' | 'pan' | 'pinch', ... }
-  const tAt = (clientX) => {
-    const r = trimCanvas.getBoundingClientRect();
-    return sp.view.s + ((clientX - r.left) / r.width) * (sp.view.e - sp.view.s);
-  };
+  const tAt = (clientX) => sp.view.s + trimFrac(clientX, trimCanvas.getBoundingClientRect()) * (sp.view.e - sp.view.s);
   trimCanvas.addEventListener('pointerdown', (ev) => {
     if (!sp.bufs) return;
     trimCanvas.setPointerCapture(ev.pointerId);
@@ -7681,9 +7713,10 @@ function compilePattern(preset, meter) {
     }
     const r = trimCanvas.getBoundingClientRect(), x = ev.clientX - r.left;
     const span = sp.view.e - sp.view.s;
-    const xa = ((sp.A - sp.view.s) / span) * r.width, xb = ((sp.B - sp.view.s) / span) * r.width;
-    const da = x - xa, db = xb - x; // distance into each handle (handles sit just inside the loop)
-    const nearA = da > -14 && da < 30, nearB = db > -14 && db < 30;
+    const iw = Math.max(1, r.width - 2 * TRIM_M);
+    const xa = TRIM_M + ((sp.A - sp.view.s) / span) * iw, xb = TRIM_M + ((sp.B - sp.view.s) / span) * iw;
+    const da = xa - x, db = x - xb; // distance into each handle (handles sit just outside the loop)
+    const nearA = da > -16 && da < 13 + 18, nearB = db > -16 && db < 13 + 18;
     if (nearA && (!nearB || Math.abs(da) <= Math.abs(db))) drag = { kind: 'a' };
     else if (nearB) drag = { kind: 'b' };
     if (drag && drag.kind !== 'pan') sp.focus = drag.kind;
@@ -7696,12 +7729,13 @@ function compilePattern(preset, meter) {
       const [p1, p2] = Array.from(ptrs.values());
       const d = Math.abs(p1.x - p2.x) || 1;
       const span = (drag.e - drag.s) * (drag.d0 / d);
-      const r = trimCanvas.getBoundingClientRect(), f = ((p1.x + p2.x) / 2 - r.left) / r.width;
+      const r = trimCanvas.getBoundingClientRect(), f = trimFrac((p1.x + p2.x) / 2, r);
       setView(drag.c - f * span, drag.c - f * span + span);
     } else if (drag.kind === 'pan') {
       const r = trimCanvas.getBoundingClientRect(), dx = ev.clientX - drag.x0;
       if (Math.abs(dx) > 6) drag.moved = true;
-      if (drag.moved) setView(drag.s - (dx / r.width) * (sp.view.e - sp.view.s), drag.s - (dx / r.width) * (sp.view.e - sp.view.s) + (sp.view.e - sp.view.s));
+      const iw = Math.max(1, r.width - 2 * TRIM_M);
+      if (drag.moved) setView(drag.s - (dx / iw) * (sp.view.e - sp.view.s), drag.s - (dx / iw) * (sp.view.e - sp.view.s) + (sp.view.e - sp.view.s));
     } else if (drag.kind === 'a' || drag.kind === 'b') {
       // While dragging, only the picture moves; the sound follows when you let go.
       const t = snapTime(Math.max(sp.view.s, Math.min(sp.view.e, tAt(ev.clientX))));
@@ -8915,9 +8949,10 @@ self.onmessage = async (e) => {
   const lpLoopLen = (l) => (l.b - l.a) / l.sr;
 
   // "2 measures", "1 measure + 3 beats", "5 eighths"
-  function lpBeatsText(k) {
-    const bpb = lpBeatsPerBar(), bars = Math.floor(k / bpb), rem = k - bars * bpb;
-    const unit = LP.meter === '6/8' ? 'eighth' : 'beat';
+  function lpBeatsText(k, meter) {
+    const m = meter || LP.meter, bpb = m === '4/4' ? 4 : m === '3/4' ? 3 : 6;
+    const bars = Math.floor(k / bpb), rem = k - bars * bpb;
+    const unit = m === '6/8' ? 'eighth' : 'beat';
     const parts = [];
     if (bars) parts.push(bars + (bars === 1 ? ' measure' : ' measures'));
     if (rem) parts.push(rem + ' ' + unit + (rem === 1 ? '' : 's'));
@@ -9178,25 +9213,36 @@ self.onmessage = async (e) => {
     lx.clickG = ctx.createGain();
     lx.clickG.gain.value = lpClickGain();
     lx.clickG.connect(ctx.destination);
-    // The loops' own bus: a compressor evens out the strums and lifts the quiet parts, then a
-    // limiter (and a gentle rounding-off) keeps four loud loops from clipping.
-    const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -20; comp.knee.value = 10; comp.ratio.value = 2.5;
-    comp.attack.value = 0.005; comp.release.value = 0.2;
+    // Each circle has its own channel: rumble cut (a phone speaker can't play it, and it eats
+    // loudness), a compressor that evens out the strums, then the loop's volume. Turning a loop
+    // up past 100% drives the shared limiter (and a gentle rounding-off) at the end, which keeps
+    // it from clipping however loud it gets.
     const lim = ctx.createDynamicsCompressor();
-    lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20;
-    lim.attack.value = 0.001; lim.release.value = 0.08;
+    lim.threshold.value = -6; lim.knee.value = 0; lim.ratio.value = 20;
+    lim.attack.value = 0.001; lim.release.value = 0.03;
+    const lift = ctx.createGain();
+    lift.gain.value = 1.9;
     const soft = ctx.createWaveShaper();
     soft.curve = softClipCurve();
     lx.loopOut = ctx.createGain();
-    lx.loopOut.connect(comp); comp.connect(lim); lim.connect(soft); soft.connect(ctx.destination);
-    lx.loopComp = [comp, lim, soft];
+    lx.loopOut.connect(lim); lim.connect(lift); lift.connect(soft); soft.connect(ctx.destination);
+    lx.loopComp = [lim, lift, soft];
+    lx.ch = [0, 1, 2, 3].map((i) => {
+      const inp = ctx.createGain(), hp = ctx.createBiquadFilter(), comp = ctx.createDynamicsCompressor(), vol = ctx.createGain();
+      hp.type = 'highpass'; hp.frequency.value = 70; hp.Q.value = 0.6;
+      comp.threshold.value = -20; comp.knee.value = 10; comp.ratio.value = 2.5;
+      comp.attack.value = 0.005; comp.release.value = 0.2;
+      vol.gain.value = lx.loops[i] ? lpVolGain(lx.loops[i].vol) : 1;
+      inp.connect(hp); hp.connect(comp); comp.connect(vol); vol.connect(lx.loopOut);
+      lx.loopComp.push(inp, hp, comp, vol);
+      return { inp, comp, vol };
+    });
     // A compressor that's just been made can swallow the first hit it gets after a silence. A
-    // constant whisper (100 dB down, far below hearing) keeps both buses running, so the first
+    // constant whisper (100 dB down, far below hearing) keeps them all running, so the first
     // downbeat after Play comes through whole.
     lx.feed = null;
     try {
-      const dests = [comp, lx.busObj.input];
+      const dests = lx.ch.map((c) => c.comp).concat([lx.busObj.input]);
       if (ctx.createConstantSource) {
         const k = ctx.createConstantSource();
         k.offset.value = 1e-5;
@@ -9223,7 +9269,7 @@ self.onmessage = async (e) => {
     const old = [lx.drumG, lx.clickG, lx.loopOut].concat(lx.loopComp || []);
     [lx.clickG, lx.loopOut].forEach((g) => { try { if (g) g.gain.setTargetAtTime(0, ctx.currentTime, 0.01); } catch (e) { /* closed */ } });
     setTimeout(() => old.forEach((n) => { try { if (n) n.disconnect(); } catch (e) { /* closed */ } }), 250);
-    lx.busObj = lx.drumG = lx.clickG = lx.loopOut = lx.loopComp = null;
+    lx.busObj = lx.drumG = lx.clickG = lx.loopOut = lx.loopComp = lx.ch = null;
   }
   function lpSched() {
     if (!lx.run) return;
@@ -9285,6 +9331,7 @@ self.onmessage = async (e) => {
     return true;
   }
   function lpPlayToggle() {
+    lpSay('');
     if (lx.run) { lpStop(); return; }
     if (lx.opening || lx.measuring) return;
     if (!lpHasSound()) { toast('Record a loop, or turn on the drums or the metronome'); return; }
@@ -9382,6 +9429,7 @@ self.onmessage = async (e) => {
       muted: false, vol: 1, norm: 1, normSet: false, env: null, recEnv: r.cap.env,
       ready: false, cap: r.cap, prov: null, src: null, g: null, buf: null, bufCtx: null,
     };
+    lpApplyVol(lx.loops[r.i]);
   }
   function lpFinish(l, now) {
     const c = l.cap;
@@ -9424,7 +9472,7 @@ self.onmessage = async (e) => {
     const g = ctx.createGain();
     g.gain.value = lpGainOf(l);
     src.connect(g);
-    g.connect(lx.loopOut);
+    g.connect(lx.ch[l.i].inp);
     src.start(at - LP_BUS_LAT - lead / sr);
     l.prov = { src, g };
   }
@@ -9443,7 +9491,10 @@ self.onmessage = async (e) => {
     const loud = lv[Math.min(lv.length - 1, Math.floor(lv.length * 0.9))];
     return loud > 1e-4 ? Math.max(0.5, Math.min(LP_BOOST, LP_LEVEL / loud)) : 1;
   }
-  const lpGainOf = (l) => (l.muted ? 0 : l.norm * l.vol);
+  const lpGainOf = (l) => (l.muted ? 0 : l.norm);
+  // Loop volume: straight up to 100%, then each further 100% more than doubles the drive into the
+  // limiter. 400% is about as loud as a phone can play without the sound turning into fuzz.
+  const lpVolGain = (v) => 0.4 * (v <= 1 ? v : Math.pow(2.3, v - 1));
   // The loop's sound: from its start to its end. In the last few ms the end fades into the sound
   // that came just before the start, so the join is seamless and the downbeat's attack is untouched.
   function lpBake(l) {
@@ -9497,7 +9548,7 @@ self.onmessage = async (e) => {
     g.gain.setValueAtTime(0, s0);
     g.gain.linearRampToValueAtTime(lpGainOf(l), Math.max(T, s0 + 0.002));
     src.connect(g);
-    g.connect(lx.loopOut);
+    g.connect(lx.ch[l.i].inp);
     src.start(s0, Math.min(lpMod(lpPhase(l, at) - (T - s0), lpLoopLen(l)), Math.max(0, l.buf.duration - 1e-4)));
     l.src = src;
     l.g = g;
@@ -9522,7 +9573,7 @@ self.onmessage = async (e) => {
     if (!m && l.ready && !l.src) lpLoopStart(l, now + 0.03);
   }
   function lpApplyVol(l) {
-    if (l.g && ctx) l.g.gain.setTargetAtTime(lpGainOf(l), ctx.currentTime, 0.02);
+    if (lx.ch && ctx) lx.ch[l.i].vol.gain.setTargetAtTime(lpVolGain(l.vol), ctx.currentTime, 0.02);
   }
   // A new start or end: rebuild the loop. Its new start lands on the beat where the round now
   // playing began, so a loop that's no longer a whole number of beats drifts from here, not from
@@ -9551,6 +9602,7 @@ self.onmessage = async (e) => {
   /* ---------- Tapping a circle ---------- */
   function lpTap(i) {
     if (lx.measuring || lx.opening) return;
+    lpSay('');
     const l = lx.loops[i], r = lx.rec;
     if (r && r.i === i) { lpRecTap(false); return; }
     if (l) {
@@ -9921,6 +9973,7 @@ self.onmessage = async (e) => {
   }
   function lpShow() {
     lx.closeWanted = false;
+    if (!lpLib.loaded) lplRefresh();
     lpRender();
     lpAnimate();
   }
@@ -9993,31 +10046,195 @@ self.onmessage = async (e) => {
   $('lpSyncAuto').addEventListener('click', () => { LP.sync = null; LP.syncSrc = ''; save(); lpRender(); });
   $('lpMeasure').addEventListener('click', lpMeasure);
 
-  /* ---------- Clearing, with a check first ---------- */
-  let lpCfI = -1;
-  function lpAskClear(i) {
-    if (!lx.loops[i]) return;
-    lpCfI = i;
-    $('lpCfText').textContent = 'Clear loop ' + (i + 1) + '? Its recording will be gone for good.';
+  /* ---------- Checks before clearing or deleting ---------- */
+  let lpCf = null; // { onYes, back }
+  function lpAsk(text, yesLabel, onYes, back) {
+    lpCf = { onYes, back };
+    $('lpCfText').textContent = text;
+    $('lpCfYes').textContent = yesLabel;
     $('lpConfirm').hidden = false;
     $('lpCfNo').focus();
   }
-  function lpCfClose() {
+  function lpCfClose(yes) {
     if ($('lpConfirm').hidden) return;
     $('lpConfirm').hidden = true;
-    const i = lpCfI;
-    lpCfI = -1;
-    if (i >= 0) { const b = lx.loops[i] ? lpCells[i].clr : lpCells[i].hit; b.focus({ preventScroll: true }); }
+    const cf = lpCf;
+    lpCf = null;
+    if (yes === true && cf) cf.onYes();
+    const b = cf && cf.back && cf.back();
+    if (b) b.focus({ preventScroll: true });
   }
-  $('lpCfYes').addEventListener('click', () => {
-    const i = lpCfI;
-    lpCfClose();
-    if (i >= 0) { lpClear(i); lpCells[i].hit.focus({ preventScroll: true }); }
-  });
-  $('lpCfNo').addEventListener('click', lpCfClose);
-  $('lpConfirm').addEventListener('click', (e) => { if (e.target === $('lpConfirm')) lpCfClose(); });
+  function lpAskClear(i) {
+    const l = lx.loops[i];
+    if (!l) return;
+    const kept = l.savedId && lpLib.items.some((x) => x.id === l.savedId);
+    lpAsk('Clear loop ' + (i + 1) + '? ' + (kept ? 'It stays in My loops, so you can load it again.' : 'It isn\'t saved, so the recording will be gone for good.'),
+      'Clear it', () => lpClear(i), () => (lx.loops[i] ? lpCells[i].clr : lpCells[i].hit));
+  }
+  $('lpCfYes').addEventListener('click', () => lpCfClose(true));
+  $('lpCfNo').addEventListener('click', () => lpCfClose(false));
+  $('lpConfirm').addEventListener('click', (e) => { if (e.target === $('lpConfirm')) lpCfClose(false); });
   const lpModalOpen = () => !$('lpConfirm').hidden || !$('lpEditor').hidden;
-  function lpCloseModals() { lpCfClose(); lpEdClose(); }
+  function lpCloseModals() { lpCfClose(false); lpEdClose(); }
+
+  /* ---------- My loops: recordings saved on this phone ----------
+     Each saved loop keeps its whole recording (with the second either side, so it can be trimmed
+     again), its trim, volume, tempo and time. The sound is kept as 16-bit samples scaled to the
+     loop's own peak, so quiet phone recordings lose nothing. Stored in the page's own storage
+     (IndexedDB), in two lists so the names load without the sound. */
+  const LPL_DB = 'looper-library';
+  const lpLib = { db: null, items: [], ok: typeof indexedDB !== 'undefined', loaded: false, busy: false };
+  async function lplDb() {
+    if (lpLib.db) return lpLib.db;
+    const r = indexedDB.open(LPL_DB, 1);
+    r.onupgradeneeded = () => {
+      const db = r.result;
+      if (!db.objectStoreNames.contains('loops')) db.createObjectStore('loops', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('audio')) db.createObjectStore('audio', { keyPath: 'id' });
+    };
+    lpLib.db = await libReq(r);
+    return lpLib.db;
+  }
+  const lplDone = (tx) => new Promise((res, rej) => { tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); });
+  async function lplRefresh() {
+    if (!lpLib.ok) { lplRender(); return; }
+    try {
+      const db = await lplDb();
+      lpLib.items = (await libReq(db.transaction('loops', 'readonly').objectStore('loops').getAll())).sort((a, b) => b.savedAt - a.savedAt);
+    } catch (e) { lpLib.ok = false; }
+    lpLib.loaded = true;
+    lplRender();
+  }
+  const lplLenText = (it) => {
+    const beat = (it.meter === '6/8' ? 60 / it.bpm / 3 : 60 / it.bpm), L = (it.b - it.a) / it.sr, k = Math.round(L / beat);
+    return k >= 1 && Math.abs(L - k * beat) < 0.0006 ? lpBeatsText(k, it.meter) : L.toFixed(2) + ' s';
+  };
+  const lplDate = (t) => { try { return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } catch (e) { return ''; } };
+  function lplRender() {
+    const rows = $('lpLibRows'), note = $('lpLibNote');
+    rows.innerHTML = '';
+    const n = lpLib.items.length;
+    $('lpLibStat').textContent = !lpLib.ok ? '' : n ? n + ' saved' : '';
+    if (!lpLib.ok) { note.textContent = 'This browser can\'t save loops.'; return; }
+    lpLib.items.forEach((it) => {
+      const row = el('div', 'lp-librow');
+      const txt = el('div', 'lp-libtxt');
+      txt.append(el('span', 'lp-libname', it.name), el('span', 'lp-libsub', lplLenText(it) + ' · ' + it.bpm + ' bpm ' + it.meter + ' · ' + lplDate(it.savedAt)));
+      const load = el('button', 'btn', 'Load');
+      load.type = 'button';
+      load.setAttribute('aria-label', 'Load ' + it.name);
+      load.disabled = lpLib.busy;
+      load.addEventListener('click', () => lplLoad(it.id));
+      const del = el('button', 'lp-clear');
+      del.type = 'button';
+      del.innerHTML = ICON_X;
+      del.setAttribute('aria-label', 'Delete ' + it.name);
+      del.addEventListener('click', () => lpAsk('Delete “' + it.name + '” from My loops? This can\'t be undone.', 'Delete', () => lplDelete(it.id), () => $('lpLibBox').querySelector('summary')));
+      row.append(txt, load, del);
+      rows.appendChild(row);
+    });
+    note.textContent = n
+      ? 'Load puts a loop in the first empty circle. Saved on this phone only; adding this page to your Home Screen keeps them safe.'
+      : 'Nothing saved yet. To keep a loop, tap its pencil and use "Save to My loops".';
+  }
+  function lplNewId() { return 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  async function lplSave(l, name) {
+    if (!lpLib.ok || lpLib.busy) return;
+    lpLib.busy = true;
+    lpEdRender();
+    try {
+      const d = l.data;
+      let pk = 1e-6;
+      for (let i = 0; i < d.length; i++) { const v = d[i] < 0 ? -d[i] : d[i]; if (v > pk) pk = v; }
+      const pcm = new Int16Array(d.length), k = 32767 / pk;
+      for (let i = 0; i < d.length; i++) pcm[i] = Math.round(d[i] * k);
+      const exists = l.savedId && lpLib.items.some((x) => x.id === l.savedId);
+      const id = exists ? l.savedId : lplNewId();
+      const old = exists ? lpLib.items.find((x) => x.id === id) : null;
+      const meta = { id, name, savedAt: old ? old.savedAt : Date.now(), editedAt: Date.now(), bpm: LP.bpm, meter: LP.meter, sr: l.sr,
+        a: l.a, b: l.b, a0: l.a0, b0: l.b0, norm: l.norm, vol: l.vol, len: d.length, bytes: pcm.byteLength };
+      const db = await lplDb(), tx = db.transaction(['loops', 'audio'], 'readwrite');
+      tx.objectStore('loops').put(meta);
+      tx.objectStore('audio').put({ id, scale: pk, pcm: pcm.buffer });
+      await lplDone(tx);
+      l.savedId = id;
+      l.name = name;
+      try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* optional */ }
+      lpLib.busy = false;
+      await lplRefresh();
+      lpEdSaved(exists ? 'Saved your changes to “' + name + '”.' : 'Saved to My loops as “' + name + '”.');
+    } catch (e) {
+      lpLib.busy = false;
+      lplRender();
+      lpEdSaved('Couldn\'t save it' + (e && e.name === 'QuotaExceededError' ? ': this phone is out of space for the page.' : ' (' + ((e && e.message) || e) + ').'));
+    }
+  }
+  async function lplDelete(id) {
+    try {
+      const db = await lplDb(), tx = db.transaction(['loops', 'audio'], 'readwrite');
+      tx.objectStore('loops').delete(id);
+      tx.objectStore('audio').delete(id);
+      await lplDone(tx);
+    } catch (e) { toast('Couldn\'t delete it'); }
+    await lplRefresh();
+  }
+  async function lplLoad(id) {
+    const it = lpLib.items.find((x) => x.id === id);
+    if (!it || lpLib.busy) return;
+    const slot = lx.loops.findIndex((l, k) => !l && !(lx.rec && lx.rec.i === k));
+    if (slot < 0) {
+      lpSay('All four circles are full. Clear one, then load “' + it.name + '”.');
+      lpRender();
+      return;
+    }
+    if (lx.loops.some(Boolean) || lx.rec) {
+      if (it.bpm !== LP.bpm || it.meter !== LP.meter) {
+        lpSay('“' + it.name + '” was recorded at ' + it.bpm + ' bpm in ' + it.meter + ', and your loops are at ' + LP.bpm + ' bpm in ' + LP.meter + ', so it wouldn\'t stay in time. Clear your loops to load it.');
+        lpRender();
+        return;
+      }
+    }
+    if (!ensureCtx()) return;
+    lpLib.busy = true;
+    lplRender();
+    try {
+      const db = await lplDb();
+      const rec = await libReq(db.transaction('audio', 'readonly').objectStore('audio').get(id));
+      if (!rec) throw new Error('missing');
+      const pcm = new Int16Array(rec.pcm), data = new Float32Array(pcm.length), k = rec.scale / 32767;
+      for (let n = 0; n < pcm.length; n++) data[n] = pcm[n] * k;
+      if (lx.loops[slot]) throw new Error('busy');
+      // An empty looper takes on the loop's tempo and time.
+      if (!lx.loops.some(Boolean) && !lx.rec && (it.bpm !== LP.bpm || it.meter !== LP.meter)) {
+        const meterChanged = it.meter !== LP.meter;
+        LP.bpm = it.bpm;
+        LP.meter = it.meter;
+        lpRetime(meterChanged);
+        save();
+      }
+      const l = {
+        i: slot, sr: it.sr, data, a: it.a, b: it.b, a0: it.a0, b0: it.b0, S: 0, E: -Infinity, planLen: (it.b - it.a) / it.sr, Grel: 0,
+        need: data.length, muted: false, vol: it.vol, norm: it.norm, normSet: true, env: null, recEnv: null,
+        ready: true, cap: null, prov: null, src: null, g: null, buf: null, bufCtx: null, savedId: id, name: it.name,
+      };
+      lpBake(l);
+      lx.loops[slot] = l;
+      lpApplyVol(l);
+      if (lx.run) {
+        // Comes in on the next downbeat.
+        const bar = lpBar(), B = lx.t0 + Math.ceil((ctx.currentTime + 0.1 - lx.t0) / bar - 1e-6) * bar;
+        l.Grel = B - lx.t0;
+        l.E = B;
+        lpLoopStart(l, B);
+      }
+      lpSay('Loaded “' + it.name + '” into loop ' + (slot + 1) + (lx.run ? '. It comes in on the next downbeat.' : '. Tap play to hear it.'));
+    } catch (e) {
+      lpSay('Couldn\'t load “' + it.name + '”.');
+    }
+    lpLib.busy = false;
+    lplRender();
+    lpRender();
+  }
 
   /* ---------- Loop editor: trim both ends, zoomed in as close as single samples ---------- */
   const edCanvas = $('lpEdCanvas');
@@ -10033,6 +10250,10 @@ self.onmessage = async (e) => {
     $('lpEdTitle').textContent = 'Edit loop ' + (i + 1);
     $('lpEdTitle').style.color = LP_COLORS[i];
     $('lpEditor').hidden = false;
+    let when = '';
+    try { when = new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { /* plain name */ }
+    $('lpSaveName').value = l.name || ('Loop ' + (i + 1) + (when ? ' · ' + when : ''));
+    $('lpSaveNote').hidden = true;
     lpEdFitView();
     lpEdRender();
     $('lpEdDone').focus();
@@ -10094,7 +10315,16 @@ self.onmessage = async (e) => {
     $('lpEdVol').value = String(Math.round(l.vol * 100));
     $('lpEdVolOut').textContent = Math.round(l.vol * 100) + '%';
     $('lpZoomIn').disabled = ed.e - ed.s <= LP_VIEW_MIN + 1;
+    const sv = $('lpSave'), saved = l.savedId && lpLib.items.some((x) => x.id === l.savedId);
+    sv.textContent = lpLib.busy ? 'Saving…' : saved ? 'Save changes' : 'Save to My loops';
+    sv.disabled = lpLib.busy || !lpLib.ok;
     lpEdDraw();
+  }
+  function lpEdSaved(msg) {
+    const n = $('lpSaveNote');
+    n.textContent = msg;
+    n.hidden = !msg;
+    lpEdRender();
   }
   // Loudest and quietest sample under each pixel column (cached until the view moves).
   function lpEdCols(W) {
@@ -10128,13 +10358,13 @@ self.onmessage = async (e) => {
     const g = edCanvas.getContext('2d');
     if (!g) return;
     if (!edColors) edColors = { brass: colorOf('--brass-bright') || '#e8b45c', ink: colorOf('--ink') || '#2b1c14' };
-    const span = ed.e - ed.s, X = (i) => ((i - ed.s) / span) * W;
+    const span = ed.e - ed.s, M = TRIM_M * dpr, IW = Math.max(1, W - 2 * M), X = (i) => M + ((i - ed.s) / span) * IW;
     g.clearRect(0, 0, W, H);
     g.fillStyle = 'rgba(0, 0, 0, 0.4)';
     g.fillRect(0, 0, W, H);
     // Beats where the recording's clicks were, brighter on each bar's first beat.
     const bs = lpBeat() * l.sr, bpb = lpBeatsPerBar();
-    if ((W / span) * bs > 6 * dpr) {
+    if ((IW / span) * bs > 6 * dpr) {
       const k0 = Math.ceil((ed.s - l.a0) / bs), k1 = Math.floor((ed.e - l.a0) / bs);
       for (let k = k0; k <= k1; k++) {
         g.fillStyle = lpMod(k, bpb) === 0 ? 'rgba(237, 226, 208, 0.26)' : 'rgba(237, 226, 208, 0.1)';
@@ -10142,7 +10372,7 @@ self.onmessage = async (e) => {
       }
     }
     const mid = H / 2;
-    const { cols, peak, per } = lpEdCols(W);
+    const iw = Math.round(IW), { cols, peak, per } = lpEdCols(iw);
     const amp = (H / 2 - 8 * dpr) / peak;
     const xa = X(l.a), xb = X(l.b);
     const col = LP_COLORS[ed.i];
@@ -10160,9 +10390,10 @@ self.onmessage = async (e) => {
       if (per < 0.25) { g.fillStyle = col; for (let i = i0; i <= i1; i++) { g.beginPath(); g.arc(X(i), mid - d[i] * amp, 1.8 * dpr, 0, Math.PI * 2); g.fill(); } }
       g.restore();
     } else {
-      for (let x = 0; x < W; x++) {
+      for (let c = 0; c < iw; c++) {
+        const x = M + c;
         g.fillStyle = x >= xa && x <= xb ? col : 'rgba(237, 226, 208, 0.35)';
-        const y1 = mid - cols[2 * x + 1] * amp, y2 = mid - cols[2 * x] * amp;
+        const y1 = mid - cols[2 * c + 1] * amp, y2 = mid - cols[2 * c] * amp;
         g.fillRect(x, y1, 1, Math.max(1, y2 - y1));
       }
     }
@@ -10174,15 +10405,16 @@ self.onmessage = async (e) => {
     g.fillStyle = edColors.brass;
     const fx1 = Math.max(-hw, xa), fx2 = Math.min(W + hw, xb);
     if (fx2 > fx1) { g.fillRect(fx1, 0, fx2 - fx1, bar); g.fillRect(fx1, H - bar, fx2 - fx1, bar); }
+    // The handles sit outside the loop, so nothing that's kept is hidden; a thin line marks the cut.
     const handle = (x0, left, focused) => {
       if (x0 + hw < 0 || x0 - hw > W) return;
-      const hx = left ? x0 : x0 - hw;
+      const hx = left ? x0 - hw : x0;
       g.fillStyle = edColors.brass;
       g.beginPath();
       if (g.roundRect) g.roundRect(hx, 0, hw, H, left ? [5 * dpr, 0, 0, 5 * dpr] : [0, 5 * dpr, 5 * dpr, 0]);
       else g.rect(hx, 0, hw, H);
       g.fill();
-      g.fillRect(Math.round(x0) - (left ? 0 : dpr), 0, Math.max(1, dpr), H);
+      g.fillRect(left ? Math.floor(x0) : Math.ceil(x0) - Math.max(1, dpr), 0, Math.max(1, dpr), H);
       g.strokeStyle = edColors.ink;
       g.lineWidth = (focused ? 2.6 : 2) * dpr;
       g.lineCap = 'round';
@@ -10234,7 +10466,7 @@ self.onmessage = async (e) => {
     if (!l) return;
     const end = btn.dataset.e, dir = Number(btn.dataset.d);
     ed.focus = end;
-    const step = Math.max(1, Math.round((ed.e - ed.s) / Math.max(1, edCanvas.clientWidth)));
+    const step = Math.max(1, Math.round((ed.e - ed.s) / Math.max(1, edCanvas.clientWidth - 2 * TRIM_M)));
     lpEdSet(end, (end === 'a' ? l.a : l.b) + dir * step);
     const t = end === 'a' ? l.a : l.b, span = ed.e - ed.s;
     if (t < ed.s || t > ed.e) lpEdView(t - span / 2, t + span / 2);
@@ -10265,13 +10497,19 @@ self.onmessage = async (e) => {
     $('lpEdVolOut').textContent = Math.round(l.vol * 100) + '%';
   });
   $('lpEdDone').addEventListener('click', lpEdClose);
+  $('lpSave').addEventListener('click', () => {
+    const l = edLoop();
+    if (!l) return;
+    const name = $('lpSaveName').value.replace(/\s+/g, ' ').trim() || ('Loop ' + (ed.i + 1));
+    $('lpSaveName').value = name;
+    lplSave(l, name);
+  });
+  $('lpSaveName').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('lpSave').click(); } });
+  $('lpSaveName').addEventListener('focus', (e) => { try { e.target.select(); } catch (err) { /* fine */ } });
   $('lpEditor').addEventListener('click', (e) => { if (e.target === $('lpEditor')) lpEdClose(); });
 
   // Touch and mouse on the trimmer: drag an end, drag the waveform to scroll, pinch to zoom.
-  const edAt = (clientX) => {
-    const r = edCanvas.getBoundingClientRect();
-    return ed.s + ((clientX - r.left) / r.width) * (ed.e - ed.s);
-  };
+  const edAt = (clientX) => ed.s + trimFrac(clientX, edCanvas.getBoundingClientRect()) * (ed.e - ed.s);
   edCanvas.addEventListener('pointerdown', (ev) => {
     const l = edLoop();
     if (!l) return;
@@ -10283,9 +10521,10 @@ self.onmessage = async (e) => {
       return;
     }
     const r = edCanvas.getBoundingClientRect(), x = ev.clientX - r.left, span = ed.e - ed.s;
-    const xa = ((l.a - ed.s) / span) * r.width, xb = ((l.b - ed.s) / span) * r.width;
-    const da = x - xa, db = xb - x; // distance into each handle (the handles sit just inside the loop)
-    const nearA = da > -16 && da < 32, nearB = db > -16 && db < 32;
+    const iw = Math.max(1, r.width - 2 * TRIM_M);
+    const xa = TRIM_M + ((l.a - ed.s) / span) * iw, xb = TRIM_M + ((l.b - ed.s) / span) * iw;
+    const da = xa - x, db = x - xb; // distance into each handle (the handles sit just outside the loop)
+    const nearA = da > -16 && da < 13 + 18, nearB = db > -16 && db < 13 + 18;
     if (nearA && (!nearB || Math.abs(da) <= Math.abs(db))) ed.drag = { kind: 'a', grab: edAt(ev.clientX) - l.a };
     else if (nearB) ed.drag = { kind: 'b', grab: edAt(ev.clientX) - l.b };
     if (ed.drag) ed.focus = ed.drag.kind;
@@ -10300,10 +10539,10 @@ self.onmessage = async (e) => {
     if (ed.drag.kind === 'pinch' && ed.ptrs.size >= 2) {
       const [p1, p2] = Array.from(ed.ptrs.values());
       const d = Math.abs(p1.x - p2.x) || 1, span = (ed.drag.e - ed.drag.s) * (ed.drag.d0 / d);
-      const f = ((p1.x + p2.x) / 2 - r.left) / r.width;
+      const f = trimFrac((p1.x + p2.x) / 2, r);
       lpEdView(ed.drag.c - f * span, ed.drag.c - f * span + span);
     } else if (ed.drag.kind === 'pan') {
-      const span = ed.e - ed.s, s = ed.drag.s - ((ev.clientX - ed.drag.x0) / r.width) * span;
+      const span = ed.e - ed.s, s = ed.drag.s - ((ev.clientX - ed.drag.x0) / Math.max(1, r.width - 2 * TRIM_M)) * span;
       lpEdView(s, s + span);
     } else if (ed.drag.kind === 'a' || ed.drag.kind === 'b') {
       // While dragging only the picture moves; the sound follows when you let go.

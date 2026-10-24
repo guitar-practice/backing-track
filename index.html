@@ -1681,6 +1681,10 @@
           <button type="button" class="toggle" id="lpMonitor" aria-pressed="false" aria-describedby="lpMonNote">Hear yourself</button>
           <span class="bgnote" id="lpMonNote">Plays the mic in your headphones while you record. Leave it off with the speaker, or it will howl.</span>
         </div>
+        <div class="bgrow">
+          <button type="button" class="toggle" id="lpMicIdle" aria-pressed="false" aria-describedby="lpMicIdleNote">Mic off between takes</button>
+          <span class="bgnote" id="lpMicIdleNote">On iPhone, everything plays much quieter through the speaker while the mic is on. This turns the mic off after each recording, so your loops play at full volume. Your phone may ask to use the mic again before the next one.</span>
+        </div>
         <label class="lp-slider"><span>Click volume</span><input type="range" id="lpClickVol" min="0" max="100" step="1"></label>
         <div class="lp-sync">
           <span class="sublbl" id="lpSyncLbl">Timing fix: <output id="lpSyncOut"></output></span>
@@ -1734,7 +1738,7 @@
           <button type="button" class="btn" id="lpEdFit">Fit to the beat</button>
           <button type="button" class="textbtn" id="lpEdReset">Undo all trims</button>
         </div>
-        <label class="lp-slider"><span>Loop volume <output id="lpEdVolOut"></output></span><input type="range" id="lpEdVol" min="0" max="200" step="1"></label>
+        <label class="lp-slider"><span>Loop volume <output id="lpEdVolOut"></output></span><input type="range" id="lpEdVol" min="0" max="400" step="5"></label>
         <p class="caption">Drag the gold ends, or pick Start or End and tap + to zoom in on it; ‹ › move it one step at the current zoom. Faint lines are the beats. The loop keeps playing, so you hear each change.</p>
       </div>
     </div>
@@ -2303,7 +2307,7 @@ function compilePattern(preset, meter) {
     drill: { mode: 'spell', scope: 'key', sev: false, best: {} },
     // Looper settings (the recordings themselves only live while the page is open).
     // sync: the speaker-to-mic delay in ms, or null to use the phone's own figure.
-    looper: { bpm: 92, meter: '4/4', bars: 2, metro: 'count', click: 70, drums: { on: false, kit: 'rock', vol: 70 }, monitor: false, sync: null, syncSrc: '' },
+    looper: { bpm: 92, meter: '4/4', bars: 2, metro: 'count', click: 70, drums: { on: false, kit: 'rock', vol: 70 }, monitor: false, micIdle: false, sync: null, syncSrc: '' },
   };
   load();
   const hash = (location.hash || '').slice(1);
@@ -2399,6 +2403,7 @@ function compilePattern(preset, meter) {
           d.drums.vol = pct(l.drums.vol, 70);
         }
         d.monitor = l.monitor === true;
+        d.micIdle = l.micIdle === true;
         if (Number.isFinite(l.sync) && l.sync >= 0 && l.sync <= 400) {
           d.sync = Math.round(l.sync);
           d.syncSrc = l.syncSrc === 'measured' ? 'measured' : 'manual';
@@ -7086,7 +7091,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-10-23a';
+  const APP_VERSION = '2026-10-24a';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;
@@ -8881,16 +8886,18 @@ self.onmessage = async (e) => {
   const LP_GRACE = 0.15;         // a tap this soon after a downbeat starts the recording on that downbeat
   const LP_RING = 3;             // seconds of mic audio kept for that, and for the bit before each recording
   const LP_MIN = 0.05;           // shortest loop the trimmer allows, in seconds
-  // The drums' mix bus holds sound back a few ms (its two compressors look ahead), so drum hits
-  // are sent that much early to land with the clicks and the loops.
-  const LP_DRUM_LAT = 0.012;
+  // The drums' mix bus and the loops' bus each hold sound back a few ms (their two compressors look
+  // ahead), so drum hits and loops are sent that much early to land with the clicks.
+  const LP_BUS_LAT = 0.012;
+  // Loudness each loop is brought to (the level of its louder parts), and the most it's raised.
+  const LP_LEVEL = 0.14, LP_BOOST = 40;
   const lx = {
     run: false, t0: 0, next: 0, pos: 0, timer: null,
     busObj: null, drumG: null, clickG: null, loopOut: null, loopComp: null,
     loops: [null, null, null, null],
     rec: null,     // the recording that's counting in or under way
     caps: [],      // everything collecting mic audio: { from, data, got, env? }
-    mic: null, opening: false, wkCtx: null,
+    mic: null, opening: false, wkCtx: null, idleTimer: null,
     level: 0, anim: false, measuring: false, closeWanted: false,
     msg: '', shown: {},
   };
@@ -9080,6 +9087,8 @@ self.onmessage = async (e) => {
     lx.caps.length = 0;
     lx.level = 0;
     lpSessionPlayback();
+    // Switching the phone back to playing only can pause the engine; carry on.
+    if (ctx && ctx.state !== 'running') { try { ctx.resume().catch(() => {}); } catch (e) { /* next tap */ } }
     lpRender();
   }
 
@@ -9169,18 +9178,49 @@ self.onmessage = async (e) => {
     lx.clickG = ctx.createGain();
     lx.clickG.gain.value = lpClickGain();
     lx.clickG.connect(ctx.destination);
-    // The loops go out on their own, rounded off gently if four loud ones add up past full scale.
-    // (No compressor here: one would hold them back a few ms behind the beat.)
+    // The loops' own bus: a compressor evens out the strums and lifts the quiet parts, then a
+    // limiter (and a gentle rounding-off) keeps four loud loops from clipping.
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -20; comp.knee.value = 10; comp.ratio.value = 2.5;
+    comp.attack.value = 0.005; comp.release.value = 0.2;
+    const lim = ctx.createDynamicsCompressor();
+    lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20;
+    lim.attack.value = 0.001; lim.release.value = 0.08;
     const soft = ctx.createWaveShaper();
     soft.curve = softClipCurve();
     lx.loopOut = ctx.createGain();
-    lx.loopOut.connect(soft);
-    soft.connect(ctx.destination);
-    lx.loopComp = soft;
+    lx.loopOut.connect(comp); comp.connect(lim); lim.connect(soft); soft.connect(ctx.destination);
+    lx.loopComp = [comp, lim, soft];
+    // A compressor that's just been made can swallow the first hit it gets after a silence. A
+    // constant whisper (100 dB down, far below hearing) keeps both buses running, so the first
+    // downbeat after Play comes through whole.
+    lx.feed = null;
+    try {
+      const dests = [comp, lx.busObj.input];
+      if (ctx.createConstantSource) {
+        const k = ctx.createConstantSource();
+        k.offset.value = 1e-5;
+        dests.forEach((d) => k.connect(d));
+        k.start();
+        lx.feed = [k];
+      } else {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = 10;
+        g.gain.value = 1e-5;
+        o.connect(g);
+        dests.forEach((d) => g.connect(d));
+        o.start();
+        lx.feed = [o, g];
+      }
+    } catch (e) { lx.feed = null; }
   }
   function lpTear() {
+    if (lx.feed) {
+      lx.feed.forEach((n) => { try { if (n.stop) n.stop(); n.disconnect(); } catch (e) { /* closed */ } });
+      lx.feed = null;
+    }
     try { if (lx.busObj) killBus(lx.busObj); } catch (e) { /* engine already closed */ }
-    const old = [lx.drumG, lx.clickG, lx.loopOut, lx.loopComp];
+    const old = [lx.drumG, lx.clickG, lx.loopOut].concat(lx.loopComp || []);
     [lx.clickG, lx.loopOut].forEach((g) => { try { if (g) g.gain.setTargetAtTime(0, ctx.currentTime, 0.01); } catch (e) { /* closed */ } });
     setTimeout(() => old.forEach((n) => { try { if (n) n.disconnect(); } catch (e) { /* closed */ } }), 250);
     lx.busObj = lx.drumG = lx.clickG = lx.loopOut = lx.loopComp = null;
@@ -9195,7 +9235,7 @@ self.onmessage = async (e) => {
         const P = lpDrumPat();
         for (const k in DRUMS) {
           const ch = P.tracks[k] && P.tracks[k][inBar];
-          if (ch && ch !== '-') DRUMS[k](Math.max(ctx.currentTime, t - LP_DRUM_LAT), VEL[ch] || 0.7, lx.drumG);
+          if (ch && ch !== '-') DRUMS[k](Math.max(ctx.currentTime, t - LP_BUS_LAT), VEL[ch] || 0.7, lx.drumG);
         }
       }
       lx.next += sd;
@@ -9324,7 +9364,15 @@ self.onmessage = async (e) => {
       lpRender();
     }
     lx.loops.forEach((l) => { if (l && l.cap) lpFinish(l, now); });
-    if (lx.closeWanted && !lx.rec && !lx.caps.length && !lx.measuring && !lx.opening) lpCloseMic();
+    const idle = !!lx.mic && !lx.rec && !lx.caps.length && !lx.measuring && !lx.opening;
+    if (idle && lx.closeWanted) lpCloseMic();
+    else if (idle && LP.micIdle && !lx.idleTimer) {
+      // "Mic off between takes": close it once nothing has needed it for a moment.
+      lx.idleTimer = setTimeout(() => {
+        lx.idleTimer = null;
+        if (LP.micIdle && lx.mic && !lx.rec && !lx.caps.length && !lx.measuring && !lx.opening) lpCloseMic();
+      }, 500);
+    }
   }
   function lpNewLoop(r) {
     const sr = r.sr, a = Math.round(LP_PRE * sr), b = a + Math.round((r.E - r.S) * sr);
@@ -9377,15 +9425,23 @@ self.onmessage = async (e) => {
     g.gain.value = lpGainOf(l);
     src.connect(g);
     g.connect(lx.loopOut);
-    src.start(at - lead / sr);
+    src.start(at - LP_BUS_LAT - lead / sr);
     l.prov = { src, g };
   }
-  // Recordings from a phone mic come in quiet; bring each up (by up to 4 times) toward a steady level.
+  // A phone mic records a guitar quietly, and one sharp pick attack says little about how loud the
+  // rest is. So each loop is brought to a steady level set by its louder parts (the top tenth of its
+  // 50 ms stretches), raised as much as 40 times; the loop bus keeps the peaks in check.
   function lpNorm(l, end) {
-    const d = l.data;
-    let pk = 0;
-    for (let i = l.a; i < end; i++) { const v = d[i] < 0 ? -d[i] : d[i]; if (v > pk) pk = v; }
-    return pk > 1e-4 ? Math.max(1, Math.min(4, 0.45 / pk)) : 1;
+    const d = l.data, w = Math.max(1, Math.round(0.05 * l.sr)), lv = [];
+    for (let s0 = l.a; s0 + w <= end; s0 += w) {
+      let e = 0;
+      for (let i = s0; i < s0 + w; i++) e += d[i] * d[i];
+      lv.push(Math.sqrt(e / w));
+    }
+    if (!lv.length) return 1;
+    lv.sort((x, y) => x - y);
+    const loud = lv[Math.min(lv.length - 1, Math.floor(lv.length * 0.9))];
+    return loud > 1e-4 ? Math.max(0.5, Math.min(LP_BOOST, LP_LEVEL / loud)) : 1;
   }
   const lpGainOf = (l) => (l.muted ? 0 : l.norm * l.vol);
   // The loop's sound: from its start to its end. In the last few ms the end fades into the sound
@@ -9426,8 +9482,9 @@ self.onmessage = async (e) => {
       o.src.stop(at + 0.02);
     } catch (e) { /* already stopped */ }
   }
-  // Starts the loop so it's at full level from `at`, fading in over the moment before (so a
+  // Starts the loop so it's heard at full level from `at`, fading in over the moment before (so a
   // downbeat at `at` keeps its attack, and anything it replaces crossfades out at the same time).
+  // Everything is sent LP_BUS_LAT early, for the loop bus's hold-up.
   function lpLoopStart(l, at) {
     if (!l.ready || !lx.loopOut) return;
     if (l.bufCtx !== ctx) lpBake(l);
@@ -9436,17 +9493,17 @@ self.onmessage = async (e) => {
     src.buffer = l.buf;
     src.loop = true;
     const g = ctx.createGain();
-    const s0 = Math.max(ctx.currentTime + 0.005, at - LP_RAMP);
+    const T = at - LP_BUS_LAT, s0 = Math.max(ctx.currentTime + 0.005, T - LP_RAMP);
     g.gain.setValueAtTime(0, s0);
-    g.gain.linearRampToValueAtTime(lpGainOf(l), Math.max(at, s0 + 0.002));
+    g.gain.linearRampToValueAtTime(lpGainOf(l), Math.max(T, s0 + 0.002));
     src.connect(g);
     g.connect(lx.loopOut);
-    src.start(s0, Math.min(lpMod(lpPhase(l, at) - (at - s0), lpLoopLen(l)), Math.max(0, l.buf.duration - 1e-4)));
+    src.start(s0, Math.min(lpMod(lpPhase(l, at) - (T - s0), lpLoopLen(l)), Math.max(0, l.buf.duration - 1e-4)));
     l.src = src;
     l.g = g;
     if (l.prov) l.prov = 'none';
-    if (old) lpFadeOut(old, at);
-    if (prov) lpFadeOut(prov, at);
+    if (old) lpFadeOut(old, T);
+    if (prov) lpFadeOut(prov, T);
   }
   function lpLoopKill(l) {
     const now = ctx ? ctx.currentTime + LP_RAMP : 0;
@@ -9849,6 +9906,7 @@ self.onmessage = async (e) => {
     lpKitSel.value = kit.id;
     $('lpDrumVol').value = String(LP.drums.vol);
     $('lpMonitor').setAttribute('aria-pressed', String(LP.monitor));
+    $('lpMicIdle').setAttribute('aria-pressed', String(LP.micIdle));
     $('lpClickVol').value = String(LP.click);
     const ms = Math.round(lpRTL() * 1000);
     $('lpSync').value = String(ms);
@@ -9918,6 +9976,12 @@ self.onmessage = async (e) => {
     LP.monitor = !LP.monitor;
     if (lx.mic) lx.mic.mon.gain.setTargetAtTime(LP.monitor ? 1 : 0, ctx.currentTime, 0.02);
     save();
+    lpRender();
+  });
+  $('lpMicIdle').addEventListener('click', () => {
+    LP.micIdle = !LP.micIdle;
+    save();
+    lpTick();
     lpRender();
   });
   $('lpSync').addEventListener('input', (e) => {

@@ -850,6 +850,9 @@
   .lp-pair .seg button { padding-left: 0; padding-right: 0; }
   .seg button:disabled { opacity: 0.4; cursor: default; }
   .lp-lock { margin: -6px 0 0; font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--parchment-faint); }
+  .lp-lock b { color: var(--parchment); font-weight: 600; }
+  .lp-flashrow { margin-top: 8px; }
+  .lp-flash { position: fixed; inset: 0; z-index: 55; pointer-events: none; opacity: 0; background: #fff; }
   .lp-grid {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px;
     padding: 14px 12px 10px; border-radius: 16px; background: #060505;
@@ -1658,8 +1661,21 @@
           <button type="button" data-d="1" aria-label="1 bpm faster">+1</button>
           <button type="button" data-d="10" aria-label="10 bpm faster">+10</button>
         </div>
+        <div class="tempo-adj" role="group" aria-labelledby="lpTempoLbl" id="lpTempoFix" hidden>
+          <button type="button" data-f="half" aria-label="Half the tempo">½×</button>
+          <button type="button" data-f="-1" aria-label="Count the first loop as one measure fewer">− bar</button>
+          <button type="button" data-f="1" aria-label="Count the first loop as one measure more">+ bar</button>
+          <button type="button" data-f="double" aria-label="Double the tempo">2×</button>
+        </div>
       </div>
     </div>
+    <div class="field">
+      <span id="lpModeLbl">Tempo mode</span>
+      <div class="seg small two" id="lpMode" role="group" aria-labelledby="lpModeLbl">
+        <button type="button" data-v="detect">Detect from playing</button><button type="button" data-v="set">Set by hand</button>
+      </div>
+    </div>
+    <p class="lp-lock" id="lpTempoNote" hidden></p>
     <div class="lp-pair">
       <div class="field">
         <span id="lpMeterLbl">Time</span>
@@ -1674,11 +1690,14 @@
         </div>
       </div>
     </div>
-    <p class="lp-lock" id="lpLock" hidden>Tempo and time are set by your loops. Clear them all to change these.</p>
     <div class="field">
       <span id="lpMetroLbl">Metronome</span>
       <div class="seg small" id="lpMetro" role="group" aria-labelledby="lpMetroLbl">
         <button type="button" data-v="off">Off</button><button type="button" data-v="count">Count-in only</button><button type="button" data-v="always">Always on</button>
+      </div>
+      <div class="bgrow lp-flashrow">
+        <button type="button" class="toggle" id="lpFlash" aria-pressed="false" aria-describedby="lpFlashNote">Flash the beat</button>
+        <span class="bgnote" id="lpFlashNote">The screen flashes on every beat, brightest on the first of each measure. With Count-in only, you hear the count, then see the beat.</span>
       </div>
     </div>
 
@@ -1731,6 +1750,7 @@
       <p class="stem-note">Plays under your loops at the tempo and time above, starting on the first beat.</p>
     </div>
 
+    <div class="lp-flash" id="lpFlashEl" aria-hidden="true"></div>
     <div class="lp-modal" id="lpEditor" hidden role="dialog" aria-modal="true" aria-labelledby="lpEdTitle">
       <div class="lp-sheet">
         <div class="lp-sheet-head"><strong id="lpEdTitle">Edit loop 1</strong><button type="button" class="btn primary" id="lpEdDone">Done</button></div>
@@ -2335,7 +2355,7 @@ function compilePattern(preset, meter) {
     drill: { mode: 'spell', scope: 'key', sev: false, best: {} },
     // Looper settings (the recordings themselves only live while the page is open).
     // sync: the speaker-to-mic delay in ms, or null to use the phone's own figure.
-    looper: { bpm: 92, meter: '4/4', bars: 2, metro: 'count', click: 70, drums: { on: false, kit: 'rock', vol: 70 }, monitor: false, micIdle: false, sync: null, syncSrc: '' },
+    looper: { bpm: 92, meter: '4/4', bars: 2, metro: 'count', click: 70, drums: { on: false, kit: 'rock', vol: 70 }, monitor: false, micIdle: false, sync: null, syncSrc: '', tempoMode: 'detect', flash: false },
   };
   load();
   const hash = (location.hash || '').slice(1);
@@ -2420,7 +2440,10 @@ function compilePattern(preset, meter) {
       if (s.looper && typeof s.looper === 'object') {
         const l = s.looper, d = state.looper;
         const pct = (v, def) => (Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : def);
-        if (Number.isFinite(l.bpm)) d.bpm = Math.max(40, Math.min(250, Math.round(l.bpm)));
+        // A tempo found from a loop isn't a whole number, and has to stay exact to keep the drums in step.
+        if (Number.isFinite(l.bpm)) d.bpm = Math.max(40, Math.min(250, l.bpm));
+        if (l.tempoMode === 'set' || l.tempoMode === 'detect') d.tempoMode = l.tempoMode;
+        d.flash = l.flash === true;
         if (METERS.includes(l.meter)) d.meter = l.meter;
         if (LP_BARS.includes(l.bars)) d.bars = l.bars;
         if (LP_METRO.includes(l.metro)) d.metro = l.metro;
@@ -7119,7 +7142,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-10-24b';
+  const APP_VERSION = '2026-10-26a';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;
@@ -8925,6 +8948,7 @@ self.onmessage = async (e) => {
   const LP_BUS_LAT = 0.012;
   // Loudness each loop is brought to (the level of its louder parts), and the most it's raised.
   const LP_LEVEL = 0.14, LP_BOOST = 40;
+  const LP_FREE_MAX = 60; // longest first loop played freely to find the tempo, in seconds
   const lx = {
     run: false, t0: 0, next: 0, pos: 0, timer: null,
     busObj: null, drumG: null, clickG: null, loopOut: null, loopComp: null,
@@ -8933,6 +8957,10 @@ self.onmessage = async (e) => {
     caps: [],      // everything collecting mic audio: { from, data, got, env? }
     mic: null, opening: false, wkCtx: null, idleTimer: null,
     level: 0, anim: false, measuring: false, closeWanted: false,
+    free: false,   // a first loop is being played freely: no clicks or drums until its tempo is known
+    beatFrom: -Infinity, // engine time the clicks, drums and flashes may start
+    master: -1,    // the circle whose loop sets the tempo
+    flashQ: [],    // beats waiting to flash the screen
     msg: '', shown: {},
   };
   if (window.__LP_TEST) window.__LP_TEST.lx = lx; // lets the automated tests look inside
@@ -8945,8 +8973,111 @@ self.onmessage = async (e) => {
   const lpBeatsPerBar = () => lpN() / lpBeatSteps();
   const lpMod = (x, m) => ((x % m) + m) % m;
   const lpLocked = () => lx.loops.some(Boolean) || !!lx.rec;
-  const lpHasSound = () => lx.loops.some(Boolean) || LP.drums.on || LP.metro === 'always';
+  const lpHasSound = () => lx.loops.some(Boolean) || LP.drums.on || LP.metro === 'always' || LP.flash;
   const lpLoopLen = (l) => (l.b - l.a) / l.sr;
+  const lpUnits = () => (LP.meter === '4/4' ? 4 : LP.meter === '3/4' ? 3 : 2); // tempo beats in a measure
+  const lpBpmText = (v) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1));
+  const lpFreeNext = () => LP.tempoMode === 'detect' && !lx.loops.some(Boolean) && !lx.run && !lx.rec;
+  function lpMasterLoop() {
+    let m = lx.master >= 0 ? lx.loops[lx.master] : null;
+    if (!m) { m = lx.loops.find((l) => l && !l.cap) || null; lx.master = m ? m.i : -1; }
+    return m;
+  }
+  const lpMasterBeats = (m) => Math.max(1, Math.round(lpLoopLen(m) / (60 / LP.bpm)));
+  /* Tempo from a loop played freely (no click). d: the recording, [a, b): the loop as tapped.
+     units: tempo beats in a measure (4 for 4/4, 3 for 3/4, 2 dotted quarters for 6/8); centre: the
+     tempo to lean toward when it's ambiguous (double or half time fit the playing equally well).
+     The start moves onto the first strum near the tap. The loop is taken to hold a whole number of
+     measures, and the count that best matches how the strums repeat wins.
+     The loop's length then comes from how far apart the strums are across the whole loop, rather
+     than from the stop tap, which is rarely exact.
+     Returns { a, b, k, bpm }: the new start and end, tempo beats in the loop, and the tempo. */
+  function lpDetectTempo(d, sr, a, b, units, centre) {
+    const FPS = 200, hop = Math.max(1, Math.round(sr / FPS));
+    const s0 = Math.max(1, a - Math.round(0.3 * sr)), s1 = Math.min(d.length, b + Math.round(0.05 * sr));
+    const nF = Math.max(0, Math.floor((s1 - s0) / hop));
+    // Level of the signal's changes (which favours the click of a pick or strum), every 5 ms.
+    const lev = new Float32Array(nF);
+    for (let m = 0; m < nF; m++) {
+      let e = 0;
+      const st = s0 + m * hop;
+      for (let i = st; i < st + hop; i++) { const v = d[i] - d[i - 1]; e += v * v; }
+      lev[m] = Math.sqrt(e / hop);
+    }
+    // Onsets: how much the level jumps, smoothed a little.
+    const raw = new Float32Array(nF), on = new Float32Array(nF);
+    for (let m = 1; m < nF; m++) raw[m] = Math.max(0, lev[m] - lev[m - 1]);
+    for (let m = 1; m < nF - 1; m++) on[m] = 0.25 * raw[m - 1] + 0.5 * raw[m] + 0.25 * raw[m + 1];
+    const frameOf = (smp) => Math.round((smp - s0) / hop);
+    const fA = frameOf(a), fB = Math.min(nF, frameOf(b));
+    const sorted = Array.from(on.subarray(Math.max(0, fA), Math.max(fA + 1, fB))).sort((x, y) => x - y);
+    const med = sorted.length ? sorted[sorted.length >> 1] : 0;
+    // 1. The first strong strum from a little before to a little after the tap (taps tend to land
+    //    late, and the first beat of a loop is usually played hardest).
+    let a2 = a;
+    const lo = Math.max(1, fA - Math.round(0.2 * FPS)), hi = Math.min(nF - 2, fA + Math.round(0.25 * FPS));
+    let mx = 0;
+    for (let m = lo; m <= hi; m++) if (on[m] > mx) mx = on[m];
+    if (mx > 4 * med + 1e-7) {
+      for (let m = lo; m <= hi; m++) {
+        if (on[m] < 0.7 * mx || on[m] < on[m - 1] || on[m] < on[m + 1]) continue;
+        // Pin it to the sample: where the attack first gets to a quarter of its peak.
+        const w0 = s0 + (m - 2) * hop, w1 = Math.min(d.length, s0 + (m + 3) * hop);
+        let pk = 0;
+        for (let i = w0; i < w1; i++) { const v = Math.abs(d[i]); if (v > pk) pk = v; }
+        let i = w0;
+        while (i < w1 && Math.abs(d[i]) < 0.25 * pk) i++;
+        a2 = Math.max(0, i - Math.round(0.001 * sr));
+        break;
+      }
+    }
+    const Lt = (b - a2) / sr;
+    // 2. How the onsets repeat around the loop (it loops, so the pattern wraps).
+    const f2 = frameOf(a2), N = Math.max(1, Math.round(Lt * FPS));
+    const env = new Float32Array(N);
+    let mean = 0;
+    for (let j = 0; j < N; j++) { const m = f2 + j; env[j] = m >= 0 && m < nF ? on[m] : 0; mean += env[j]; }
+    mean /= N;
+    for (let j = 0; j < N; j++) env[j] -= mean;
+    const acf = (lag) => {
+      if (lag < 1 || lag > N - 1) return 0;
+      const l0 = Math.floor(lag), fr = lag - l0;
+      let s = 0;
+      for (let j = 0; j < N; j++) s += env[j] * ((1 - fr) * env[(j + l0) % N] + fr * env[(j + l0 + 1) % N]);
+      return s;
+    };
+    const r0 = acf(0) || (() => { let s = 0; for (let j = 0; j < N; j++) s += env[j] * env[j]; return s; })();
+    let best = null;
+    for (let bars = 1; bars <= 64; bars++) {
+      const k = bars * units, bpm = (60 * k) / Lt;
+      if (bpm < 40) continue;
+      if (bpm > 250) break;
+      const lag = (Lt / k) * FPS;
+      // The beat repeating, and the measure repeating (chords change and accents fall per measure).
+      const fit = r0 > 0 ? (acf(lag) + acf(units * lag)) / r0 : 0;
+      // Lean away from fast tempos more than slow ones: double-time drums feel frantic, half-time ones fine.
+      const oct = Math.log2(bpm / centre), prior = Math.exp(-0.5 * Math.pow(oct / (oct > 0 ? 0.7 : 1.0), 2));
+      const score = Math.max(0, fit) * prior + 1e-6 * prior; // with no clear beat, the prior decides
+      if (!best || score > best.score) best = { k, bpm, score };
+    }
+    if (!best) { const k = Math.max(units, Math.round((Lt * centre) / 60 / units) * units); best = { k, bpm: (60 * k) / Lt }; }
+    // 3. The exact length: the strums repeat every beat, so find the spacing that fits them best over
+    //    as long a stretch as possible (half the loop), and make the loop that many beats long.
+    const k = best.k, m = Math.max(1, Math.floor(k / 2)), lag0 = ((Lt / k) * m) * FPS;
+    const lin = (lag) => {
+      const l0 = Math.floor(lag), fr = lag - l0;
+      let sum = 0;
+      for (let j = f2; j + l0 + 1 < nF && j < f2 + N; j++) { if (j < 0) continue; sum += on[j] * ((1 - fr) * on[j + l0] + fr * on[j + l0 + 1]); }
+      return sum;
+    };
+    let bLag = lag0, bVal = -1;
+    for (let lag = lag0 * 0.97; lag <= lag0 * 1.03; lag += 0.25) { const v = lin(lag); if (v > bVal) { bVal = v; bLag = lag; } }
+    let b2 = b;
+    const L2 = (bLag / FPS / m) * k;
+    if (bVal > 0 && Math.abs(L2 - Lt) < 0.15) b2 = a2 + Math.round(L2 * sr);
+    return { a: a2, b: b2, k, bpm: (60 * k) / ((b2 - a2) / sr) };
+  }
+
 
   // "2 measures", "1 measure + 3 beats", "5 eighths"
   function lpBeatsText(k, meter) {
@@ -9214,19 +9345,18 @@ self.onmessage = async (e) => {
     lx.clickG.gain.value = lpClickGain();
     lx.clickG.connect(ctx.destination);
     // Each circle has its own channel: rumble cut (a phone speaker can't play it, and it eats
-    // loudness), a compressor that evens out the strums, then the loop's volume. Turning a loop
-    // up past 100% drives the shared limiter (and a gentle rounding-off) at the end, which keeps
-    // it from clipping however loud it gets.
+    // loudness), a compressor that evens out the strums, then the loop's volume. Past 100% the
+    // loops lean on a shared limiter with a slow, smooth release, which turns peaks down rather
+    // than chopping them off (fast release or clipping is what sounds blown out). The rounding-off
+    // after it only catches the odd stray peak.
     const lim = ctx.createDynamicsCompressor();
-    lim.threshold.value = -6; lim.knee.value = 0; lim.ratio.value = 20;
-    lim.attack.value = 0.001; lim.release.value = 0.03;
-    const lift = ctx.createGain();
-    lift.gain.value = 1.9;
+    lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20;
+    lim.attack.value = 0.002; lim.release.value = 0.25;
     const soft = ctx.createWaveShaper();
     soft.curve = softClipCurve();
     lx.loopOut = ctx.createGain();
-    lx.loopOut.connect(lim); lim.connect(lift); lift.connect(soft); soft.connect(ctx.destination);
-    lx.loopComp = [lim, lift, soft];
+    lx.loopOut.connect(lim); lim.connect(soft); soft.connect(ctx.destination);
+    lx.loopComp = [lim, soft];
     lx.ch = [0, 1, 2, 3].map((i) => {
       const inp = ctx.createGain(), hp = ctx.createBiquadFilter(), comp = ctx.createDynamicsCompressor(), vol = ctx.createGain();
       hp.type = 'highpass'; hp.frequency.value = 70; hp.Q.value = 0.6;
@@ -9276,8 +9406,12 @@ self.onmessage = async (e) => {
     const ahead = document.hidden ? 1.1 : 0.12, n = lpN(), bs = lpBeatSteps(), sd = lpSD();
     while (lx.next < ctx.currentTime + ahead) {
       const p = lx.pos, t = lx.next, inBar = lpMod(p, n);
-      if (inBar % bs === 0 && lpClickWanted(t)) lpClick(t, inBar === 0 ? 2 : LP.meter === '6/8' && inBar === 6 ? 1 : 0);
-      if (p >= 0 && LP.drums.on) {
+      const beatOk = !lx.free && t >= lx.beatFrom - 1e-6;
+      if (beatOk && inBar % bs === 0 && lpClickWanted(t)) lpClick(t, inBar === 0 ? 2 : LP.meter === '6/8' && inBar === 6 ? 1 : 0);
+      // The flash follows the tempo's beats (in 6/8, the two big beats). Past about three a second
+      // only each measure's first beat flashes, which is easier on the eyes.
+      if (beatOk && LP.flash && inBar % (n / lpUnits()) === 0 && (inBar === 0 || 60 / LP.bpm >= 0.34)) lx.flashQ.push({ t, down: inBar === 0 });
+      if (p >= 0 && LP.drums.on && beatOk) {
         const P = lpDrumPat();
         for (const k in DRUMS) {
           const ch = P.tracks[k] && P.tracks[k][inBar];
@@ -9291,7 +9425,7 @@ self.onmessage = async (e) => {
     lx.timer = setTimeout(lpSched, 25);
   }
   // Starts the clock with its first downbeat `delay` seconds from now (a bar's count-in comes before it).
-  function lpStartTransport(delay) {
+  function lpStartTransport(delay, free) {
     if (!ensureCtx()) { lpSay('This browser does not support Web Audio, so the looper can\'t run here.'); return false; }
     if (playing) stop(); // one thing playing at a time
     stemHalt();
@@ -9302,6 +9436,9 @@ self.onmessage = async (e) => {
     lpBuild();
     const t0 = ctx.currentTime + delay, sd = lpSD();
     lx.run = true;
+    lx.free = !!free;
+    lx.beatFrom = -Infinity;
+    lx.flashQ = [];
     lx.t0 = t0;
     lx.pos = Math.ceil((ctx.currentTime + 0.02 - t0) / sd - 1e-6);
     lx.next = t0 + lx.pos * sd;
@@ -9317,6 +9454,8 @@ self.onmessage = async (e) => {
   function lpStop() {
     if (lx.rec) lpRecTap(true);
     lx.run = false;
+    lx.free = false;
+    lx.flashQ = [];
     clearTimeout(lx.timer);
     lx.timer = null;
     lx.loops.forEach((l) => { if (l) lpLoopKill(l); });
@@ -9350,6 +9489,20 @@ self.onmessage = async (e) => {
     if (!(await lpOpenMic())) { lpRender(); return; }
     if (lx.rec || lx.loops[i]) return; // something changed while the mic was starting
     const now = ctx.currentTime, bar = lpBar();
+    if (lpFreeNext()) {
+      // Detect mode, first loop: it starts as you tap and ends when you tap again; the tempo
+      // comes from it afterwards.
+      if (!lpStartTransport(0.03, true)) return;
+      const sr = lx.mic.sr, pre = Math.round(LP_PRE * sr), S = lx.t0;
+      const from = Math.round((S + lpRTL()) * sr) - pre;
+      const cap = lpCapture(from, pre + Math.ceil((LP_FREE_MAX + LP_POST + 0.1) * sr));
+      lx.rec = { i, S, E: null, len: LP_FREE_MAX, sr, cap, free: true };
+      lpSay('');
+      lpTick();
+      lpRender();
+      lpAnimate();
+      return;
+    }
     let S;
     if (!lx.run) {
       // From a standstill: a bar of clicks first unless the metronome is off.
@@ -9378,7 +9531,8 @@ self.onmessage = async (e) => {
     lx.rec = null;
     lpDropCap(r.cap);
     if (msg) lpSay(msg);
-    if (lx.run && !lpHasSound()) lpStop();
+    // A free first loop that didn't happen leaves no tempo, so the beat can't carry on.
+    if (lx.run && (r.free || !lpHasSound())) lpStop();
     lpRender();
   }
   // Tapping the circle that's recording: stop on the nearest beat (it carries on to that beat if
@@ -9388,6 +9542,13 @@ self.onmessage = async (e) => {
     if (!r) return;
     const now = ctx.currentTime;
     if (now < r.S) { lpCancelRec(); return; }
+    if (r.free) {
+      if (now - r.S < 0.5) { lpCancelRec(stopping ? '' : 'That was too short to keep. Tap the circle again to record.'); return; }
+      r.E = Math.min(now, r.S + r.len);
+      lpTick();
+      lpRender();
+      return;
+    }
     const beat = lpBeat();
     let Q = lx.t0 + Math.round((now - lx.t0) / beat) * beat;
     if (Q <= r.S + 1e-4) {
@@ -9423,10 +9584,11 @@ self.onmessage = async (e) => {
   }
   function lpNewLoop(r) {
     const sr = r.sr, a = Math.round(LP_PRE * sr), b = a + Math.round((r.E - r.S) * sr);
+    if (!lx.loops.some(Boolean)) lx.master = r.i;
     lx.loops[r.i] = {
       i: r.i, sr, data: r.cap.data, a, b, a0: a, b0: b, S: r.S, E: r.E, planLen: r.len, Grel: r.S - lx.t0,
       need: Math.min(r.cap.data.length, b + Math.round(LP_POST * sr)),
-      muted: false, vol: 1, norm: 1, normSet: false, env: null, recEnv: r.cap.env,
+      muted: false, vol: 1, norm: 1, normSet: false, env: null, recEnv: r.free ? null : r.cap.env, free: !!r.free,
       ready: false, cap: r.cap, prov: null, src: null, g: null, buf: null, bufCtx: null,
     };
     lpApplyVol(lx.loops[r.i]);
@@ -9434,11 +9596,12 @@ self.onmessage = async (e) => {
   function lpFinish(l, now) {
     const c = l.cap;
     if (!l.ready) {
-      if (c.got >= l.b) {
+      if (c.got >= (l.free ? Math.min(c.data.length, l.b + Math.round(0.2 * l.sr)) : l.b)) {
         if (!l.normSet) { l.norm = lpNorm(l, l.b); l.normSet = true; }
-        lpBake(l);
+        if (l.free) lpApplyDetect(l, now); // finds the tempo and the loop's exact start and end
+        else lpBake(l);
         l.ready = true;
-        if (lx.run && !l.muted) lpLoopStart(l, Math.max(now + 0.03, l.E));
+        if (lx.run && !l.muted) lpLoopStart(l, Math.max(now + 0.05, l.E));
         lpRender();
       } else if (!l.prov && lx.run && now >= l.E - 0.12) {
         lpProvisional(l, now);
@@ -9476,6 +9639,61 @@ self.onmessage = async (e) => {
     src.start(at - LP_BUS_LAT - lead / sr);
     l.prov = { src, g };
   }
+  // A free first loop is in: find its tempo and its exact start and end. Its first time round is
+  // already playing from where you tapped; the corrected loop takes over from the very same spot in
+  // the recording, so nothing jumps, and the beat (drums, clicks, flashes) starts on the next measure.
+  function lpApplyDetect(l, now) {
+    l.free = false;
+    const aTap = l.a;
+    const det = lpDetectTempo(l.data, l.sr, l.a, l.b, lpUnits(), LP.meter === '6/8' ? 60 : 105);
+    l.a = det.a;
+    l.b = Math.min(det.b, l.data.length);
+    l.a0 = l.a;
+    l.b0 = l.b;
+    LP.bpm = Math.max(40, Math.min(250, (60 * det.k) / lpLoopLen(l)));
+    lx.master = l.i;
+    // When the new start was heard in the loop's first time round: bar 1 of the beat.
+    const t0 = l.E + (l.a - aTap) / l.sr;
+    l.Grel = 0;
+    lpBake(l);
+    if (lx.run) {
+      lx.t0 = t0;
+      const sd = lpSD(), bar = lpBar();
+      lx.pos = Math.ceil((now + 0.03 - t0) / sd - 1e-6);
+      lx.next = t0 + lx.pos * sd;
+      lx.beatFrom = t0 + Math.ceil((now + 0.1 - t0) / bar - 1e-6) * bar;
+    }
+    lx.free = false;
+    save();
+    const k = lpMasterBeats(l), bars = k / lpUnits();
+    lpSay('Tempo ♩' + (LP.meter === '6/8' ? '.' : '') + ' = ' + lpBpmText(LP.bpm) + ', with your loop as ' +
+      (Number.isInteger(bars) ? lpBarsText(bars) : k + ' beats') + '. ' +
+      (LP.drums.on && lx.run ? 'The drums come in on the next measure. ' : '') + 'Off by double or half? Tap ½× or 2× by the tempo.');
+  }
+  // A new tempo that keeps every loop where it is, with bar 1 on the first loop's start.
+  function lpSetTempoKeepLoops(bpm, m) {
+    const shift = m ? m.Grel : 0;
+    if (shift) { lx.loops.forEach((l) => { if (l) l.Grel -= shift; }); lx.t0 += shift; }
+    LP.bpm = Math.max(40, Math.min(250, bpm));
+    if (lx.run && ctx) {
+      const sd = lpSD();
+      lx.pos = Math.ceil((ctx.currentTime + 0.05 - lx.t0) / sd - 1e-6);
+      lx.next = lx.t0 + lx.pos * sd;
+      lx.flashQ = [];
+    }
+    save();
+    lpRender();
+  }
+  // ½×, 2×, − bar, + bar: what the first loop counts as, and so the tempo, without touching the loops.
+  function lpTempoFixK(f) {
+    const m = lpMasterLoop();
+    if (!m) return null;
+    const k = lpMasterBeats(m), u = lpUnits();
+    const k2 = f === 'half' ? k / 2 : f === 'double' ? k * 2 : k + Number(f) * u;
+    if (!Number.isInteger(k2) || k2 < 1) return null;
+    const bpm = (60 * k2) / lpLoopLen(m);
+    return bpm >= 40 && bpm <= 250 ? { bpm, m } : null;
+  }
   // A phone mic records a guitar quietly, and one sharp pick attack says little about how loud the
   // rest is. So each loop is brought to a steady level set by its louder parts (the top tenth of its
   // 50 ms stretches), raised as much as 40 times; the loop bus keeps the peaks in check.
@@ -9492,9 +9710,9 @@ self.onmessage = async (e) => {
     return loud > 1e-4 ? Math.max(0.5, Math.min(LP_BOOST, LP_LEVEL / loud)) : 1;
   }
   const lpGainOf = (l) => (l.muted ? 0 : l.norm);
-  // Loop volume: straight up to 100%, then each further 100% more than doubles the drive into the
-  // limiter. 400% is about as loud as a phone can play without the sound turning into fuzz.
-  const lpVolGain = (v) => 0.4 * (v <= 1 ? v : Math.pow(2.3, v - 1));
+  // Loop volume, straight through. 400% is about as loud as the loops can get and stay clean:
+  // any louder only comes from clipping, which is the blown-out sound.
+  const lpVolGain = (v) => v;
   // The loop's sound: from its start to its end. In the last few ms the end fades into the sound
   // that came just before the start, so the join is seamless and the downbeat's attack is untouched.
   function lpBake(l) {
@@ -9585,8 +9803,12 @@ self.onmessage = async (e) => {
     if (lx.run) C = l.Grel + Math.floor((ctx.currentTime - (lx.t0 + l.Grel)) / oldLen) * oldLen;
     else C = lpMod(l.Grel, oldLen);
     l.Grel = Math.round(C / beat) * beat;
+    const k = Math.max(1, Math.round(oldLen / (60 / LP.bpm)));
     lpBake(l);
     if (lx.run && l.src) lpLoopStart(l, ctx.currentTime + 0.03);
+    // While it's the only loop, the first loop sets the tempo: trimming it moves the tempo with it,
+    // so the drums stay in step with its new length.
+    if (lpMasterLoop() === l && lx.loops.filter(Boolean).length === 1 && !lx.rec) lpSetTempoKeepLoops((60 * k) / lpLoopLen(l), l);
   }
   function lpClear(i) {
     const l = lx.loops[i];
@@ -9595,6 +9817,8 @@ self.onmessage = async (e) => {
     lpLoopKill(l);
     if (l.cap) lpDropCap(l.cap);
     lx.loops[i] = null;
+    if (lx.master === i) lx.master = -1;
+    lpMasterLoop();
     if (lx.run && !lpHasSound() && !lx.rec) lpStop();
     lpRender();
   }
@@ -9732,6 +9956,10 @@ self.onmessage = async (e) => {
         const left = Math.max(1, Math.ceil((r.S - now) / lpBeat() - 1e-3));
         return ['Starts in ' + left, n + ': about to record. Tap to cancel.'];
       }
+      if (r.free) {
+        const sec = Math.max(0, Math.floor(now - r.S));
+        return ['Recording ' + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') + ' · tap to stop', n + ': recording. Tap to stop.'];
+      }
       return ['Recording · tap to stop', n + ': recording. Tap to stop.'];
     }
     if (l && l.cap && now < l.E) return ['Finishing…', n + ': finishing its recording.'];
@@ -9740,6 +9968,7 @@ self.onmessage = async (e) => {
       const len = k >= 1 && Math.abs(L - k * lpBeat()) < 0.0006 ? lpBeatsText(k) : L.toFixed(2) + ' s';
       return [len + (l.muted ? ' · muted' : ''), n + ', ' + len + (l.muted ? ', muted. Tap to unmute.' : lx.run ? ', playing. Tap to mute.' : '. Tap to play.')];
     }
+    if (lpFreeNext()) return ['Tap, play, tap', n + ': empty. Tap to start recording, play, then tap again to stop.'];
     return [lx.rec ? 'Tap to record next' : 'Tap to record', n + ': empty. Tap to record ' + lpBarsText(LP.bars) + '.'];
   }
 
@@ -9821,7 +10050,24 @@ self.onmessage = async (e) => {
       bars(env, Math.floor(frac * LP_BINS) + 1, LP_REC, 0.9, 0.9, null);
       dot(h * 0.1, LP_REC, 0.55 + 0.45 * Math.abs(Math.sin(now * 4)));
     };
-    if (r) {
+    if (r && r.free) {
+      // Playing freely: no length yet, so a turning arc instead of a sweep.
+      ring(Ro + 4 * dpr, LP_REC, 2.5 * dpr, 0.3);
+      const ang = TOP + lpMod(now - r.S, 2) * Math.PI;
+      g.save();
+      g.strokeStyle = LP_REC;
+      g.lineWidth = 3.5 * dpr;
+      g.lineCap = 'round';
+      g.shadowColor = LP_REC;
+      g.shadowBlur = 10 * dpr;
+      g.beginPath();
+      g.arc(c, c, Ro + 4 * dpr, ang, ang + 1.2);
+      g.stroke();
+      g.restore();
+      ring(Ri - 4 * dpr, LP_REC, 1.4 * dpr, 0.4);
+      const lv = Math.min(1, Math.sqrt(lx.level) * 1.4);
+      dot(h * (0.1 + 0.14 * lv), LP_REC, 0.6 + 0.4 * lv);
+    } else if (r) {
       if (now < r.S) {
         const beat = lpBeat(), left = Math.max(1, Math.ceil((r.S - now) / beat - 1e-3));
         const pulse = lpMod((r.S - now) / beat, 1);
@@ -9868,6 +10114,7 @@ self.onmessage = async (e) => {
     if (lx.opening) return 'Starting the microphone…';
     if (lx.measuring) return 'Listening for the clicks… keep quiet for a few seconds.';
     const r = lx.rec, now = ctx ? ctx.currentTime : 0;
+    if (r && r.free) return 'Recording loop ' + (r.i + 1) + '. Play, then tap it again on the first beat after your last measure.';
     if (r) {
       if (now < r.S) return LP.metro === 'off' && !LP.drums.on && !lx.loops.some(Boolean)
         ? 'Get ready…'
@@ -9875,6 +10122,7 @@ self.onmessage = async (e) => {
       return 'Recording loop ' + (r.i + 1) + ' for ' + lpBarsText(Math.round(r.len / lpBar())) + '. Tap it again to stop sooner.';
     }
     const any = lx.loops.some(Boolean);
+    if (!any && lpFreeNext()) return 'Tap a circle to start your first loop.';
     if (!any) return 'Tap a circle to record ' + lpBarsText(LP.bars) + (LP.metro === 'off' ? ', starting right away.' : ', after a bar of clicks.');
     if (lx.run) return 'Tap a loop to mute or unmute it, or an empty circle to add one.';
     return 'Tap play, or a loop, to hear your loops.';
@@ -9912,8 +10160,28 @@ self.onmessage = async (e) => {
     lx.anim = true;
     requestAnimationFrame(lpFrame);
   }
+  // Flashes the screen for a beat, timed to when its click would be heard.
+  const lpFlashEl = $('lpFlashEl');
+  function lpFlashBeats() {
+    if (!lx.flashQ.length || !ctx) return;
+    const now = ctx.currentTime, lat = (ctx.outputLatency || 0) - 0.012;
+    let hit = null;
+    while (lx.flashQ.length && lx.flashQ[0].t + lat <= now) hit = lx.flashQ.shift();
+    if (!hit || now - (hit.t + lat) > 0.1) return;
+    lpFlashEl.style.background = hit.down ? '#ffd76a' : '#ffffff';
+    const peak = hit.down ? 0.42 : 0.2;
+    if (lpFlashEl.animate) lpFlashEl.animate([{ opacity: peak }, { opacity: 0 }], { duration: hit.down ? 200 : 140, easing: 'ease-out' });
+    else {
+      lpFlashEl.style.transition = 'none';
+      lpFlashEl.style.opacity = String(peak);
+      void lpFlashEl.offsetWidth;
+      lpFlashEl.style.transition = 'opacity 0.15s ease-out';
+      lpFlashEl.style.opacity = '0';
+    }
+  }
   function lpFrame() {
     if (state.tab !== 'looper' || document.hidden) { lx.anim = false; return; }
+    lpFlashBeats();
     lpDrawAll();
     if (ed.i >= 0) lpEdDraw();
     const busy = lx.run || lx.rec || lx.mic || lx.opening || lx.measuring || lx.loops.some((l) => l && l.cap) || lx.level > 0.002;
@@ -9931,6 +10199,8 @@ self.onmessage = async (e) => {
   /* ---------- Controls ---------- */
   const lpPlayBtn = $('lpPlay');
   const lpTempoBtns = Array.from(document.querySelectorAll('#lpTempo button'));
+  const lpFixBtns = Array.from(document.querySelectorAll('#lpTempoFix button'));
+  const lpModeBtns = Array.from(document.querySelectorAll('#lpMode button'));
   const lpMeterBtns = Array.from(document.querySelectorAll('#lpMeter button'));
   const lpBarsBtns = Array.from(document.querySelectorAll('#lpBars button'));
   const lpMetroBtns = Array.from(document.querySelectorAll('#lpMetro button'));
@@ -9941,13 +10211,30 @@ self.onmessage = async (e) => {
     const locked = lpLocked();
     lpPlayBtn.innerHTML = lx.run ? ICON_STOP : ICON_PLAY;
     lpPlayBtn.setAttribute('aria-label', lx.run ? 'Stop the loops' : 'Play the loops');
-    $('lpBpm').textContent = (LP.meter === '6/8' ? '♩. = ' : '♩ = ') + LP.bpm;
+    const any = lx.loops.some(Boolean), free = lpFreeNext() || (lx.rec && lx.rec.free);
+    $('lpBpm').textContent = free ? 'from your loop' : (LP.meter === '6/8' ? '♩. = ' : '♩ = ') + lpBpmText(LP.bpm);
+    // No loops yet: set the tempo with the stepper. With loops: change what the first loop counts as.
+    $('lpTempo').hidden = any || free;
+    $('lpTempoFix').hidden = !any;
     lpTempoBtns.forEach((b) => {
       const d = Number(b.dataset.d);
-      b.disabled = locked || (d < 0 ? LP.bpm <= 40 : LP.bpm >= 250);
+      b.disabled = locked || free || (d < 0 ? LP.bpm <= 40 : LP.bpm >= 250);
     });
+    lpFixBtns.forEach((b) => { b.disabled = !!lx.rec || !lpTempoFixK(b.dataset.f); });
+    lpModeBtns.forEach((b) => { b.setAttribute('aria-pressed', String(b.dataset.v === LP.tempoMode)); b.disabled = any || !!lx.rec; });
     lpMeterBtns.forEach((b) => { b.setAttribute('aria-pressed', String(b.dataset.m === LP.meter)); b.disabled = locked && b.dataset.m !== LP.meter; });
-    $('lpLock').hidden = !lx.loops.some(Boolean);
+    const note = $('lpTempoNote'), m = any ? lpMasterLoop() : null;
+    if (m) {
+      const k = lpMasterBeats(m), bars = k / lpUnits();
+      note.innerHTML = 'Loop ' + (m.i + 1) + ' sets the tempo: it counts as <b>' + (Number.isInteger(bars) ? lpBarsText(bars) : k + ' beats') +
+        '</b>. If the drums run twice too fast or slow, tap ½× or 2×; if they\'re a measure off, − bar or + bar. Clear every loop to start over with a new tempo or time.';
+    } else if (LP.tempoMode === 'detect') {
+      note.textContent = lx.run
+        ? 'With the beat already going, the first loop records to the tempo above.'
+        : 'Tap a circle and play at your own speed, then tap it again on the first beat after your last measure. The tempo comes from that loop, and the drums and metronome follow it.';
+    } else note.textContent = '';
+    note.hidden = !note.textContent;
+    $('lpFlash').setAttribute('aria-pressed', String(LP.flash));
     lpBarsBtns.forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.b) === LP.bars)));
     lpMetroBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === LP.metro)));
     const kit = DRUM_KITS.find((k) => k.id === LP.drums.kit) || DRUM_KITS[0];
@@ -9989,11 +10276,31 @@ self.onmessage = async (e) => {
   lpPlayBtn.addEventListener('click', lpPlayToggle);
   lpTempoBtns.forEach((b) => b.addEventListener('click', () => {
     if (lpLocked()) return;
-    LP.bpm = Math.max(40, Math.min(250, LP.bpm + Number(b.dataset.d)));
+    LP.bpm = Math.max(40, Math.min(250, Math.round(LP.bpm) + Number(b.dataset.d)));
     lpRetime(false);
     save();
     lpRender();
   }));
+  lpFixBtns.forEach((b) => b.addEventListener('click', () => {
+    if (lx.rec) return;
+    const r = lpTempoFixK(b.dataset.f);
+    if (!r) return;
+    lpSay('');
+    lpSetTempoKeepLoops(r.bpm, r.m);
+  }));
+  lpModeBtns.forEach((b) => b.addEventListener('click', () => {
+    if (lx.loops.some(Boolean) || lx.rec) return;
+    LP.tempoMode = b.dataset.v;
+    save();
+    lpRender();
+  }));
+  $('lpFlash').addEventListener('click', () => {
+    LP.flash = !LP.flash;
+    lx.flashQ = [];
+    save();
+    if (lx.run && !lpHasSound() && !lx.rec) lpStop();
+    lpRender();
+  });
   lpMeterBtns.forEach((b) => b.addEventListener('click', () => {
     if (lpLocked() || LP.meter === b.dataset.m) return;
     LP.meter = b.dataset.m;
@@ -10119,7 +10426,7 @@ self.onmessage = async (e) => {
     lpLib.items.forEach((it) => {
       const row = el('div', 'lp-librow');
       const txt = el('div', 'lp-libtxt');
-      txt.append(el('span', 'lp-libname', it.name), el('span', 'lp-libsub', lplLenText(it) + ' · ' + it.bpm + ' bpm ' + it.meter + ' · ' + lplDate(it.savedAt)));
+      txt.append(el('span', 'lp-libname', it.name), el('span', 'lp-libsub', lplLenText(it) + ' · ' + lpBpmText(it.bpm) + ' bpm ' + it.meter + ' · ' + lplDate(it.savedAt)));
       const load = el('button', 'btn', 'Load');
       load.type = 'button';
       load.setAttribute('aria-label', 'Load ' + it.name);
@@ -10188,8 +10495,8 @@ self.onmessage = async (e) => {
       return;
     }
     if (lx.loops.some(Boolean) || lx.rec) {
-      if (it.bpm !== LP.bpm || it.meter !== LP.meter) {
-        lpSay('“' + it.name + '” was recorded at ' + it.bpm + ' bpm in ' + it.meter + ', and your loops are at ' + LP.bpm + ' bpm in ' + LP.meter + ', so it wouldn\'t stay in time. Clear your loops to load it.');
+      if (Math.abs(it.bpm - LP.bpm) > 0.01 || it.meter !== LP.meter) {
+        lpSay('“' + it.name + '” was recorded at ' + lpBpmText(it.bpm) + ' bpm in ' + it.meter + ', and your loops are at ' + lpBpmText(LP.bpm) + ' bpm in ' + LP.meter + ', so it wouldn\'t stay in time. Clear your loops to load it.');
         lpRender();
         return;
       }
@@ -10205,6 +10512,7 @@ self.onmessage = async (e) => {
       for (let n = 0; n < pcm.length; n++) data[n] = pcm[n] * k;
       if (lx.loops[slot]) throw new Error('busy');
       // An empty looper takes on the loop's tempo and time.
+      if (!lx.loops.some(Boolean)) lx.master = slot;
       if (!lx.loops.some(Boolean) && !lx.rec && (it.bpm !== LP.bpm || it.meter !== LP.meter)) {
         const meterChanged = it.meter !== LP.meter;
         LP.bpm = it.bpm;

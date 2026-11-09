@@ -1218,6 +1218,8 @@
     z-index: 5;
     transform: translateX(-50%);
     max-width: calc(100% - 32px);
+    width: max-content;
+    text-align: center;
     padding: 8px 15px;
     border-radius: 999px;
     background: var(--brass-fill);
@@ -2689,6 +2691,7 @@ function compilePattern(preset, meter) {
     rootSel.value = String(state.root);
     scaleSel.value = state.scale;
     beatSel.value = state.preset;
+    $('randomBtn').setAttribute('aria-label', state.tab === 'track' ? 'Randomize the key, scale, beat and instrument' : 'Randomize the key and scale');
     segBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === state.meter)));
     const title = keyInfo.rootName + ' ' + SCALES[state.scale].name;
     keyLabel.textContent = title.toUpperCase();
@@ -3292,6 +3295,8 @@ function compilePattern(preset, meter) {
   });
   // New key and scale, never the same pair twice in a row. Same rules as picking them by hand:
   // a new scale loads its default chords, a new key alone keeps your progression.
+  // On the Track tab it also rolls a different beat and, when that beat can switch instruments,
+  // any of the instruments (its strumming pattern goes back to Default, as when picked by hand).
   const randomBtn = $('randomBtn');
   randomBtn.addEventListener('click', () => {
     let r, s;
@@ -3299,18 +3304,38 @@ function compilePattern(preset, meter) {
     if (s !== state.scale) newScaleChords(s);
     state.root = r;
     state.scale = s;
+    let sound = '';
+    if (state.tab === 'track') {
+      const p = pick(PRESETS.filter((x) => x.id !== state.preset));
+      setBeat(p.id);
+      if (p.pick) {
+        const i = pick(INSTRUMENTS);
+        state.mix.inst = i.id === p.inst ? null : i.id;
+      }
+      const inst = instById(mainInst());
+      sound = ' · ' + p.name + (p.pick && inst ? ' on ' + inst.name.toLowerCase() : '');
+    }
     keyChanged();
-    toast('Now in ' + keyInfo.rootName + ' ' + scaleName(s));
+    if (sound) {
+      renderInst();
+      renderLayers();
+      renderMix();
+    }
+    toast('Now in ' + keyInfo.rootName + ' ' + scaleName(s) + sound);
     randomBtn.classList.remove('roll');
     void randomBtn.offsetWidth;
     randomBtn.classList.add('roll');
   });
 
-  beatSel.addEventListener('change', () => {
-    state.preset = beatSel.value;
-    state.mix.inst = null; // every beat starts on its own instrument
-    state.mix.strum = null; // and its own strumming pattern
+  // A new beat starts on its own instrument and its own strumming pattern.
+  function setBeat(id) {
+    state.preset = id;
+    state.mix.inst = null;
+    state.mix.strum = null;
     applyGain('chords');
+  }
+  beatSel.addEventListener('change', () => {
+    setBeat(beatSel.value);
     renderInst();
     save();
     renderLayers();
@@ -7482,7 +7507,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-11-04c';
+  const APP_VERSION = '2026-11-09a';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;

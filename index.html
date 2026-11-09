@@ -2324,6 +2324,16 @@ const STRUMS = [
     '4/4': ['M---D-M---D-M---', [100, 60, 100, 60, 100], 'D-D-D-D-D-D-DDUD', [95, 72, 72, 95, 72, 72, 95, 55, 50, 60]],
     '3/4': ['M---D-M-----', [100, 60, 100], 'D-D-D-D-DDUD', [95, 72, 72, 95, 72, 55, 50, 60]],
     '6/8': ['M---D-M-----', [100, 60, 100], 'D-D-D-D-DDUD', [95, 72, 72, 95, 72, 55, 50, 60]] },
+  // As played on Brand New's "The Quiet Things That No One Ever Knows" (100 bpm), in 16ths:
+  //   1 e & a 2 e & a 3 e & a 4 e & a
+  //   D   D   D U D U   U D U   U D U
+  // Beats 3 and 4 skip their downstroke and come in with an upstroke on the "e", which pushes the
+  // second half of every measure forward.
+  { id: 'quiet', name: 'I will play my game',
+    about: 'As on Brand New\'s "The Quiet Things That No One Ever Knows". Downstrokes on 1, its "and" and 2, then down-ups; on 3 and 4 the hand misses the downbeat and comes in with an upstroke just after, which pushes each measure forward.',
+    '4/4': ['D-D-DUDU-UDU-UDU', [100, 70, 85, 55, 75, 55, 65, 80, 55, 65, 80, 60]],
+    '3/4': ['D-D-DUDU-UDU', [100, 70, 85, 55, 75, 55, 65, 80, 60]],
+    '6/8': ['D-D-DU-UDUDU', [100, 70, 75, 55, 65, 80, 55, 75, 60]] },
   { id: 'ring', name: 'Let it ring',
     about: 'Two big strums a measure, left to ring out, with an upstroke leading into the next measure. Good for slow songs.',
     '4/4': ['D-------D-----U-', [100, 85, 55]],
@@ -3751,14 +3761,15 @@ function compilePattern(preset, meter) {
   // Slider 80 is the original level; 100 is about 1.5x louder.
   // Busier strumming patterns on a sparse beat (Reggae plays two chops a measure) would come out
   // louder than the beat's own rhythm. These trims (dB), from rendering every beat with every
-  // pattern, keep each pattern within about 1.5 dB of the beat's own level.
+  // pattern, keep each pattern within about 1.5 dB of the beat's own level. (I will play my game's
+  // are worked out from how hard and how many its strums are, against Emo ballad's and Driving eighths'.)
   const STRUM_TRIM = {
-    acoustic: { glycerine: -1.0, eighths: -2.3, emo: -1.6 },
-    folk: { eighths: -1.0, emo: -0.6 },
-    funk: { glycerine: -1.4, ring: -0.6, eighths: -1.9, emo: -1.2 },
-    reggae: { glycerine: -2.9, ring: -1.9, eighths: -3.6, emo: -2.5, chuck: -1.1 },
-    shuffle: { eighths: -0.8 },
-    bluegrass: { eighths: -0.9 },
+    acoustic: { glycerine: -1.0, eighths: -2.3, emo: -1.6, quiet: -2.7 },
+    folk: { eighths: -1.0, emo: -0.6, quiet: -1.5 },
+    funk: { glycerine: -1.4, ring: -0.6, eighths: -1.9, emo: -1.2, quiet: -2.3 },
+    reggae: { glycerine: -2.9, ring: -1.9, eighths: -3.6, emo: -2.5, chuck: -1.1, quiet: -3.8 },
+    shuffle: { eighths: -0.8, quiet: -0.9 },
+    bluegrass: { eighths: -0.9, quiet: -1.0 },
   };
   const strumTrim = () => {
     const t = state.mix.strum && STRUM_TRIM[state.preset] && STRUM_TRIM[state.preset][state.mix.strum];
@@ -7572,7 +7583,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-11-09d';
+  const APP_VERSION = '2026-11-09f';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;

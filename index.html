@@ -7551,7 +7551,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-11-09b';
+  const APP_VERSION = '2026-11-09c';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;
@@ -10131,8 +10131,18 @@ self.onmessage = async (e) => {
     if (m && m.ready && !m.free) {
       const k = lpMasterBeats(m), L = lpLoopLen(m), spb = lpN() / lpUnits(), G = Math.round(m.Grel / lpSD());
       const B = LP.follow ? lpGrooveOf(m, k) : null;
-      if (B) c = { m, G, L, M: k * spb, spb, B };
-      else {
+      if (B) {
+        // Following the loop's beats. A drum tempo set by hand scales them: the drums keep the ups and
+        // downs of your playing but run that much faster or slower, then start over with the loop.
+        const K = k * spb, ratio = LP.bpm / lpDrumBpm();
+        c = { m, G, L, M: K, spb, B, K, ratio };
+        if (Math.abs(ratio - 1) > 1e-9) {
+          const lim = B[0] + L - 0.4 * (L / K) * ratio;
+          let M = 1;
+          while (M < 4 * K && lpFollowAt(c, M) <= lim) M++;
+          c.M = M;
+        }
+      } else {
         // A last step that would land right on top of the next time round is left out.
         const dsd = lpDrumSD();
         c = { m, G, L, M: Math.max(1, Math.ceil(L / dsd - 0.4)), dsd };
@@ -10145,9 +10155,14 @@ self.onmessage = async (e) => {
     const c = lx.clk;
     if (!c) return lx.t0 + p * lpSD();
     const s = p - c.G, q = Math.floor(s / c.M), r = s - q * c.M, T = lx.t0 + c.m.Grel + q * c.L;
-    if (!c.B) return T + r * c.dsd;
-    const j = Math.floor(r / c.spb), f = (r - j * c.spb) / c.spb;
-    return T + c.B[j] + f * (c.B[j + 1] - c.B[j]);
+    return T + (c.B ? lpFollowAt(c, r) : r * c.dsd);
+  }
+  // Following: when step r of a time round lands, from the round's start (beyond the loop's own
+  // beats, the next round's carry on, for drums set faster than the loop).
+  function lpFollowAt(c, r) {
+    const q = Math.floor(r / c.K), rr = r - q * c.K, j = Math.floor(rr / c.spb), f = (rr - j * c.spb) / c.spb;
+    const t = q * c.L + c.B[j] + f * (c.B[j + 1] - c.B[j]);
+    return c.ratio === 1 ? t : c.B[0] + (t - c.B[0]) * c.ratio;
   }
   // Where a step falls in its measure (0: the downbeat).
   function lpStepBar(p) {
@@ -11134,11 +11149,13 @@ self.onmessage = async (e) => {
       ? (LP.follow
         ? 'On: once you\'ve recorded a loop, the drums speed up and slow down with your playing in it, beat by beat. Off: they keep a steady tempo you set.'
         : 'Off: the drums keep a steady tempo. Once you\'ve recorded a loop you can set it, and they start over with the loop each time round, so they can\'t drift away from it.')
-      : following ? 'The drums follow loop ' + n + ' beat by beat. If they sound off, turn this off and set their tempo yourself.'
+      : following ? (lx.drumBpm == null
+        ? 'The drums follow loop ' + n + ' beat by beat. If they sound off, fine-tune their tempo below, or turn this off for a steady tempo.'
+        : 'The drums follow the ups and downs of loop ' + n + ' at the tempo below, and start over with it each time round.')
       : finding ? 'Finding the beats in loop ' + n + '…'
       : LP.follow ? 'Couldn\'t find clear enough strums in loop ' + n + ' to follow, so the drums keep a steady tempo. Set it below.'
       : 'The drums keep the tempo below, and start over with loop ' + n + ' each time round, so they can\'t drift away from it.';
-    const showDrum = any && !following && !finding;
+    const showDrum = any;
     $('lpDrumRow').hidden = !showDrum;
     if (showDrum) {
       const db = lpDrumBpm();
@@ -11195,8 +11212,8 @@ self.onmessage = async (e) => {
     lpClockSet(true);
     lpRender();
   });
-  // The drums' own tempo, with Follow my playing off. Each time round they start over with the
-  // first loop, so a tempo a little off from it can't add up.
+  // The drums' own tempo. Each time round they start over with the first loop, so a tempo a little
+  // off from it can't add up. With Follow my playing on, they keep following the loop's ups and downs.
   lpDrumBtns.forEach((b) => b.addEventListener('click', () => {
     if (!lx.loops.some(Boolean)) return;
     const v = Math.max(40, Math.min(250, lpDrumBpm() + Number(b.dataset.d)));

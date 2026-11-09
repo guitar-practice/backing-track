@@ -869,17 +869,13 @@
   .lp-lock { margin: -6px 0 0; font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--parchment-faint); }
   .lp-lock b { color: var(--parchment); font-weight: 600; }
   .lp-flashrow, .lp-subrow { margin-top: 8px; }
+  .lp-quietrow { margin-top: 10px; }
   .lp-subrow { margin-top: 2px; }
   .lp-adjrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 6px; }
   .lp-adjval { font-family: var(--sans); font-size: 14px; color: var(--parchment); min-width: 74px; font-variant-numeric: tabular-nums; }
   .lp-adjrow .toggle { padding: 6px 12px; }
   .lp-adjrow .toggle:disabled, .lp-subrow .toggle:disabled { opacity: 0.4; cursor: default; }
   .lp-speednote { margin: 4px 0 0; }
-  .lp-edmode { margin-bottom: 10px; }
-  #lpEditor.strum .lp-trimonly { display: none; }
-  .lp-snaprow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-  .lp-snaprow .seg { flex: 1; }
-  .lp-strumtools .lp-edrow { margin-top: 10px; }
   .lp-flash { position: fixed; inset: 0; z-index: 55; pointer-events: none; opacity: 0; background: #fff; }
   .lp-grid {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px;
@@ -1836,15 +1832,16 @@
         <input type="range" id="lpDrumVol" min="0" max="100" step="1" aria-label="Drum volume">
       </div>
       <p class="stem-note">Plays under your loops at the tempo and time above, starting on the first beat.</p>
+      <div class="bgrow lp-quietrow">
+        <button type="button" class="toggle" id="lpQuiet" aria-pressed="false" aria-describedby="lpQuietNote">Quiet while recording</button>
+        <span class="bgnote" id="lpQuietNote">For recording without headphones, so the speaker doesn't end up in your loop: the drums play you in, go silent while the mic records (the screen flashes the beat instead), and come back in step the moment the take ends.</span>
+      </div>
     </div>
 
     <div class="lp-flash" id="lpFlashEl" aria-hidden="true"></div>
     <div class="lp-modal" id="lpEditor" hidden role="dialog" aria-modal="true" aria-labelledby="lpEdTitle">
       <div class="lp-sheet">
         <div class="lp-sheet-head"><strong id="lpEdTitle">Edit loop 1</strong><button type="button" class="btn primary" id="lpEdDone">Done</button></div>
-        <div class="seg small two lp-edmode" id="lpEdMode" role="group" aria-label="What to edit">
-          <button type="button" data-v="trim" aria-pressed="true">Trim the ends</button><button type="button" data-v="strum" aria-pressed="false">Line up strums</button>
-        </div>
         <canvas class="trim lp-trim" id="lpEdCanvas" role="img" aria-label="The loop's waveform. Drag either gold end to trim it."></canvas>
         <div class="trim-scale"><span id="lpEdL"></span><span id="lpEdSpan"></span><span id="lpEdR"></span></div>
         <div class="trim-tools">
@@ -1853,24 +1850,11 @@
             <button type="button" id="lpZoomFit">Fit</button>
             <button type="button" id="lpZoomIn" aria-label="Zoom in">+</button>
           </div>
-          <div class="seg small two lp-focus lp-trimonly" id="lpEdFocus" role="group" aria-label="Zoom in on">
+          <div class="seg small two lp-focus" id="lpEdFocus" role="group" aria-label="Zoom in on">
             <button type="button" data-e="a" aria-pressed="false">Start</button><button type="button" data-e="b" aria-pressed="true">End</button>
           </div>
         </div>
-        <div class="lp-strumtools" id="lpStrumTools" hidden>
-          <div class="lp-snaprow">
-            <span class="sublbl" id="lpEdGridLbl">Snap to</span>
-            <div class="seg small two" id="lpEdGrid" role="group" aria-labelledby="lpEdGridLbl">
-              <button type="button" data-g="2" aria-pressed="true">8th notes</button><button type="button" data-g="1" aria-pressed="false">16th notes</button>
-            </div>
-          </div>
-          <div class="lp-edrow">
-            <button type="button" class="btn" id="lpEdSnapAll">Snap all to the beat</button>
-            <button type="button" class="textbtn" id="lpEdUnmove">Undo strum moves</button>
-          </div>
-          <p class="caption" id="lpEdStrumNote"></p>
-        </div>
-        <div class="trim-ends lp-trimonly">
+        <div class="trim-ends">
           <div class="trim-end">
             <span class="sublbl">Start</span>
             <div class="nudge2"><button type="button" data-e="a" data-d="-1" aria-label="Move the start earlier">‹</button><output id="lpEdA"></output><button type="button" data-e="a" data-d="1" aria-label="Move the start later">›</button></div>
@@ -1880,8 +1864,8 @@
             <div class="nudge2"><button type="button" data-e="b" data-d="-1" aria-label="Move the end earlier">‹</button><output id="lpEdB"></output><button type="button" data-e="b" data-d="1" aria-label="Move the end later">›</button></div>
           </div>
         </div>
-        <p class="caption lp-trimonly" id="lpEdLen"></p>
-        <div class="lp-edrow lp-trimonly">
+        <p class="caption" id="lpEdLen"></p>
+        <div class="lp-edrow">
           <button type="button" class="btn" id="lpEdFit">Fit to the beat</button>
           <button type="button" class="textbtn" id="lpEdReset">Undo all trims</button>
         </div>
@@ -1892,7 +1876,7 @@
         </div>
         <p class="stem-note" id="lpSaveNote" hidden></p>
         <button type="button" class="textbtn lp-copybtn" id="lpEdExport">Save a copy to your phone</button>
-        <p class="caption lp-trimonly">Drag the gold ends, or pick Start or End and tap + to zoom in on it; ‹ › move it one step at the current zoom. Faint lines are the beats. The loop keeps playing, so you hear each change.</p>
+        <p class="caption">Drag the gold ends, or pick Start or End and tap + to zoom in on it; ‹ › move it one step at the current zoom. Faint lines are the beats. The loop keeps playing, so you hear each change.</p>
       </div>
     </div>
     <div class="lp-modal lp-center" id="lpSend" hidden role="dialog" aria-modal="true" aria-labelledby="lpSendTitle">
@@ -2535,7 +2519,7 @@ function compilePattern(preset, meter) {
     drill: { mode: 'spell', scope: 'key', sev: false, best: {} },
     // Looper settings (the recordings themselves only live while the page is open).
     // sync: the speaker-to-mic delay in ms, or null to use the phone's own figure.
-    looper: { bpm: 92, meter: '4/4', bars: 2, metro: 'count', click: 70, drums: { on: false, kit: 'rock', vol: 70 }, monitor: false, micIdle: false, sync: null, syncSrc: '', tempoMode: 'detect', flash: false, follow: true },
+    looper: { bpm: 92, meter: '4/4', bars: 2, metro: 'count', click: 70, drums: { on: false, kit: 'rock', vol: 70 }, monitor: false, micIdle: false, sync: null, syncSrc: '', tempoMode: 'detect', flash: false, follow: true, quietRec: false },
   };
   load();
   const hash = (location.hash || '').slice(1);
@@ -2626,6 +2610,7 @@ function compilePattern(preset, meter) {
         if (l.tempoMode === 'set' || l.tempoMode === 'detect') d.tempoMode = l.tempoMode;
         d.flash = l.flash === true;
         d.follow = l.follow !== false;
+        d.quietRec = l.quietRec === true;
         if (METERS.includes(l.meter)) d.meter = l.meter;
         if (LP_BARS.includes(l.bars)) d.bars = l.bars;
         if (LP_METRO.includes(l.metro)) d.metro = l.metro;
@@ -7583,7 +7568,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-11-09f';
+  const APP_VERSION = '2026-11-09h';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;
@@ -9406,6 +9391,8 @@ self.onmessage = async (e) => {
     lastT: -Infinity, // when the last step was sent
     drumBpm: null, // the drums' own tempo, set by hand (null: the loops' tempo)
     speed: { busy: false, want: null }, // recording speed changes under way
+    quiet: null,   // Quiet while recording: { S, E }, when the drums and clicks are silent
+    drumFrom: 0,   // the first step the drums play on (earlier for a count-in with drums)
     msg: '', shown: {},
   };
   if (window.__LP_TEST) window.__LP_TEST.lx = lx; // lets the automated tests look inside
@@ -9665,8 +9652,7 @@ self.onmessage = async (e) => {
     return out;
   }
   /* Changes a recording's timing without changing its pitch: all of it (s: new length over old, so
-     1.1 is 10% slower), or bit by bit (knots: [original position, new position] pairs, rising, for
-     strums moved one at a time). It's rebuilt from overlapping 32 ms slices of the original: each
+     1.1 is 10% slower), or bit by bit (knots: [original position, new position] pairs, rising). It's rebuilt from overlapping 32 ms slices of the original: each
      slice is taken from about where the new timing says, nudged by up to 10 ms to whichever spot joins
      most smoothly onto the slice before. Strum attacks are kept whole and land exactly where the new
      timing puts them: around each one the slices are copied straight across, never repeated or
@@ -10088,11 +10074,12 @@ self.onmessage = async (e) => {
     while (lx.next < ctx.currentTime + ahead) {
       const p = lx.pos, t = lx.next, inBar = lpStepBar(p);
       const beatOk = !lx.free && (lx.beatFromPos != null ? p >= lx.beatFromPos : t >= lx.beatFrom - 1e-6);
-      if (beatOk && inBar % bs === 0 && lpClickWanted(p)) lpClick(t, inBar === 0 ? 2 : LP.meter === '6/8' && inBar === 6 ? 1 : 0);
+      const quiet = !!lx.quiet && t >= lx.quiet.S - 0.001 && t < lx.quiet.E - 0.001; // Quiet while recording
+      if (beatOk && !quiet && inBar % bs === 0 && lpClickWanted(p)) lpClick(t, inBar === 0 ? 2 : LP.meter === '6/8' && inBar === 6 ? 1 : 0);
       // The flash follows the tempo's beats (in 6/8, the two big beats). Past about three a second
       // only each measure's first beat flashes, which is easier on the eyes.
-      if (beatOk && LP.flash && inBar % (n / lpUnits()) === 0 && (inBar === 0 || 60 / lpDrumBpm() >= 0.34)) lx.flashQ.push({ t, down: inBar === 0 });
-      if (p >= 0 && LP.drums.on && beatOk) {
+      if (beatOk && (LP.flash || quiet) && inBar % (n / lpUnits()) === 0 && (inBar === 0 || 60 / lpDrumBpm() >= 0.34)) lx.flashQ.push({ t, down: inBar === 0 });
+      if (p >= lx.drumFrom && LP.drums.on && beatOk && !quiet) {
         const P = lpDrumPat();
         for (const k in DRUMS) {
           const ch = P.tracks[k] && P.tracks[k][inBar];
@@ -10123,6 +10110,8 @@ self.onmessage = async (e) => {
     lx.beatFrom = -Infinity;
     lx.beatFromPos = null;
     lx.flashQ = [];
+    lx.quiet = null;
+    lx.drumFrom = 0;
     lx.t0 = t0;
     lx.lastT = -Infinity;
     lpClockSet(false);
@@ -10316,6 +10305,29 @@ self.onmessage = async (e) => {
     return null;
   }
 
+  /* Quiet while recording: the drums and clicks fade out just before a recording starts (so even the
+     ring of the last hit before it stays out), the screen flashes the beat meanwhile, and they come
+     straight back for the downbeat where it ends. S, E: when the recording starts and ends (E moves
+     if you stop it early); no S: nothing's being recorded. */
+  function lpQuietSet(S, E) {
+    lx.quiet = LP.quietRec && S != null ? { S, E } : null;
+    if (!ctx || !lx.drumG || !lx.clickG) return;
+    const now = ctx.currentTime;
+    [[lx.drumG, lpDrumGain(), LP_BUS_LAT], [lx.clickG, lpClickGain(), 0]].forEach(([g, full, lat]) => {
+      const p = g.gain;
+      try {
+        p.cancelScheduledValues(now);
+        if (!lx.quiet) { p.setTargetAtTime(full, now, 0.01); return; }
+        const t1 = S - lat - 0.008;
+        if (t1 > now + 0.002) { p.setValueAtTime(full, now); p.setValueAtTime(full, t1); p.linearRampToValueAtTime(0, t1 + 0.006); }
+        else p.setTargetAtTime(0, now, 0.004);
+        const t2 = Math.max(now + 0.01, t1 + 0.01, E - lat - 0.002);
+        p.setValueAtTime(0, t2 - 0.004);
+        p.linearRampToValueAtTime(full, t2);
+      } catch (e) { /* engine closed */ }
+    });
+  }
+
   /* ---------- Recording ---------- */
   async function lpArm(i) {
     if (lx.opening || lx.measuring) return;
@@ -10339,9 +10351,12 @@ self.onmessage = async (e) => {
     // Recordings start on a downbeat of the beat clock (which, with loops, follows the first one).
     let Spos;
     if (!lx.run) {
-      // From a standstill: a bar of clicks first unless the metronome is off.
-      if (!lpStartTransport(0.1 + (LP.metro === 'off' ? 0 : bar))) return;
+      // From a standstill: a bar of clicks first unless the metronome is off. With the drums on and
+      // Quiet while recording, two bars of drums first instead, since they'll be silent once it starts.
+      const drumIn = LP.quietRec && LP.drums.on;
+      if (!lpStartTransport(0.1 + (drumIn ? 2 * bar : LP.metro === 'off' ? 0 : bar))) return;
       Spos = lpNextBar(lpFirstStep(lx.t0 - 0.05));
+      if (drumIn) lx.drumFrom = Spos - 2 * lpN();
     } else if (LP.metro === 'count') {
       // A full bar of clicks before the downbeat it starts on.
       Spos = lpNextBar(lpNextBar(lpFirstStep(now + 0.05)) + 1);
@@ -10361,6 +10376,7 @@ self.onmessage = async (e) => {
     const from = Math.round((S + lpRTL()) * sr) - pre;
     const cap = lpCapture(from, pre + Math.ceil((len + LP_POST + 0.1) * sr), pre, Math.round(len * sr));
     lx.rec = { i, S, Spos, E: null, len, sr, cap };
+    lpQuietSet(S, S + len);
     lpSay('');
     lpTick();
     lpRender();
@@ -10371,6 +10387,7 @@ self.onmessage = async (e) => {
     if (!r) return;
     lx.rec = null;
     lpDropCap(r.cap);
+    if (lx.quiet) lpQuietSet(null);
     if (msg) lpSay(msg);
     // A free first loop that didn't happen leaves no tempo, so the beat can't carry on.
     if (lx.run && (r.free || !lpHasSound())) lpStop();
@@ -10398,6 +10415,7 @@ self.onmessage = async (e) => {
     }
     if (stopping) Q = Math.min(Q, Math.max(first, near.Td));
     r.E = Math.min(Q, r.S + r.len);
+    if (lx.quiet) lpQuietSet(r.S, r.E);
     lpTick();
     lpRender();
   }
@@ -10406,6 +10424,7 @@ self.onmessage = async (e) => {
   function lpTick() {
     if (!ctx) return;
     const now = ctx.currentTime, r = lx.rec;
+    if (lx.quiet && !r && now > lx.quiet.E + 0.3) lx.quiet = null;
     if (r && r.E == null && now >= r.S + r.len - 0.15) r.E = r.S + r.len;
     if (r && r.E != null) {
       lx.rec = null;
@@ -10552,7 +10571,7 @@ self.onmessage = async (e) => {
      the sound down; l.str is how much longer than that recording it now is (1.1: 10% slower). The
      tempo, the drums and every loop's place in its cycle move together, so nothing jumps. */
   const lpPlayedBpm = () => { const m = lpMasterLoop(); return m ? LP.bpm * (m.str || 1) : LP.bpm; };
-  const lpSpeedCan = () => !lx.rec && !lx.free && lx.loops.some(Boolean) && lx.loops.every((l) => !l || (l.ready && !l.cap && !l.reb));
+  const lpSpeedCan = () => !lx.rec && !lx.free && lx.loops.some(Boolean) && lx.loops.every((l) => !l || (l.ready && !l.cap));
   async function lpSpeedTo(target) {
     if (!lpSpeedCan()) return;
     const played = lpPlayedBpm();
@@ -10574,7 +10593,7 @@ self.onmessage = async (e) => {
   }
   async function lpSpeedApply(T) {
     const old = LP.bpm, list = lx.loops.filter(Boolean);
-    const res = await Promise.all(list.map((l) => lpRebuildJob(l, ((l.str || 1) * old) / T, l.moves)));
+    const res = await Promise.all(list.map((l) => lpRebuildJob(l, ((l.str || 1) * old) / T)));
     // Anything changed meanwhile (a loop cleared, trimmed, or a recording started)? Leave it be.
     if (res.some((r) => !r) || !lpSpeedCan() || LP.bpm !== old || res.some(lpRebuildStale)) {
       if (res.some((r) => !r)) lpSay('Couldn\'t change the speed of the loops.');
@@ -10590,42 +10609,18 @@ self.onmessage = async (e) => {
   }
 
   /* ---------- Rebuilding a loop from its original recording ----------
-     A loop's sound is its original recording (l.orig) played l.str times as long, with any strums
-     you've moved (l.moves: [where in the original, where it now falls in the original's own timing])
-     shifted into place. l.wk is the timing the sound was last built with, in the original's samples:
-     [original, as moved] pairs, or null when nothing's moved. Every change starts again from the
-     original, so nothing wears the sound down. */
-  function lpPL(P, v) {
-    let k = 0;
-    while (k < P.length - 2 && P[k + 1][0] < v) k++;
-    const p0 = P[k], p1 = P[k + 1];
-    return p0[1] + ((v - p0[0]) * (p1[1] - p0[1])) / Math.max(1e-9, p1[0] - p0[0]);
-  }
-  // A spot in the loop's sound now -> the same spot in its original recording, and back.
-  const lpToOrig = (l, i) => { const w = i / (l.str || 1); return l.wk ? lpPL(l.wk.map(([x, y]) => [y, x]), w) : w; };
-  const lpFromOrig = (l, o) => (l.wk ? lpPL(l.wk, o) : o) * (l.str || 1);
-  function lpRebuildJob(l, f, moves) {
+     A loop's sound is its original recording (l.orig) played l.str times as long. Every change
+     starts again from the original, so nothing wears the sound down. */
+  function lpRebuildJob(l, f) {
     if (!l.orig) l.orig = { data: l.data, a: l.a, b: l.b, a0: l.a0, b0: l.b0 };
-    const o = l.orig, n = o.data.length, near = (v, v0) => (Math.abs(v - v0) <= 2 ? v0 : Math.round(v));
-    const oa = near(lpToOrig(l, l.a), o.a), ob = near(lpToOrig(l, l.b), o.b);
-    const oa0 = near(lpToOrig(l, l.a0), o.a0), ob0 = near(lpToOrig(l, l.b0), o.b0);
-    // Moves inside the loop, kept 20 ms clear of its ends and of each other, in order both ways.
-    const gap = 0.02 * l.sr, mv = [];
-    for (const [s0, w] of (moves || []).slice().sort((p, q) => p[0] - q[0])) {
-      const last = mv.length ? mv[mv.length - 1] : [oa, oa];
-      if (s0 - last[0] < gap || w - last[1] < gap || ob - s0 < gap || ob - w < gap) continue;
-      mv.push([s0, w]);
-    }
-    let wk = null;
-    if (mv.length) {
-      wk = [];
-      [[0, 0], [oa, oa], ...mv, [ob, ob], [n, n]].forEach((k) => { if (!wk.length || k[0] > wk[wk.length - 1][0]) wk.push(k); });
-    }
+    const o = l.orig, str = l.str || 1;
+    // Its trims, back in the original recording's samples (exactly the original ones if unchanged).
+    const back = (v, v0) => { const w = v / str; return Math.abs(w - v0) <= 2 ? v0 : Math.round(w); };
+    const oa = back(l.a, o.a), ob = back(l.b, o.b), oa0 = back(l.a0, o.a0), ob0 = back(l.b0, o.b0);
     const was = [l.a, l.b, l.data];
-    const done = (y, mk) => ({ l, f, y, a: mk[0], b: mk[0] + Math.round((ob - oa) * f), a0: mk[1], b0: mk[2], wk, moves: mv, was });
-    if (Math.abs(f - 1) < 1e-6 && !wk) return Promise.resolve(done(o.data, [oa, oa0, ob0]));
-    const knots = (wk || [[0, 0], [n, n]]).map(([i, w]) => [i, w * f]);
-    return lpWork({ job: 'stretch', x: o.data, sr: l.sr, s: f, marks: [oa, oa0, ob0], knots, force: mv.map((m) => m[0]) })
+    const done = (y, mk) => ({ l, f, y, a: mk[0], b: mk[0] + Math.round((ob - oa) * f), a0: mk[1], b0: mk[2], was });
+    if (Math.abs(f - 1) < 1e-6) return Promise.resolve(done(o.data, [oa, oa0, ob0]));
+    return lpWork({ job: 'stretch', x: o.data, sr: l.sr, s: f, marks: [oa, oa0, ob0] })
       .then((r) => (r && r.y ? done(r.y, r.marks) : null));
   }
   const lpRebuildStale = (r) => lx.loops[r.l.i] !== r.l || r.l.a !== r.was[0] || r.l.b !== r.was[1] || r.l.data !== r.was[2];
@@ -10642,39 +10637,12 @@ self.onmessage = async (e) => {
       l.a0 = Math.max(0, Math.min(N, r.a0));
       l.b0 = Math.max(0, Math.min(N, r.b0));
       l.str = r.f;
-      l.wk = r.wk;
-      l.moves = r.moves;
       l.groove = null;
       l.grooveWant = null;
       if (ctx) lpBake(l);
       l.Grel = Tref - lx.t0 - frac * lpLoopLen(l);
     });
     ed.colsKey = '';
-    ed.mkKey = '';
-  }
-  // Moves strums in one loop (the editor's Line up strums). Taps that come while one is being built
-  // are picked up when it's done.
-  async function lpStrumsTo(l, moves) {
-    l.movesWant = moves;
-    lpRender();
-    if (l.reb) return;
-    l.reb = true;
-    try {
-      while (l.movesWant && lx.loops[l.i] === l) {
-        if (lx.speed.busy || l.cap) { await new Promise((r) => setTimeout(r, 120)); continue; }
-        const mv = l.movesWant, r = await lpRebuildJob(l, l.str || 1, mv);
-        if (l.movesWant === mv) l.movesWant = null;
-        if (!r) { lpSay('Couldn\'t move the strums.'); break; }
-        if (lpRebuildStale(r)) { if (!l.movesWant) l.movesWant = mv; continue; } // trimmed meanwhile: again
-        lpRebuildPut([r]);
-        if (lx.run && ctx && l.src) lpLoopStart(l, ctx.currentTime + 0.03);
-        if (lpMasterLoop() === l) lpClockSet(true);
-        lpRender();
-      }
-    } finally {
-      l.reb = false;
-      lpRender();
-    }
   }
   // A phone mic records a guitar quietly, and one sharp pick attack says little about how loud the
   // rest is. So each loop is brought to a steady level set by its louder parts (the top tenth of its
@@ -11235,6 +11203,7 @@ self.onmessage = async (e) => {
     $('lpDrums').setAttribute('aria-pressed', String(LP.drums.on));
     $('lpDrums').setAttribute('aria-label', 'Drums, ' + kit.name + ' beat');
     $('lpDrumCombo').classList.toggle('on', LP.drums.on);
+    $('lpQuiet').setAttribute('aria-pressed', String(LP.quietRec));
     $('lpKitName').textContent = kit.name;
     lpKitSel.value = kit.id;
     $('lpDrumVol').value = String(LP.drums.vol);
@@ -11347,6 +11316,14 @@ self.onmessage = async (e) => {
     save();
     lpRender();
   }));
+  $('lpQuiet').addEventListener('click', () => {
+    LP.quietRec = !LP.quietRec;
+    save();
+    const r = lx.rec;
+    if (r && !r.free) lpQuietSet(r.S, r.E != null ? r.E : r.S + r.len);
+    else if (lx.quiet) lpQuietSet(null);
+    lpRender();
+  });
   $('lpFlash').addEventListener('click', () => {
     LP.flash = !LP.flash;
     lx.flashQ = [];
@@ -11377,12 +11354,12 @@ self.onmessage = async (e) => {
   lpKitSel.addEventListener('change', () => { LP.drums.kit = lpKitSel.value; LP.drums.on = true; save(); lpRender(); });
   $('lpDrumVol').addEventListener('input', (e) => {
     LP.drums.vol = Number(e.target.value);
-    if (lx.drumG) lx.drumG.gain.setTargetAtTime(lpDrumGain(), ctx.currentTime, 0.03);
+    if (lx.drumG && !lx.quiet) lx.drumG.gain.setTargetAtTime(lpDrumGain(), ctx.currentTime, 0.03);
     save();
   });
   $('lpClickVol').addEventListener('input', (e) => {
     LP.click = Number(e.target.value);
-    if (lx.clickG) lx.clickG.gain.setTargetAtTime(lpClickGain(), ctx.currentTime, 0.03);
+    if (lx.clickG && !lx.quiet) lx.clickG.gain.setTargetAtTime(lpClickGain(), ctx.currentTime, 0.03);
     save();
   });
   $('lpMonitor').addEventListener('click', () => {
@@ -11802,9 +11779,8 @@ self.onmessage = async (e) => {
 
   /* ---------- Loop editor: trim both ends, zoomed in as close as single samples ---------- */
   const edCanvas = $('lpEdCanvas');
-  const ed = { i: -1, s: 0, e: 1, focus: 'b', drag: null, ptrs: new Map(), cols: null, colsKey: '', timer: null, mode: 'trim', grid: 2, mk: null, mkKey: '' };
+  const ed = { i: -1, s: 0, e: 1, focus: 'b', drag: null, ptrs: new Map(), cols: null, colsKey: '', timer: null };
   const edLoop = () => (ed.i >= 0 ? lx.loops[ed.i] : null);
-  if (window.__LP_TEST) Object.assign(window.__LP_TEST, { ed, lpOnsets }); // automated tests only
   const LP_VIEW_MIN = 160; // samples across the whole trimmer at the closest zoom
   function lpEdOpen(i) {
     const l = lx.loops[i];
@@ -11812,7 +11788,6 @@ self.onmessage = async (e) => {
     ed.i = i;
     ed.focus = 'b';
     ed.colsKey = '';
-    ed.mkKey = '';
     $('lpEdTitle').textContent = 'Edit loop ' + (i + 1);
     $('lpEdTitle').style.color = LP_COLORS[i];
     $('lpEditor').hidden = false;
@@ -11881,22 +11856,6 @@ self.onmessage = async (e) => {
     $('lpEdVol').value = String(Math.round(l.vol * 100));
     $('lpEdVolOut').textContent = Math.round(l.vol * 100) + '%';
     $('lpZoomIn').disabled = ed.e - ed.s <= LP_VIEW_MIN + 1;
-    // Trim the ends, or Line up strums.
-    const strum = ed.mode === 'strum';
-    $('lpEditor').classList.toggle('strum', strum);
-    $('lpStrumTools').hidden = !strum;
-    document.querySelectorAll('#lpEdMode button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === ed.mode)));
-    document.querySelectorAll('#lpEdGrid button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.g) === ed.grid)));
-    edCanvas.setAttribute('aria-label', strum
-      ? 'The loop\'s waveform with a mark on each strum. Drag a mark onto a beat line to move that strum.'
-      : 'The loop\'s waveform. Drag either gold end to trim it.');
-    if (strum) {
-      const nMoved = (l.movesWant || l.moves || []).length, busy = l.reb || !!l.movesWant;
-      $('lpEdStrumNote').textContent = (busy ? 'Moving the strums… ' : nMoved ? nMoved + (nMoved === 1 ? ' strum moved. ' : ' strums moved. ') : '') +
-        'Each mark is a strum, and the lines are the beat (brightest on each measure\'s 1). Drag a mark onto a line to move that strum; it snaps when it\'s close, and the sound around it stretches to fit, at the same pitch. Tap a moved (gold) mark to put it back. Zoom in to reach strums close together.';
-      $('lpEdSnapAll').disabled = busy || lx.speed.busy;
-      $('lpEdUnmove').disabled = busy || !nMoved;
-    }
     const sv = $('lpSave'), saved = l.savedId && lpLib.items.some((x) => x.id === l.savedId);
     sv.textContent = lpLib.busy ? 'Saving…' : saved ? 'Save changes' : 'Save to My loops';
     sv.disabled = lpLib.busy || !lpLib.ok;
@@ -11928,27 +11887,6 @@ self.onmessage = async (e) => {
     ed.colsKey = key;
     return ed.cols;
   }
-  // The strums in a loop, for Line up strums: where each is in the original recording (o), where it
-  // is now (p), and whether you've moved it. Found once per recording; moved ones stay where they were.
-  function lpEdStrums(l) {
-    const key = l.data.length + '|' + l.a + '|' + l.b + '|' + (l.str || 1) + '|' + JSON.stringify(l.moves || []) + '|' + JSON.stringify(l.movesWant || null);
-    if (ed.mkKey === key && ed.mk) return ed.mk;
-    const src = l.orig ? l.orig.data : l.data;
-    if (!l.onc || l.onc.src !== src) l.onc = { src, list: lpOnsets(src, l.sr).map(([o]) => o) };
-    // While a move is being built, the moved marks already show where they're going.
-    const f = l.str || 1, want = l.movesWant ? new Map(l.movesWant) : null;
-    const moved = new Set((l.movesWant || l.moves || []).map((m) => m[0])), gap = 0.02 * l.sr, out = [];
-    const all = l.onc.list.slice();
-    moved.forEach((o) => { if (!all.includes(o)) all.push(o); });
-    all.sort((x, y) => x - y).forEach((o) => {
-      const p = want && want.has(o) ? want.get(o) * f : lpFromOrig(l, o);
-      if (p > l.a + gap && p < l.b - gap) out.push({ o, p, moved: moved.has(o) });
-    });
-    ed.mk = out;
-    ed.mkKey = key;
-    return out;
-  }
-  const lpEdGridLen = (l) => ed.grid * lpSD() * l.sr; // samples between the lines you snap to
   let edColors = null;
   function lpEdDraw() {
     const l = edLoop();
@@ -11965,20 +11903,9 @@ self.onmessage = async (e) => {
     g.clearRect(0, 0, W, H);
     g.fillStyle = 'rgba(0, 0, 0, 0.4)';
     g.fillRect(0, 0, W, H);
-    // Beats where the recording's clicks were, brighter on each bar's first beat. Lining up strums,
-    // the lines count from the loop's start, down to the 8th or 16th notes you snap to.
+    // Beats where the recording's clicks were, brighter on each bar's first beat.
     const bs = lpBeat() * l.sr, bpb = lpBeatsPerBar();
-    if (ed.mode === 'strum') {
-      const G = lpEdGridLen(l), n = lpN();
-      if ((IW / span) * G > 4 * dpr) {
-        const j0 = Math.ceil((ed.s - l.a) / G), j1 = Math.floor((ed.e - l.a) / G);
-        for (let j = j0; j <= j1; j++) {
-          const st = j * ed.grid, bar = lpMod(st, n) === 0, beat = lpMod(st, lpBeatSteps()) === 0;
-          g.fillStyle = bar ? 'rgba(237, 226, 208, 0.42)' : beat ? 'rgba(237, 226, 208, 0.22)' : 'rgba(237, 226, 208, 0.09)';
-          g.fillRect(Math.round(X(l.a + j * G)), 0, Math.max(1, dpr * (bar ? 1.5 : 1)), H);
-        }
-      }
-    } else if ((IW / span) * bs > 6 * dpr) {
+    if ((IW / span) * bs > 6 * dpr) {
       const k0 = Math.ceil((ed.s - l.a0) / bs), k1 = Math.floor((ed.e - l.a0) / bs);
       for (let k = k0; k <= k1; k++) {
         g.fillStyle = lpMod(k, bpb) === 0 ? 'rgba(237, 226, 208, 0.26)' : 'rgba(237, 226, 208, 0.1)';
@@ -12041,35 +11968,6 @@ self.onmessage = async (e) => {
     };
     handle(xa, true, ed.focus === 'a');
     handle(xb, false, ed.focus === 'b');
-    // Lining up strums: a mark on each, gold once moved; the one being dragged shows where it was.
-    if (ed.mode === 'strum') {
-      const d = ed.drag && ed.drag.kind === 'strum' ? ed.drag : null, tri = 7 * dpr;
-      // A white line through the strum, with a tab at the top: white, or gold with a dark edge once
-      // moved (so it shows on every loop's colour).
-      const mark = (x, moved, active) => {
-        g.fillStyle = active ? '#fff' : moved ? 'rgba(255, 255, 255, 0.75)' : 'rgba(255, 255, 255, 0.4)';
-        g.fillRect(Math.round(x) - Math.max(1, dpr) / 2, bar, Math.max(1, dpr), H - 2 * bar);
-        g.beginPath();
-        g.moveTo(x - tri, bar);
-        g.lineTo(x + tri, bar);
-        g.lineTo(x, bar + tri * 1.4);
-        g.closePath();
-        g.fillStyle = active ? '#fff' : moved ? edColors.brass : 'rgba(255, 255, 255, 0.85)';
-        g.fill();
-        if (moved || active) { g.strokeStyle = edColors.ink; g.lineWidth = 1.2 * dpr; g.stroke(); }
-      };
-      lpEdStrums(l).forEach((m) => {
-        const x = X(m.p);
-        if (x < -tri || x > W + tri) return;
-        if (d && d.o === m.o) {
-          g.fillStyle = 'rgba(255, 255, 255, 0.35)';
-          g.fillRect(Math.round(x), 0, Math.max(1, dpr), H);
-          return;
-        }
-        mark(x, m.moved, false);
-      });
-      if (d) mark(X(d.p), true, true);
-    }
     // Where the loop is playing now.
     if (lx.run && l.src && !ed.drag) {
       const p = l.a + lpPhase(l, ctx.currentTime) * l.sr;
@@ -12132,33 +12030,6 @@ self.onmessage = async (e) => {
     lpEdFitView();
     lpEdApply(true);
   });
-  document.querySelectorAll('#lpEdMode button').forEach((b) => b.addEventListener('click', () => {
-    ed.mode = b.dataset.v;
-    lpEdRender();
-  }));
-  document.querySelectorAll('#lpEdGrid button').forEach((b) => b.addEventListener('click', () => {
-    ed.grid = Number(b.dataset.g);
-    lpEdRender();
-  }));
-  // Every strum onto its nearest line (one per line: the closest wins).
-  $('lpEdSnapAll').addEventListener('click', () => {
-    const l = edLoop();
-    if (!l || l.reb || l.cap) return;
-    const G = lpEdGridLen(l), f = l.str || 1, gap = 0.02 * l.sr, best = new Map();
-    lpEdStrums(l).forEach((m) => {
-      const j = Math.round((m.p - l.a) / G), q = l.a + j * G, d = Math.abs(q - m.p);
-      if (q <= l.a + gap || q >= l.b - gap) return;
-      const cur = best.get(j);
-      if (!cur || d < cur.d) best.set(j, { o: m.o, q, d });
-    });
-    const moves = Array.from(best.values()).sort((x, y) => x.o - y.o).map((m) => [m.o, m.q / f]);
-    if (!moves.length) { lpSay('No strums to line up in this loop.'); return; }
-    lpStrumsTo(l, moves);
-  });
-  $('lpEdUnmove').addEventListener('click', () => {
-    const l = edLoop();
-    if (l && (l.moves || []).length) lpStrumsTo(l, []);
-  });
   $('lpEdVol').addEventListener('input', (e) => {
     const l = edLoop();
     if (!l) return;
@@ -12192,21 +12063,6 @@ self.onmessage = async (e) => {
     }
     const r = edCanvas.getBoundingClientRect(), x = ev.clientX - r.left, span = ed.e - ed.s;
     const iw = Math.max(1, r.width - 2 * TRIM_M);
-    if (ed.mode === 'strum' && !l.reb) {
-      // The strum mark nearest the finger, if one's close; it can move as far as the moved strums
-      // (or the loop's ends) either side of it.
-      const mk = lpEdStrums(l), xs = (pp) => TRIM_M + ((pp - ed.s) / span) * iw;
-      let hit = null;
-      mk.forEach((m) => { const dx = Math.abs(xs(m.p) - x); if (dx < 18 && (!hit || dx < hit.dx)) hit = { m, dx }; });
-      if (hit) {
-        const gap = 0.03 * l.sr;
-        let lo = l.a + gap, hi = l.b - gap;
-        mk.forEach((m) => { if (m.moved && m.o !== hit.m.o) { if (m.p < hit.m.p) lo = Math.max(lo, m.p + gap); else hi = Math.min(hi, m.p - gap); } });
-        ed.drag = { kind: 'strum', o: hit.m.o, p0: hit.m.p, p: hit.m.p, grab: edAt(ev.clientX) - hit.m.p, lo, hi, moved: hit.m.moved, x0: ev.clientX };
-        lpEdRender();
-        return;
-      }
-    }
     const xa = TRIM_M + ((l.a - ed.s) / span) * iw, xb = TRIM_M + ((l.b - ed.s) / span) * iw;
     const da = xa - x, db = x - xb; // distance into each handle (the handles sit just outside the loop)
     const nearA = da > -16 && da < 13 + 18, nearB = db > -16 && db < 13 + 18;
@@ -12232,14 +12088,6 @@ self.onmessage = async (e) => {
     } else if (ed.drag.kind === 'a' || ed.drag.kind === 'b') {
       // While dragging only the picture moves; the sound follows when you let go.
       lpEdSet(ed.drag.kind, Math.max(ed.s, Math.min(ed.e, edAt(ev.clientX) - ed.drag.grab)));
-    } else if (ed.drag.kind === 'strum') {
-      // Snaps onto a line within 10 points of it.
-      const d = ed.drag, G = lpEdGridLen(l), span = ed.e - ed.s, iw = Math.max(1, r.width - 2 * TRIM_M);
-      let p = edAt(ev.clientX) - d.grab;
-      const q = l.a + Math.round((p - l.a) / G) * G;
-      if ((Math.abs(q - p) / span) * iw < 10) p = q;
-      d.p = Math.max(d.lo, Math.min(d.hi, p));
-      if (Math.abs(ev.clientX - d.x0) > 3) d.dragged = true;
     }
     lpEdRender();
   });
@@ -12248,18 +12096,8 @@ self.onmessage = async (e) => {
     ed.ptrs.delete(ev.pointerId);
     if (!ed.drag) return;
     if (ed.drag.kind === 'pinch') { if (ed.ptrs.size === 0) ed.drag = null; return; }
-    const moved = ed.drag.kind === 'a' || ed.drag.kind === 'b', d = ed.drag;
+    const moved = ed.drag.kind === 'a' || ed.drag.kind === 'b';
     ed.drag = null;
-    if (d.kind === 'strum') {
-      const l = edLoop();
-      if (!l) return;
-      const f = l.str || 1, rest = (l.movesWant || l.moves || []).filter((m) => m[0] !== d.o);
-      // A tap on a moved strum puts it back; a drag moves it.
-      if (d.dragged && Math.abs(d.p - d.p0) >= 1) lpStrumsTo(l, rest.concat([[d.o, d.p / f]]));
-      else if (!d.dragged && d.moved) lpStrumsTo(l, rest);
-      lpEdRender();
-      return;
-    }
     if (moved) lpEdApply(true);
     else lpEdRender();
   };

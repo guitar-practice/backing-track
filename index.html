@@ -1183,9 +1183,56 @@
   .slotrow .sc { font-size: 14.5px; font-weight: 600; white-space: nowrap; }
 
   /* Drills */
-  .modes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-  .mode { grid-column: span 2; font-family: var(--sans); font-size: 13px; padding: 10px 4px; }
-  .mode:nth-child(n + 4) { grid-column: span 3; }
+  .drillhead { display: flex; flex-direction: column; gap: 10px; }
+  .drillgoal { margin: 0; }
+  .lesson { border: 1px solid var(--line); border-radius: 12px; background: rgba(0, 0, 0, 0.14); }
+  .lesson summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 14px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--brass-bright);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lesson summary::-webkit-details-marker { display: none; }
+  .lesson summary::after {
+    content: '';
+    width: 10px;
+    height: 6px;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23c9963f' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat center;
+    transition: transform 0.15s ease;
+  }
+  .lesson[open] summary::after { transform: rotate(180deg); }
+  .lesson-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; font-family: var(--sans); font-size: 13px; line-height: 1.55; color: var(--parchment-dim); }
+  .lesson-body p, .lesson-body ul, .lesson-body ol { margin: 0; }
+  .lesson-body ul, .lesson-body ol { padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+  .lesson-body b { color: var(--parchment); font-weight: 600; }
+  .lesson-body h4 { margin: 0 0 4px; font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--brass-bright); }
+  .lsn-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .lsn-cols ul { padding-left: 16px; }
+  .lsn-ex { font-family: var(--serif); font-size: 15px; line-height: 1.6; color: var(--parchment); padding: 8px 12px; border-radius: 8px; background: rgba(0, 0, 0, 0.2); }
+  .lsn-note { font-size: 12px; color: var(--parchment-faint); }
+  .cof { display: block; width: 100%; max-width: 300px; margin: 2px auto; }
+  .cof .ring { fill: none; stroke: var(--line); stroke-width: 1; }
+  .cof .mj { font-family: var(--serif); font-size: 15px; font-weight: 600; fill: var(--parchment); }
+  .cof .mj.top { fill: var(--brass-bright); }
+  .cof .ct { font-family: var(--sans); font-size: 9.5px; fill: var(--parchment-faint); }
+  .cof .mn { font-family: var(--sans); font-size: 10.5px; fill: var(--parchment-dim); }
+  .cof .arr { fill: none; stroke: var(--brass); stroke-width: 1.2; }
+  .cof .arrlbl { font-family: var(--sans); font-size: 9px; fill: var(--brass-bright); }
+  .qhint { margin: -4px 0 0; font-family: var(--sans); font-size: 13px; line-height: 1.5; color: var(--parchment); padding: 9px 12px; border-radius: 8px; background: rgba(232, 180, 92, 0.1); border: 1px solid rgba(232, 180, 92, 0.3); }
+  .hintbtn { align-self: flex-start; margin-top: -6px; }
+  .neck-wrap.mini { max-width: 300px; width: 100%; align-self: center; }
+  .neck.mini .board { border-radius: 6px; }
+  .dot.hit { border: 2px solid var(--good); color: var(--good); }
+  .dot.miss { border: 2px solid var(--warn); color: var(--warn); }
+  .dot.gone { opacity: 0.3; }
+  .dot.moved { border: 2px solid var(--brass-bright); color: var(--brass-bright); box-shadow: 0 0 0 3px rgba(232, 180, 92, 0.25), 0 0 14px rgba(232, 180, 92, 0.5); cursor: default; }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .stat { padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.18); display: flex; flex-direction: column; gap: 1px; }
   .stat .sv { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -1493,9 +1540,16 @@
 
   <!-- Drills -->
   <section class="panel flow" id="panel-drills" data-tab="drills" role="tabpanel" aria-labelledby="tab-drills" hidden>
-    <div class="modes" id="drillModes" role="group" aria-label="Drill"></div>
+    <div class="drillhead">
+      <label class="field"><span>Drill</span><select id="drillSel"></select></label>
+      <p class="caption drillgoal" id="drillGoal"></p>
+      <details class="lesson" id="drillLesson" hidden>
+        <summary>How it works</summary>
+        <div class="lesson-body" id="drillLessonBody"></div>
+      </details>
+    </div>
     <div class="duo" id="drillOpts">
-      <div class="field">
+      <div class="field" id="scopeField">
         <span id="scopeLbl">Keys</span>
         <div class="seg small two" role="group" aria-labelledby="scopeLbl" id="scopeSeg">
           <button type="button" data-v="key" aria-pressed="true">This key</button>
@@ -1507,6 +1561,14 @@
         <div class="seg small two" role="group" aria-labelledby="sizeLbl" id="sizeSeg">
           <button type="button" data-v="0" aria-pressed="true">Triads</button>
           <button type="button" data-v="1" aria-pressed="false">7ths</button>
+        </div>
+      </div>
+      <div class="field" id="poolField" hidden>
+        <span id="poolLbl">Modes</span>
+        <div class="seg small" role="group" aria-labelledby="poolLbl" id="poolSeg">
+          <button type="button" data-v="three" aria-pressed="false">Big 3</button>
+          <button type="button" data-v="six" aria-pressed="true">Six</button>
+          <button type="button" data-v="seven" aria-pressed="false">All 7</button>
         </div>
       </div>
     </div>
@@ -2463,8 +2525,19 @@ function compilePattern(preset, meter) {
   const TAB_TITLES = { track: 'Backing Track', map: 'Key Map', lab: 'Chord Lab', drills: 'Drills', saved: 'Saved Setups', stems: 'Song Splitter', looper: 'Looper' };
   const LP_BARS = [1, 2, 4, 8, 16];
   const LP_METRO = ['off', 'count', 'always'];
-  const DRILL_MODES = ['spell', 'chords', 'hearChord', 'hearDegree', 'intervals'];
-  const MODE_NAMES = { spell: 'Spell scales', chords: 'Chords in key', hearChord: 'Hear chords', hearDegree: 'Hear degrees', intervals: 'Intervals' };
+  // The drills, in the order the dropdown lists them. The m... ones learn the modes step by step.
+  const DRILL_GROUPS = [
+    ['Scales and chords', ['spell', 'chords']],
+    ['Ear training', ['hearChord', 'hearDegree', 'intervals']],
+    ['Modes, step by step', ['mFlavor', 'mMinor', 'mTweak', 'mBuild', 'mCircle', 'mHear', 'mNeck']],
+  ];
+  const DRILL_MODES = DRILL_GROUPS.flatMap((g) => g[1]);
+  const MODE_NAMES = {
+    spell: 'Spell scales', chords: 'Chords in key', hearChord: 'Hear chords', hearDegree: 'Hear degrees', intervals: 'Intervals',
+    mFlavor: '1. Major or minor?', mMinor: '2. Minor for free', mTweak: '3. One-note tweaks', mBuild: '4. Build any mode',
+    mCircle: '5. Sharp and flat keys', mHear: '6. Hear the big three', mNeck: '7. See it on the neck',
+  };
+  const DRILL_POOLS = ['three', 'six', 'seven'];
   const MAX_CHORDS = 16;
   const HOLDS = [0.5, 1, 2, 3, 4];
   const defaultSlots = (id) => DEFAULTS[id].map(([d, s]) => ({ d, sev: !!s, bars: 1, oct: 0 }));
@@ -2516,7 +2589,7 @@ function compilePattern(preset, meter) {
     scaleView: { open: false, notes: false, pos: 'main', labels: 'blank' },
     spell: {}, // root -> 'sharp' | 'flat', for the five keys with two names
     lab: { d: 0, sev: false },
-    drill: { mode: 'spell', scope: 'key', sev: false, best: {} },
+    drill: { mode: 'spell', scope: 'key', sev: false, best: {}, pool: 'six', lessonShut: [] },
     // Looper settings (the recordings themselves only live while the page is open).
     // sync: the speaker-to-mic delay in ms, or null to use the phone's own figure.
     looper: { bpm: 92, meter: '4/4', bars: 2, metro: 'count', click: 70, drums: { on: false, kit: 'rock', vol: 70 }, monitor: false, micIdle: false, sync: null, syncSrc: '', tempoMode: 'detect', flash: false, follow: true, quietRec: false },
@@ -2635,6 +2708,8 @@ function compilePattern(preset, meter) {
         if (DRILL_MODES.includes(s.drill.mode)) state.drill.mode = s.drill.mode;
         if (s.drill.scope === 'key' || s.drill.scope === 'any') state.drill.scope = s.drill.scope;
         state.drill.sev = !!s.drill.sev;
+        if (DRILL_POOLS.includes(s.drill.pool)) state.drill.pool = s.drill.pool;
+        if (Array.isArray(s.drill.lessonShut)) state.drill.lessonShut = s.drill.lessonShut.filter((m) => DRILL_MODES.includes(m));
         if (s.drill.best && typeof s.drill.best === 'object') {
           DRILL_MODES.forEach((m) => { if (Number.isInteger(s.drill.best[m]) && s.drill.best[m] >= 0) state.drill.best[m] = s.drill.best[m]; });
         }
@@ -3332,7 +3407,7 @@ function compilePattern(preset, meter) {
     drillStale = true;
     save();
     renderAll();
-    if (state.tab === 'drills') newQuestion();
+    if (state.tab === 'drills') { renderDrillChrome(); newQuestion(); }
   }
   rootSel.addEventListener('change', () => {
     state.root = Number(rootSel.value);
@@ -6191,9 +6266,147 @@ function compilePattern(preset, meter) {
      Drills
      ===================================================================== */
   const qcard = $('qcard'), drillFb = $('drillFb'), nextBtn = $('nextBtn'), drillStatsEl = $('drillStats');
-  const drillModesEl = $('drillModes'), drillOpts = $('drillOpts'), sizeField = $('sizeField');
+  const drillSel = $('drillSel'), drillGoal = $('drillGoal'), drillLesson = $('drillLesson'), drillLessonBody = $('drillLessonBody');
+  const drillOpts = $('drillOpts'), sizeField = $('sizeField'), scopeField = $('scopeField'), poolField = $('poolField');
   const scopeBtns = Array.from(document.querySelectorAll('#scopeSeg button'));
   const sizeBtns = Array.from(document.querySelectorAll('#sizeSeg button'));
+  const poolBtns = Array.from(document.querySelectorAll('#poolSeg button'));
+
+  // What each drill is for, shown under the dropdown.
+  const DRILL_GOALS = {
+    spell: 'Spell any scale with the right sharps and flats.',
+    chords: 'Know the chord on every degree of a key, by name and by numeral.',
+    hearChord: 'Tell major, minor, diminished and the other chord types apart by ear.',
+    hearDegree: 'Hear where a note sits in the key, from 1 to 7.',
+    intervals: 'Name the distance between two notes by ear.',
+    mFlavor: 'See a mode\'s name and know at once whether it sounds major or minor, from its 3rd.',
+    mMinor: 'Turn any major key into its relative minor and back without counting, so every minor scale comes free.',
+    mTweak: 'Know the one note behind each mode: which scale it starts from and which note moves.',
+    mBuild: 'Build any mode in any key on the fly: start from major or minor and move one note.',
+    mCircle: 'Know how many sharps or flats any major key has, and which ones, from the circle of fifths.',
+    mHear: 'Hear Mixolydian, Dorian and Phrygian, the three modes most songs use, and name them by their sound.',
+    mNeck: 'See every mode on the neck as a shape you already know with one dot moved one fret.',
+  };
+  // Which options each drill uses: Keys (or Root), Chords, Modes.
+  const DRILL_OPTS = {
+    spell: ['scope'], chords: ['scope', 'size'], hearChord: ['scope', 'size'], hearDegree: ['scope'], intervals: ['scope'],
+    mFlavor: ['pool'], mMinor: ['scope'], mTweak: ['pool'], mBuild: ['scope', 'pool'], mCircle: [], mHear: ['pool'], mNeck: ['scope', 'pool'],
+  };
+
+  /* ---------- Modes, step by step ----------
+     Every mode is the major or the natural minor scale with at most two notes moved. bucket: how it
+     sounds (its 3rd); from: the scale it's built from; moves: [degree index, +1 raised / -1 lowered]. */
+  const MODE_INFO = {
+    ionian: { bucket: 'major', nick: 'the standard major scale', from: 'major', moves: [], rule: '', how: '' },
+    lydian: { bucket: 'major', nick: 'the spacey major scale', from: 'major', moves: [[3, 1]], rule: '♯4', how: 'raise the 4th', did: 'its 4th raised' },
+    mixolydian: { bucket: 'major', nick: 'the bluesy major scale', from: 'major', moves: [[6, -1]], rule: '♭7', how: 'lower the 7th', did: 'its 7th lowered', big3: 'the classic rock and blues sound' },
+    aeolian: { bucket: 'minor', nick: 'the standard natural minor scale', from: 'natural', moves: [], rule: '', how: '' },
+    dorian: { bucket: 'minor', nick: 'the jazzy minor scale', from: 'natural', moves: [[5, 1]], rule: '♯6', how: 'raise the 6th', did: 'its 6th raised', big3: 'the funky, jazzy minor sound' },
+    phrygian: { bucket: 'minor', nick: 'the exotic minor scale', from: 'natural', moves: [[1, -1]], rule: '♭2', how: 'lower the 2nd', did: 'its 2nd lowered', big3: 'the heavy metal and flamenco sound' },
+    locrian: { bucket: 'dim', nick: 'the diminished one you save for last', from: 'natural', moves: [[1, -1], [4, -1]], rule: '♭2 ♭5', how: 'lower the 2nd and the 5th', did: 'its 2nd and 5th lowered' },
+  };
+  const MODE_POOL = {
+    three: ['mixolydian', 'dorian', 'phrygian'],
+    six: ['ionian', 'lydian', 'mixolydian', 'aeolian', 'dorian', 'phrygian'],
+    seven: ['ionian', 'lydian', 'mixolydian', 'aeolian', 'dorian', 'phrygian', 'locrian'],
+  };
+  const MODE_DRILLS = ['mFlavor', 'mMinor', 'mTweak', 'mBuild', 'mCircle', 'mHear', 'mNeck'];
+  const poolOf = () => MODE_POOL[state.drill.pool] || MODE_POOL.six;
+  const tweakPool = () => poolOf().filter((m) => MODE_INFO[m].moves.length);
+  const FROM_WORD = { major: 'major', natural: 'natural minor' };
+  const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th'];
+  const namesOf = (notes) => notes.map((n) => n.name).join(' ');
+  const uniq = (a) => a.filter((x, i) => a.indexOf(x) === i);
+  // A key on a root, kept on the given letter unless that would need a double sharp or flat.
+  function safeKey(pc, id, L) {
+    const k = buildKey(pc, id, L);
+    return k.notes.some((n) => Math.abs(n.acc) > 1) ? buildKey(pc, id) : k;
+  }
+  // The root a mode drill uses: the key's own (spelled as it is above) or any.
+  const drillRoot = () => (state.drill.scope === 'key' ? { pc: state.root, L: keyInfo.notes[0].L } : { pc: randInt(12), L: null });
+  // A mode on a root, the scale it's built from (on the same letter), and the notes that move.
+  function modePair(pc, id, L) {
+    const k = safeKey(pc, id, L), from = MODE_INFO[id].from;
+    let p = buildKey(pc, from, k.notes[0].L);
+    if (p.notes.some((n) => Math.abs(n.acc) > 1)) p = buildKey(pc, from);
+    const moves = MODE_INFO[id].moves.map(([i, d]) => ({ i, d, from: p.notes[i].name, to: k.notes[i].name }));
+    return { k, p, from, moves, kt: k.rootName + ' ' + SCALES[id].name, ft: p.rootName + ' ' + FROM_WORD[from] };
+  }
+  const moveText = (P) => P.moves.map((m) => m.from + ' → ' + m.to).join(' and ');
+  const modeSound = (k, alt) => ({ kind: 'mode', pc: k.notes[0].pc, steps: k.scale.steps, k, alt });
+  // A rule as an answer: "Major + ♯4", with what it means underneath.
+  function ruleAnswer(m) {
+    const I = MODE_INFO[m], base = I.from === 'major' ? 'Major' : 'Minor';
+    return I.moves.length ? { v: m, l: base + ' + ' + I.rule, s: I.how } : { v: m, l: base + ' as is', s: 'no change' };
+  }
+
+  // The circle of fifths, clockwise from C: each step up a 5th and one more sharp (or one fewer flat).
+  const SHARP_ORDER = ['F', 'C', 'G', 'D', 'A', 'E', 'B'];
+  const CIRCLE = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5].map((pc, i) => {
+    const k = buildKey(pc, 'major'), n = k.notes.filter((x) => x.acc !== 0).length, sharp = k.notes.some((x) => x.acc > 0);
+    return { pc, i, k, name: k.rootName, n, kind: n === 0 ? '' : sharp ? 'sharp' : 'flat', minor: k.notes[5].name };
+  });
+  const countText = (c) => (c.n === 0 ? 'no sharps or flats' : c.n + ' ' + c.kind + (c.n > 1 ? 's' : ''));
+  const accList = (c) => (c.kind === 'sharp' ? SHARP_ORDER.slice(0, c.n).map((L) => L + '♯') : SHARP_ORDER.slice().reverse().slice(0, c.n).map((L) => L + '♭'));
+  function circleWhere(c) {
+    if (c.i === 0) return 'C sits at the top of the circle.';
+    return c.i <= 6 ? c.name + ' is ' + c.i + (c.i === 1 ? ' step' : ' steps') + ' clockwise from C.' : c.name + ' is ' + (12 - c.i) + (12 - c.i === 1 ? ' step' : ' steps') + ' counterclockwise from C.';
+  }
+  // The circle as a picture: majors outside with their sharps or flats, relative minors inside.
+  function circleSvg() {
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '-124 -124 248 248');
+    svg.setAttribute('class', 'cof');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'The circle of fifths. Clockwise from C at the top: ' + CIRCLE.map((c) => c.name + ' (' + countText(c) + ')').join(', ') + '.');
+    const add = (tag, attrs, text) => {
+      const e = document.createElementNS(NS, tag);
+      Object.keys(attrs).forEach((a) => e.setAttribute(a, attrs[a]));
+      if (text != null) e.textContent = text;
+      svg.appendChild(e);
+      return e;
+    };
+    add('circle', { class: 'ring', cx: 0, cy: 0, r: 114 });
+    add('circle', { class: 'ring', cx: 0, cy: 0, r: 68 });
+    CIRCLE.forEach((c) => {
+      const a = (c.i / 12) * Math.PI * 2 - Math.PI / 2, x = (r) => (Math.cos(a) * r).toFixed(1), y = (r) => (Math.sin(a) * r).toFixed(1);
+      add('text', { class: 'mj' + (c.i === 0 ? ' top' : ''), x: x(100), y: y(100), 'text-anchor': 'middle', 'dominant-baseline': 'central' }, c.name);
+      add('text', { class: 'ct', x: x(82), y: y(82), 'text-anchor': 'middle', 'dominant-baseline': 'central' }, c.n ? c.n + (c.kind === 'sharp' ? '♯' : '♭') : '0');
+      add('text', { class: 'mn', x: x(55), y: y(55), 'text-anchor': 'middle', 'dominant-baseline': 'central' }, c.minor + 'm');
+    });
+    add('text', { class: 'arrlbl', x: 0, y: -4, 'text-anchor': 'middle' }, 'clockwise:');
+    add('text', { class: 'arrlbl', x: 0, y: 8, 'text-anchor': 'middle' }, 'up a 5th, +1♯');
+    return svg;
+  }
+
+  const DRILL_LESSONS = {
+    mFlavor: '<p>Every mode sounds either <b>major</b> or <b>minor</b>, and its <b>3rd</b> decides which. Sort each one into its bucket and seven choices become two.</p>' +
+      '<div class="lsn-cols"><div><h4>Major 3rd: major-sounding</h4><ul><li><b>Ionian</b>: the standard major scale</li><li><b>Lydian</b>: the spacey major scale</li><li><b>Mixolydian</b>: the bluesy major scale</li></ul></div>' +
+      '<div><h4>Minor 3rd: minor-sounding</h4><ul><li><b>Aeolian</b>: the standard natural minor scale</li><li><b>Dorian</b>: the jazzy minor scale</li><li><b>Phrygian</b>: the exotic minor scale</li></ul></div></div>' +
+      '<p><b>Locrian</b> is diminished and very rare, so save it for last. It joins the questions when you pick All 7.</p>',
+    mMinor: '<p>You don\'t need to learn a whole new set of notes for <b>natural minor</b>. It\'s just a <b>major scale started on its 6th note</b>.</p>' +
+      '<p class="lsn-ex">C major: C D E F G <b>A</b> B<br>A minor: <b>A</b> B C D E F G</p>' +
+      '<p>If you know C major, you already know A minor. If you know G major, you already know E minor. Practise your 12 major scales and the 12 minor ones come free.</p>',
+    mTweak: '<p>Instead of counting back to a major key, take the scale you already know, major or minor, and <b>change one note</b>.</p>' +
+      '<div class="lsn-cols"><div><h4>Bright: change the major scale</h4><ul><li><b>Lydian</b>: raise the 4th (♯4)</li><li><b>Mixolydian</b>: lower the 7th (♭7)</li></ul></div>' +
+      '<div><h4>Dark: change the natural minor scale</h4><ul><li><b>Dorian</b>: raise the 6th (♯6)</li><li><b>Phrygian</b>: lower the 2nd (♭2)</li><li><b>Locrian</b>: lower the 2nd and 5th (♭2 ♭5)</li></ul></div></div>' +
+      '<p><b>Ionian</b> is the major scale as it is and <b>Aeolian</b> is the natural minor scale as it is. Memorize the four rules for Lydian, Mixolydian, Dorian and Phrygian and you can build any mode in any key on the fly.</p>' +
+      '<p class="lsn-note">Dorian\'s ♯6 means minor\'s 6th raised a half step, which lands on the same 6th the major scale has.</p>',
+    mBuild: '<p>Put the rules to work. Finding <b>A Phrygian</b> instantly, without thinking about F major:</p>' +
+      '<ol><li>Start with <b>A natural minor</b>: A B C D E F G.</li><li>Phrygian is minor with a <b>♭2</b>, so flatten the 2nd: B becomes B♭.</li><li>Done: <b>A Phrygian</b> is A B♭ C D E F G.</li></ol>' +
+      '<p>Each question gives you a mode on a root. Find the scale it starts from, move the one note, and spell it. Stuck? Tap <b>Show me how</b>. Afterwards, play the plain scale and the mode to hear the one note that changed.</p>',
+    mCircle: '<p>Don\'t try to memorize every sharp and flat key by rote. The <b>circle of fifths</b> shows how the keys are related.</p>' +
+      '<div class="lsn-svg"></div>' +
+      '<ul><li>Going <b>clockwise</b>, each key is a 5th higher and has <b>one more sharp</b> (or one fewer flat).</li><li>Going <b>counterclockwise</b>, each key is a 4th higher and has <b>one more flat</b>.</li>' +
+      '<li>Sharps are added in the order <b>F C G D A E B</b>, flats in the opposite order, <b>B E A D G C F</b>.</li><li>The inner ring is each key\'s relative minor, with the same sharps or flats (step 2).</li></ul>' +
+      '<p>Learn the pattern and you know all 12 keys without rewriting the rules in your head. F♯ (6 sharps) is the same key as G♭ (6 flats).</p>',
+    mHear: '<p>In most rock, pop and blues jams, only three modes come up besides plain major and minor:</p>' +
+      '<ul><li><b>Mixolydian</b>: the classic rock and blues sound (major with a ♭7)</li><li><b>Dorian</b>: the funky, jazzy minor sound (minor with a ♯6)</li><li><b>Phrygian</b>: the heavy metal and flamenco sound (minor with a ♭2)</li></ul>' +
+      '<p>Each question plays a chord to set home base, then the scale up and back down. Decide major or minor first (the 3rd), then listen for the one note that\'s different. <b>Chords</b> plays a short progression in the mode instead. Big 3 sticks to these three; Six adds Lydian and All 7 adds Locrian.</p>',
+    mNeck: '<p>Rely on <b>visual patterns and muscle memory</b>. You don\'t need a new fingering for every mode: keep the major or minor shape you know and <b>move one dot one fret</b>.</p>' +
+      '<ul><li><b>Lydian</b>: every 4 moves up a fret</li><li><b>Mixolydian</b>: every 7 moves down a fret</li><li><b>Dorian</b>: every ♭6 moves up a fret</li><li><b>Phrygian</b>: every 2 moves down a fret</li><li><b>Locrian</b>: every 2 and 5 move down a fret</li></ul>' +
+      '<p>Each question shows a major or minor scale in one position, with the root on the low E string. Tap a note you\'d move, then see where it goes and hear both scales.</p>',
+  };
   const session = {};
   DRILL_MODES.forEach((m) => { session[m] = { right: 0, total: 0, streak: 0 }; });
   let dq = null, dAnswered = false, drillStale = true, lastSig = '', userAcc = [], gestured = false;
@@ -6330,16 +6543,228 @@ function compilePattern(preset, meter) {
         sound: { kind: 'interval', a: startMidi, b: startMidi + semis },
       };
     },
+    // Step 1: which bucket a mode goes in, from its 3rd. By name, by nickname, or by ear.
+    mFlavor() {
+      const pool = poolOf(), id = pick(pool), I = MODE_INFO[id], nm = SCALES[id].name;
+      const buckets = [{ v: 'major', l: 'Major', s: 'major 3rd' }, { v: 'minor', l: 'Minor', s: 'minor 3rd' }];
+      if (pool.includes('locrian')) buckets.push({ v: 'dim', l: 'Diminished', s: 'minor 3rd and ♭5' });
+      const why = {
+        major: 'major-sounding: it has a major 3rd',
+        minor: 'minor-sounding: it has a minor 3rd',
+        dim: 'diminished: a minor 3rd and a flat 5th, so even its home chord is unsettled. It\'s rare, so save it for last',
+      }[I.bucket];
+      const r = Math.random();
+      if (r < 0.3) {
+        const k = buildKey(randInt(12), id);
+        return {
+          type: 'choice', ear: true, alt: 'Home chord', sig: 'mfe' + id, answers: buckets, correct: I.bucket,
+          prompt: 'Does this mode sound major or minor?',
+          sub: 'A chord sets home, then the scale plays up and back down. Listen to its 3rd. Home chord plays just the chord.',
+          explain: 'That was ' + k.rootName + ' ' + nm + ', ' + I.nick + '. Its 3rd, ' + k.notes[2].name + ', is ' + (I.bucket === 'major' ? 'a major 3rd' : 'a minor 3rd') + ' above ' + k.rootName + (I.bucket === 'dim' ? ', and its 5th is flat' : '') + '.',
+          sound: modeSound(k, 'chord'),
+        };
+      }
+      if (r < 0.65 && pool.length > 2) {
+        const opts = shuffle(pool.filter((m) => m !== id)).slice(0, 3).concat([id]);
+        return {
+          type: 'choice', sig: 'mfn' + id, correct: id, cols: 2,
+          prompt: 'Which mode is ' + I.nick + '?',
+          sub: 'Major-sounding ones have a major 3rd; minor-sounding ones a minor 3rd.',
+          answers: shuffle(opts).map((m) => ({ v: m, l: SCALES[m].name })),
+          explain: nm + ' is ' + I.nick + '. It\'s ' + why + '.',
+        };
+      }
+      return {
+        type: 'choice', sig: 'mfk' + id, answers: buckets, correct: I.bucket,
+        prompt: 'Is ' + nm + ' major-sounding or minor-sounding?',
+        sub: 'Sort it by its 3rd.',
+        explain: nm + ' (' + I.nick + ') is ' + why + '.',
+      };
+    },
+    // Step 2: natural minor is a major scale started on its 6th note.
+    mMinor() {
+      const root = drillRoot(), r = Math.random();
+      if (r < 0.4) {
+        const M = safeKey(root.pc, 'major', root.L), six = M.notes[5];
+        const m = safeKey(six.pc, 'natural', six.L);
+        const opts = [six.name].concat(uniq([M.notes[0], M.notes[2], M.notes[1], M.notes[4]].map((n) => n.name)).filter((n) => n !== six.name).slice(0, 3));
+        return {
+          type: 'choice', sig: 'mma' + M.rootName, correct: six.name,
+          prompt: 'What\'s the relative minor of ' + M.rootName + ' major?',
+          sub: 'The natural minor scale with exactly the same notes.',
+          answers: shuffle(opts).map((n) => ({ v: n, l: n + ' minor' })),
+          explain: 'Count up ' + M.rootName + ' major to its 6th note: ' + namesOf(M.notes.slice(0, 6)) + '. Start there and you have ' + six.name + ' natural minor, ' + namesOf(m.notes) + ': the same notes.',
+        };
+      }
+      if (r < 0.75) {
+        const m = safeKey(root.pc, 'natural', root.L), three = m.notes[2];
+        const M = safeKey(three.pc, 'major', three.L);
+        const opts = [three.name].concat(uniq([m.notes[0], m.notes[6], m.notes[3], m.notes[4]].map((n) => n.name)).filter((n) => n !== three.name).slice(0, 3));
+        return {
+          type: 'choice', sig: 'mmb' + m.rootName, correct: three.name,
+          prompt: m.rootName + ' minor has the same notes as which major key?',
+          sub: 'Its relative major.',
+          answers: shuffle(opts).map((n) => ({ v: n, l: n + ' major' })),
+          explain: three.name + ' major is ' + namesOf(M.notes) + '. Its 6th note is ' + m.rootName + ', so ' + m.rootName + ' natural minor (' + namesOf(m.notes) + ') is just ' + three.name + ' major started from there.',
+        };
+      }
+      const M = safeKey(root.pc, 'major', root.L), six = M.notes[5], m = safeKey(six.pc, 'natural', six.L);
+      return {
+        type: 'spell', sig: 'mms' + m.rootName, notes: m.notes,
+        prompt: 'Spell ' + m.rootName + ' natural minor.',
+        sub: 'It\'s ' + M.rootName + ' major started on its 6th note. Tap a note to cycle it through natural, sharp and flat, then check.',
+        explain: m.rootName + ' natural minor: ' + namesOf(m.notes) + '. The notes of ' + M.rootName + ' major (' + namesOf(M.notes) + '), starting from ' + m.rootName + '.',
+      };
+    },
+    // Step 3: each mode's one-note rule, both ways round.
+    mTweak() {
+      const pool = poolOf(), id = pick(pool), I = MODE_INFO[id], nm = SCALES[id].name;
+      const rules = uniq(['lydian', 'mixolydian', 'dorian', 'phrygian'].concat(pool.includes('locrian') ? ['locrian'] : [], pool.filter((m) => !MODE_INFO[m].moves.length)));
+      const explain = I.moves.length
+        ? nm + ' is the ' + FROM_WORD[I.from] + ' scale with ' + I.did + ' (' + I.rule + ').'
+        : nm + ' is the ' + FROM_WORD[I.from] + ' scale itself, nothing moved.';
+      const r = Math.random();
+      if (r < 0.2) {
+        return {
+          type: 'choice', sig: 'mtf' + id, correct: I.from,
+          prompt: 'To build ' + nm + ', which scale do you start from?',
+          answers: [{ v: 'major', l: 'Major', s: 'bright modes' }, { v: 'natural', l: 'Natural minor', s: 'dark modes' }],
+          explain,
+        };
+      }
+      if (r < 0.6 && I.moves.length) {
+        const opts = [id].concat(shuffle(rules.filter((m) => m !== id && MODE_INFO[m].moves.length)).slice(0, 3));
+        return {
+          type: 'choice', sig: 'mtb' + id, correct: id, cols: 2,
+          prompt: 'Take the ' + FROM_WORD[I.from] + ' scale and ' + I.how + ' (' + I.rule + '). Which mode is that?',
+          answers: shuffle(opts).map((m) => ({ v: m, l: SCALES[m].name })),
+          explain,
+        };
+      }
+      const opts = [id].concat(shuffle(rules.filter((m) => m !== id)).slice(0, 3));
+      return {
+        type: 'choice', sig: 'mta' + id, correct: id, cols: 2,
+        prompt: nm + ' is which scale, with which change?',
+        answers: shuffle(opts).map(ruleAnswer),
+        explain,
+      };
+    },
+    // Step 4: spell a mode on any root by moving one note of the major or minor scale.
+    mBuild() {
+      const root = drillRoot(), id = pick(poolOf()), I = MODE_INFO[id], P = modePair(root.pc, id, root.L);
+      const how = I.moves.length
+        ? 'Start from ' + P.ft + ': ' + namesOf(P.p.notes) + '. ' + cap(I.how) + ' (' + I.rule + '): ' + moveText(P) + '.'
+        : SCALES[id].name + ' is ' + P.ft + ' as it is.';
+      const explain = cap(P.kt) + ': ' + namesOf(P.k.notes) + '. ' + how;
+      const listen = I.moves.length ? [{ l: P.ft, sound: modeSound(P.p) }, { l: P.kt, sound: modeSound(P.k) }] : [{ l: P.kt, sound: modeSound(P.k) }];
+      if (!I.moves.length || Math.random() < 0.6) {
+        return {
+          type: 'spell', sig: 'mbs' + P.kt, notes: P.k.notes, explain, listen,
+          prompt: 'Spell ' + P.kt + '.',
+          sub: 'The letters are set. Tap a note to cycle it through natural, sharp and flat, then check.',
+          hint: I.moves.length ? 'Start from ' + P.ft + ': ' + namesOf(P.p.notes) + '. Then ' + I.how + ' (' + I.rule + ').' : SCALES[id].name + ' is just ' + P.ft + ': spell that.',
+        };
+      }
+      // Which change: this mode's, or the other modes' on the same root.
+      const right = moveText(P), opts = [right];
+      shuffle(['lydian', 'mixolydian', 'dorian', 'phrygian', 'locrian'].filter((m) => m !== id)).forEach((m) => {
+        const t = moveText(modePair(P.k.notes[0].pc, m, P.k.notes[0].L));
+        if (opts.length < 4 && !opts.includes(t)) opts.push(t);
+      });
+      return {
+        type: 'choice', sig: 'mbc' + P.kt, correct: right, cols: 2, explain, listen,
+        prompt: 'Which change turns ' + P.ft + ' into ' + P.kt + '?',
+        sub: P.ft + ': ' + namesOf(P.p.notes) + '.',
+        answers: shuffle(opts).map((o) => ({ v: o, l: o })),
+      };
+    },
+    // Step 5: sharp and flat keys from the circle of fifths.
+    mCircle() {
+      const r = Math.random();
+      const keyFacts = (c) => c.name + ' major: ' + namesOf(c.k.notes) + '. ' + (c.n ? cap(countText(c)) + ': ' + accList(c).join(' ') + '. ' : 'No sharps or flats. ') + circleWhere(c);
+      if (r < 0.4) {
+        const c = pick(CIRCLE);
+        const lbl = (x) => cap(countText(x));
+        const near = [CIRCLE[(c.i + 1) % 12], CIRCLE[(c.i + 11) % 12], CIRCLE[(c.i + 2) % 12], CIRCLE[(c.i + 10) % 12]];
+        const mirror = CIRCLE.find((x) => x.n === c.n && x.kind && x.kind !== c.kind);
+        if (mirror) near.unshift(mirror);
+        const opts = [lbl(c)].concat(uniq(near.map(lbl)).filter((x) => x !== lbl(c)).slice(0, 3));
+        return {
+          type: 'choice', sig: 'mca' + c.name, correct: lbl(c), cols: 2,
+          prompt: 'How many sharps or flats does ' + c.name + ' major have?',
+          answers: shuffle(opts).map((o) => ({ v: o, l: o })),
+          explain: keyFacts(c),
+        };
+      }
+      if (r < 0.75) {
+        const c = pick(CIRCLE.filter((x) => x.n > 0));
+        const mirror = CIRCLE.find((x) => x.n === c.n && x.kind !== c.kind);
+        const opts = [c.name].concat(uniq([mirror, CIRCLE[(c.i + 1) % 12], CIRCLE[(c.i + 11) % 12], CIRCLE[(c.i + 2) % 12]].filter(Boolean).map((x) => x.name)).filter((x) => x !== c.name).slice(0, 3));
+        return {
+          type: 'choice', sig: 'mcb' + c.name, correct: c.name,
+          prompt: 'Which major key has ' + countText(c) + '?',
+          answers: shuffle(opts).map((o) => ({ v: o, l: o + ' major' })),
+          explain: keyFacts(c),
+        };
+      }
+      // A step round the circle. F♯ to D♭ is where sharps turn into flats, so it's left out.
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      const c = pick(CIRCLE.filter((x) => !(dir === 1 && x.i === 6) && !(dir === -1 && x.i === 7)));
+      const nx = CIRCLE[(c.i + dir + 12) % 12];
+      const opts = [nx.name].concat(uniq([CIRCLE[(c.i - dir + 12) % 12], CIRCLE[(c.i + 2 * dir + 12) % 12], CIRCLE[(c.i + 2) % 12], CIRCLE[(c.i + 3) % 12]].map((x) => x.name)).filter((x) => x !== nx.name).slice(0, 3));
+      return {
+        type: 'choice', sig: 'mcc' + c.name + dir, correct: nx.name,
+        prompt: dir === 1 ? 'One step clockwise from ' + c.name + ' (up a 5th) is which key?' : 'One step counterclockwise from ' + c.name + ' (up a 4th) is which key?',
+        answers: shuffle(opts).map((o) => ({ v: o, l: o + ' major' })),
+        explain: c.name + ' up a ' + (dir === 1 ? '5th' : '4th') + ' is ' + nx.name + '. ' + (dir === 1 ? 'Clockwise steps add a sharp or take away a flat' : 'Counterclockwise steps add a flat or take away a sharp') + ': ' + c.name + ' major has ' + countText(c) + ', ' + nx.name + ' major has ' + countText(nx) + '.',
+      };
+    },
+    // Step 6: name the mode by ear. Plain major and minor are always choices, to compare against.
+    mHear() {
+      const order = ['ionian', 'aeolian', 'mixolydian', 'dorian', 'phrygian', 'lydian', 'locrian'];
+      const ids = order.filter((m) => m === 'ionian' || m === 'aeolian' || poolOf().includes(m));
+      // The modes themselves come up twice as often as plain major and minor.
+      const id = pick(ids.flatMap((m) => (m === 'ionian' || m === 'aeolian' ? [m] : [m, m])));
+      const I = MODE_INFO[id], k = buildKey(randInt(12), id);
+      const SUB = { ionian: 'plain major', aeolian: 'natural minor', mixolydian: 'major ♭7', dorian: 'minor ♯6', phrygian: 'minor ♭2', lydian: 'major ♯4', locrian: 'minor ♭2 ♭5' };
+      let tell;
+      if (I.moves.length) {
+        const P = modePair(k.notes[0].pc, id, k.notes[0].L);
+        tell = 'Listen for its ' + I.rule + ': ' + P.moves.map((m) => m.to).join(' and ') + ' where ' + P.ft + ' has ' + P.moves.map((m) => m.from).join(' and ') + '.';
+      } else tell = id === 'ionian' ? 'Plain major: nothing moved.' : 'Plain natural minor: nothing moved.';
+      return {
+        type: 'choice', ear: true, alt: 'Chords', sig: 'mh' + id, correct: id, cols: ids.length > 4 ? 3 : 2,
+        prompt: 'Which mode is this?',
+        sub: 'A chord sets home, then the scale plays up and back down. Major or minor first, then the one note that\'s different.',
+        answers: ids.map((m) => ({ v: m, l: m === 'ionian' ? 'Major' : m === 'aeolian' ? 'Minor' : SCALES[m].name, s: SUB[m] })),
+        explain: 'That was ' + k.rootName + ' ' + SCALES[id].name + (I.big3 ? ', ' + I.big3 : '') + '. ' + tell,
+        sound: modeSound(k, 'vamp'),
+      };
+    },
+    // Step 7: the major or minor shape in one position; tap the note that moves.
+    mNeck() {
+      const root = drillRoot(), id = pick(tweakPool()), I = MODE_INFO[id], P = modePair(root.pc, id, root.L);
+      const f = (((P.k.notes[0].pc - 4) % 12) + 12) % 12, lo = f === 0 ? 0 : f - 1;
+      const two = I.moves.length > 1;
+      return {
+        type: 'neck', sig: 'mn' + P.kt, P, id, lo, hi: lo + 4,
+        prompt: 'This is ' + P.ft + '. Tap ' + (two ? 'the notes' : 'the note') + ' you\'d move to make ' + P.kt + '.',
+        sub: two ? 'Two notes move. Tap one of each.' : 'Any one of them will do.',
+        explain: cap(P.kt) + ' is ' + P.ft + ' with ' + I.did + ' (' + I.rule + '): ' +
+          P.moves.map((m) => 'every ' + m.from + ' moves ' + (m.d > 0 ? 'up' : 'down') + ' one fret to ' + m.to).join(', and ') + '. Same shape, ' + (two ? 'two dots' : 'one dot') + ' moved.',
+        listen: [{ l: P.ft, sound: modeSound(P.p) }, { l: P.kt, sound: modeSound(P.k) }],
+      };
+    },
   };
 
-  function playDrillSound(alt) {
-    if (!dq || !dq.sound || !ensureCtx()) return;
+  function playDrillSound(alt, spec) {
+    const s = spec || (dq && dq.sound);
+    if (!s || !ensureCtx()) return;
     stopScaleRun();
     if (playing) stop();
     stopRun();
     const dest = freshEarBus();
     const t = ctx.currentTime + 0.05;
-    const s = dq.sound;
     if (s.kind === 'chord') {
       const R = placeRoot(s.pc, 48);
       const midis = s.ivs.map((v) => R + v);
@@ -6358,29 +6783,74 @@ function compilePattern(preset, meter) {
     } else if (s.kind === 'interval') {
       if (alt) { pluck(s.a, t, dest, 1.5); pluck(s.b, t, dest, 1.5); }
       else { pluck(s.a, t, dest, 0.9); pluck(s.b, t + 0.7, dest, 1.3); }
+    } else if (s.kind === 'mode') {
+      // A mode: its home chord, then the scale up an octave and back down over it. The other
+      // button plays just the home chord, or a short progression in the mode.
+      const R = placeRoot(s.pc, 48), home = voicing([0, s.steps[2], s.steps[4]].map((v) => (s.pc + v) % 12), 52);
+      if (alt && s.alt === 'vamp') {
+        const prog = CADENCE[Object.keys(SCALES).find((id) => SCALES[id] === s.k.scale)] || [[0, 0], [3, 0], [4, 0], [0, 0]];
+        prog.forEach(([d, sv], n) => {
+          const ch = chordAt(s.k, d, !!sv);
+          strumAt(voicing(ch.tones.map((x) => x.pc), 52), placeRoot(ch.rootPc, 40), t + n * 0.85, dest, n === prog.length - 1 ? 1.8 : 0.78);
+        });
+      } else if (alt) {
+        strumAt(home, R - 12, t, dest, 2.2);
+      } else {
+        strumAt(home, R - 12, t, dest, 3.2);
+        const run = s.steps.concat([12]), seq = run.concat(run.slice(0, -1).reverse());
+        seq.forEach((v, n) => pluck(R + v, t + 0.75 + n * 0.27, dest, n === seq.length - 1 ? 1.2 : 0.62));
+      }
     }
   }
 
+  // Every drill in one dropdown, grouped, with what it's for and (for the modes) how it works.
+  DRILL_GROUPS.forEach(([label, ids]) => {
+    const g = document.createElement('optgroup');
+    g.label = label;
+    ids.forEach((m) => { const o = document.createElement('option'); o.value = m; o.textContent = MODE_NAMES[m]; g.appendChild(o); });
+    drillSel.appendChild(g);
+  });
+  drillSel.addEventListener('change', () => {
+    if (!DRILL_MODES.includes(drillSel.value) || state.drill.mode === drillSel.value) return;
+    state.drill.mode = drillSel.value;
+    save();
+    renderDrillChrome();
+    newQuestion();
+  });
+  let lessonFor = '';
+  drillLesson.addEventListener('toggle', () => {
+    const m = state.drill.mode, shut = state.drill.lessonShut.filter((x) => x !== m);
+    if (!drillLesson.open) shut.push(m);
+    if (shut.length !== state.drill.lessonShut.length) { state.drill.lessonShut = shut; save(); }
+  });
   function renderDrillChrome() {
-    drillModesEl.innerHTML = '';
-    DRILL_MODES.forEach((m) => {
-      const b = el('button', 'tile mode', MODE_NAMES[m]);
-      b.type = 'button';
-      b.setAttribute('aria-pressed', String(m === state.drill.mode));
-      b.addEventListener('click', () => {
-        if (state.drill.mode === m) return;
-        state.drill.mode = m;
-        save();
-        renderDrillChrome();
-        newQuestion();
-      });
-      drillModesEl.appendChild(b);
+    const m = state.drill.mode;
+    drillSel.value = m;
+    drillGoal.innerHTML = '';
+    drillGoal.append(el('b', null, 'Goal: '), DRILL_GOALS[m]);
+    drillLesson.hidden = !DRILL_LESSONS[m];
+    if (DRILL_LESSONS[m] && lessonFor !== m) {
+      lessonFor = m;
+      drillLessonBody.innerHTML = DRILL_LESSONS[m];
+      const svgSlot = drillLessonBody.querySelector('.lsn-svg');
+      if (svgSlot) svgSlot.appendChild(circleSvg());
+    }
+    if (DRILL_LESSONS[m]) drillLesson.open = !state.drill.lessonShut.includes(m);
+    // Options: only the ones this drill uses.
+    const opts = DRILL_OPTS[m] || [];
+    scopeField.hidden = !opts.includes('scope');
+    sizeField.hidden = !opts.includes('size');
+    poolField.hidden = !opts.includes('pool');
+    drillOpts.hidden = !opts.length;
+    drillOpts.classList.toggle('solo', opts.length === 1);
+    const rooted = MODE_DRILLS.includes(m) && m !== 'mMinor';
+    $('scopeLbl').textContent = rooted ? 'Root' : 'Keys';
+    scopeBtns.forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset.v === state.drill.scope));
+      b.textContent = rooted ? (b.dataset.v === 'key' ? 'Root ' + keyInfo.rootName : 'Any root') : (b.dataset.v === 'key' ? 'This key' : 'Any key');
     });
-    scopeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === state.drill.scope)));
-    const showSize = state.drill.mode === 'chords' || state.drill.mode === 'hearChord';
-    sizeField.hidden = !showSize;
-    drillOpts.classList.toggle('solo', !showSize);
     sizeBtns.forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.v === '1') === state.drill.sev)));
+    poolBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === state.drill.pool)));
     renderStats();
   }
 
@@ -6422,6 +6892,16 @@ function compilePattern(preset, meter) {
       row.append(p, a);
       qcard.appendChild(row);
     }
+    // A worked hint, hidden until asked for.
+    if (dq.hint) {
+      const hb = el('button', 'textbtn hintbtn', 'Show me how');
+      hb.type = 'button';
+      const hp = el('p', 'qhint', dq.hint);
+      hp.hidden = true;
+      hb.addEventListener('click', () => { hp.hidden = false; hb.hidden = true; });
+      qcard.append(hb, hp);
+    }
+    if (dq.type === 'neck') { renderNeckQ(); renderListen(); return; }
     if (dq.type === 'spell') {
       const grid = el('div', 'spell');
       grid.style.setProperty('--n', String(dq.notes.length));
@@ -6464,10 +6944,11 @@ function compilePattern(preset, meter) {
         finish(ok);
       });
       qcard.appendChild(check);
+      renderListen();
       return;
     }
     const grid = el('div', 'answers');
-    grid.style.setProperty('--cols', String(colsFor(dq.answers.length)));
+    grid.style.setProperty('--cols', String(dq.cols || colsFor(dq.answers.length)));
     dq.answers.forEach((a) => {
       const b = el('button', 'tile ans');
       b.type = 'button';
@@ -6488,6 +6969,120 @@ function compilePattern(preset, meter) {
       grid.appendChild(b);
     });
     qcard.appendChild(grid);
+    renderListen();
+  }
+
+  // Buttons to hear the scales a question is about (they don't play by themselves).
+  function renderListen() {
+    if (!dq.listen) return;
+    const row = el('div', 'ear');
+    dq.listen.forEach((x) => {
+      const b = iconBtn('btn', x.l, ICON_PLAY);
+      b.setAttribute('aria-label', 'Play ' + x.l);
+      b.addEventListener('click', () => playDrillSound(false, x.sound));
+      row.appendChild(b);
+    });
+    qcard.appendChild(row);
+  }
+
+  /* Step 7's neck: frets lo to hi (one position, the root on the low E string) with the scale the
+     mode is built from, labelled by degree. Tap a dot of the note that moves; afterwards every one
+     of them slides a fret to where the mode has it. */
+  function renderNeckQ() {
+    const q = dq, P = q.P, from = P.from;
+    const lo = q.lo, hi = q.hi, rlo = Math.max(0, lo - 1), rhi = hi + 1;
+    const ROW = 42, OPEN = 30, rows = [];
+    let H = 0;
+    for (let f = rlo; f <= rhi; f++) { const h = f === 0 ? OPEN : ROW; rows[f] = { top: H, h }; H += h; }
+    const mid = (f) => rows[f].top + rows[f].h / 2;
+    const wrap = el('div', 'neck-wrap mini');
+    const names = el('div', 'strnames'), nums = el('div', 'fretnums'), neck = el('div', 'neck mini');
+    names.setAttribute('aria-hidden', 'true');
+    nums.setAttribute('aria-hidden', 'true');
+    neck.style.height = H + 'px';
+    nums.style.height = H + 'px';
+    const board = el('div', 'board');
+    board.style.top = (rlo === 0 ? rows[1].top : 0) + 'px';
+    neck.appendChild(board);
+    if (rlo === 0) { const nut = el('div', 'nut'); nut.style.top = (rows[1].top - 3) + 'px'; neck.appendChild(nut); }
+    for (let f = Math.max(1, rlo); f <= rhi; f++) {
+      const fr = el('div', 'fret');
+      fr.style.top = (rows[f].top + rows[f].h - 1) + 'px';
+      neck.appendChild(fr);
+      if ([3, 5, 7, 9, 15, 17].includes(f) || f === 12) {
+        (f === 12 ? [100 / 3, 200 / 3] : [50]).forEach((x) => { const d = el('div', 'inlay'); d.style.left = x + '%'; d.style.top = mid(f) + 'px'; neck.appendChild(d); });
+      }
+      const n = el('span', null, String(f));
+      n.style.top = mid(f) + 'px';
+      nums.appendChild(n);
+    }
+    for (let st = 0; st < 6; st++) {
+      const str = el('div', 'str' + (st < 3 ? ' wound' : ''));
+      str.style.left = strX(st) + '%';
+      str.style.width = STRING_W[st] + 'px';
+      neck.appendChild(str);
+      const nm = el('span', null, STRING_NAMES[st]);
+      nm.style.left = strX(st) + '%';
+      names.appendChild(nm);
+    }
+    const frame = el('div', 'boxfr');
+    frame.style.top = (rows[lo].top - 2) + 'px';
+    frame.style.height = (rows[hi].top + rows[hi].h - rows[lo].top + 4) + 'px';
+    neck.appendChild(frame);
+    // The parent scale's dots inside the position.
+    const byPc = new Map();
+    P.p.notes.forEach((n, i) => byPc.set(n.pc, i));
+    const need = new Set(P.moves.map((m) => m.i)), got = new Set(), dots = [];
+    const place = (b, st, f) => { b.style.left = strX(st) + '%'; b.style.top = mid(f) + 'px'; };
+    for (let st = 0; st < 6; st++) {
+      for (let f = lo; f <= hi; f++) {
+        const i = byPc.get((TUNING[st] + f) % 12);
+        if (i == null) continue;
+        const b = el('button', 'dot' + (i === 0 ? ' root' : ''), degreeLabel(from, i));
+        b.type = 'button';
+        b._d = { st, f, i };
+        place(b, st, f);
+        b.setAttribute('aria-label', STRING_ARIA[st] + ' string, ' + (f === 0 ? 'open' : 'fret ' + f) + ': ' + P.p.notes[i].name + ', degree ' + degreeLabel(from, i));
+        b.addEventListener('click', () => tap(b));
+        neck.appendChild(b);
+        dots.push(b);
+      }
+    }
+    // Once answered: the moving notes fade and each reappears a fret up or down, as the mode has it.
+    function reveal() {
+      P.moves.forEach((m) => {
+        dots.filter((b) => b._d.i === m.i).forEach((b) => {
+          b.classList.add('gone');
+          const nf = b._d.f + m.d;
+          if (nf < 0 || nf > rhi) return;
+          const nb = el('span', 'dot moved', degreeLabel(dq.id, m.i));
+          place(nb, b._d.st, nf);
+          nb.setAttribute('aria-label', STRING_ARIA[b._d.st] + ' string, ' + (nf === 0 ? 'open' : 'fret ' + nf) + ': ' + m.to);
+          neck.appendChild(nb);
+        });
+      });
+      dots.forEach((b) => { b.disabled = true; });
+    }
+    function tap(b) {
+      if (dAnswered || q !== dq) return;
+      const i = b._d.i;
+      if (need.has(i)) {
+        dots.filter((x) => x._d.i === i).forEach((x) => x.classList.add('hit'));
+        got.add(i);
+        if (got.size < need.size) return;
+        dAnswered = true;
+        reveal();
+        finish(true);
+      } else {
+        b.classList.add('miss');
+        dAnswered = true;
+        dots.filter((x) => need.has(x._d.i)).forEach((x) => x.classList.add('hit'));
+        reveal();
+        finish(false);
+      }
+    }
+    wrap.append(names, nums, neck);
+    qcard.appendChild(wrap);
   }
 
   function finish(ok) {
@@ -6519,6 +7114,13 @@ function compilePattern(preset, meter) {
     const sev = b.dataset.v === '1';
     if (state.drill.sev === sev) return;
     state.drill.sev = sev;
+    save();
+    renderDrillChrome();
+    newQuestion();
+  }));
+  poolBtns.forEach((b) => b.addEventListener('click', () => {
+    if (state.drill.pool === b.dataset.v) return;
+    state.drill.pool = b.dataset.v;
     save();
     renderDrillChrome();
     newQuestion();
@@ -7568,7 +8170,7 @@ function compilePattern(preset, meter) {
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-11-09h';
+  const APP_VERSION = '2026-11-09i';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;

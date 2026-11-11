@@ -3197,16 +3197,16 @@ const PRE_LIST = [
     meter: '4/4', beats: 4, sub: 4, bpm: 106, min: 80, max: 124, wet: 0.2, gen: 'nightwemet', sw16: 0.045,
     parts: ['drums', 'bass', 'gtr', 'keys'], sets: ['nylon', 'bass'], names: { keys: 'Keys & pad' },
     lv: { drums: 1.2, bass: 1, gtr: 0.29, keys: 1.13 }, trim: -1.8,
-    secs: [[0, 'Verse'], [16, 'Chorus'], [18, 'Bridge']],
+    secs: [[0, 'Verse'], [12, 'Chorus'], [16, 'Bridge']],
     v: {
       major: {
-        form: ['I:', 'V:', 'VI:m', 'IV:', 'I:', 'V:', 'VI:m', 'III:m', 'I:', 'V:', 'VI:m', 'III:m', 'III:m', 'VI:m', 'V:', 'I:',
-          'VI:m7', 'IV:maj7', 'IV:m6', 'V:sus4 V:'],
+        form: ['I:', 'V:', 'VI:m', 'IV:', 'I:', 'V:', 'VI:m', 'III:m', 'I: V:', 'VI:m III:m', 'III:m VI:m', 'V: I:',
+          'VI:m7', 'VI:m7', 'IV:maj7', 'IV:maj7', 'IV:m6', 'IV:m6', 'V:sus4', 'V:'],
         scales: ['major', 'pentatonic'],
       },
       minor: {
-        form: ['I:m', 'bVII:', 'IV:m', 'bIII:', 'I:m', 'bVII:', 'IV:m', 'V:m', 'I:m', 'bVII:', 'IV:m', 'V:m', 'V:m', 'IV:m', 'bVII:', 'I:m',
-          'bVI:maj7', 'bVII:add9', 'IV:m7', 'V:sus4 V:'],
+        form: ['I:m', 'bVII:', 'IV:m', 'bIII:', 'I:m', 'bVII:', 'IV:m', 'V:m', 'I:m bVII:', 'IV:m V:m', 'V:m IV:m', 'bVII: I:m',
+          'bVI:maj7', 'bVI:maj7', 'bVII:add9', 'bVII:add9', 'IV:m7', 'IV:m7', 'V:sus4', 'V:'],
         scales: ['natural', 'pentatonic', 'harmonic'],
       },
     },
@@ -8518,19 +8518,19 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     }
   };
 
-  /* Night We Met: chill, emotional boom bap. A 16-bar verse, a 2-bar chorus and a 2-bar bridge,
+  /* Night We Met: chill, emotional boom bap. A 12-bar verse, a 4-bar chorus and a 4-bar bridge,
      each with its own sound.
-     Verse, first half: nylon guitar fingerpicked from real chord shapes, a soft triangle-wave synth
+     Verse, bars 1 to 8: nylon guitar fingerpicked from real chord shapes, a soft triangle-wave synth
      struck on every change, a warm pad, a dusty boom-bap beat and a round bass locked to the kick.
-     A shaker joins halfway.
-     Verse, second half: everything climbs. The guitar moves up the neck with pinches and a
-     sixteenth-note roll, the pad turns airy an octave higher, glass bells answer in a dotted rhythm
-     through an echo, and the drums add ghost notes and sixteenth hats. Its last bar comes back down
-     and fills into the chorus.
+     A shaker joins at bar 5.
+     Verse, bars 9 to 12: the chords come twice as fast and everything climbs. The guitar moves up
+     the neck with pinches and a sixteenth-note roll, the pad turns airy an octave higher, glass bells
+     answer in a dotted rhythm through an echo, and the drums add ghost notes and sixteenth hats.
+     The last chord comes back down and fills into the chorus.
      Chorus: strings, the guitar rolling in sixteenths, a clap on the snare, open hats and a busier bass.
      Bridge: the beat drops to a rim click and a shaker, an electric piano and a held sub bass take
-     over, the guitar rolls each chord slowly, then a snare roll and a swelling cymbal lead back to
-     the top. */
+     over, and the guitar rolls each chord slowly. The drums come back a measure at a time, then a
+     snare roll and a swelling cymbal lead back to the top. */
   // Fingerpicking: [strings, beat]. p the root on a bass string, a the next string up, t0 t1 t2 the
   // top three strings low to high. Two strings at once are a pinch.
   const NWM_GTR = {
@@ -8539,11 +8539,23 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     B: [['p t2', 0], ['t0', 0.5], ['t1', 1], ['t0', 1.5], ['a', 2], ['t1', 2.5], ['t2', 3], ['t1', 3.25], ['t0', 3.5], ['t1', 3.75]],
     B2: [['p t1', 0], ['t0', 0.5], ['t2', 1], ['t1', 1.5], ['a t2', 2], ['t0', 2.5], ['t1', 3], ['t2', 3.5], ['t1', 3.75]],
     C: ['p', 't0', 't1', 't2', 't1', 't0', 't1', 't2', 'a', 't0', 't1', 't2', 't1', 't0', 't1', 't2'].map((r, q) => [r, q / 4]),
+    // the bridge, a measure at a time, over each slowly rolled chord
+    D: [[['t1', 2], ['t2', 2.5], ['t0', 3]], [['t2', 0], ['t1', 1], ['t0', 1.5], ['t1', 2.5], ['t2', 3]], [['t1', 2], ['t2', 2.5], ['t0', 3]], [['t0', 3.5], ['t1', 3.75]]],
   };
   PRE_GEN.nightwemet = (S) => {
-    const C = S.nb - 4, D = S.nb - 2;
+    const C = S.nb - 8, D = S.nb - 4;
     const part = (bar) => (bar >= D ? 'D' : bar >= C ? 'C' : bar >= 8 ? 'B' : 'A');
-    const lift = (bar) => bar >= 8 && bar < C - 1; // the second half of the verse, all but its last bar
+    // The second part of the verse climbs, all but its last chord.
+    const lastB = S.segs.filter((s) => s.bar === C - 1).pop();
+    const lift = (sg) => part(sg.bar) === 'B' && sg !== lastB;
+    // A chord that carries on into the next measure is held as one: its full length, and 0 for the carry-on.
+    const same = (x, y) => x.pc === y.pc && x.q === y.q;
+    const held = (sg) => {
+      if (sg.i > 0 && same(sg.prev, sg)) return 0;
+      let L = sg.len;
+      for (let n = sg.next; n.i > sg.i && same(n, sg); n = n.next) L += n.len;
+      return L;
+    };
     // Drums
     for (let bar = 0; bar < S.nb; bar++) {
       const R = S.rng('dr', bar), H = S.rng('drh', bar), B = bar * 4, p = part(bar), odd = bar % 2 === 1;
@@ -8551,11 +8563,20 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       const snare = (b, v) => S.drum('snSoul', B + b, v * (0.94 + 0.12 * H()), hz(H, 5, 14), H());
       const rim = (b) => S.drum('xstick', B + b, 0.5 * (0.92 + 0.16 * H()), hz(H, 4, 10), H());
       if (p === 'D') {
+        // the bridge builds back a measure at a time
+        const k = bar - D;
         eighths(S, B, 'shaker', 0.34, 0.22, H);
-        if (bar === D) { kick(0, 0.7); rim(1); rim(3); }
-        else {
+        if (k === 0) S.drum('crash', B, 0.4, 0, H());
+        if (k < 3) {
+          kick(0, 0.7);
+          if (k === 2) {
+            kick(2.5, 0.55);
+            [0.5, 1.5, 2.5, 3.5].forEach((b) => S.drum('hatC', B + b, 0.24 * (0.88 + 0.24 * H()), hz(H, 4, 6), H()));
+          }
+          rim(1); rim(3);
+        } else {
           kick(0, 0.72); kick(2, 0.66); rim(1);
-          for (let k = 0; k < 8; k++) S.drum(k < 4 ? 'snGhost' : 'snSoul', B + 2 + k / 4, 0.26 + 0.07 * k, hz(H, 3, 6), H());
+          for (let q = 0; q < 8; q++) S.drum(q < 4 ? 'snGhost' : 'snSoul', B + 2 + q / 4, 0.26 + 0.07 * q, hz(H, 3, 6), H());
           S.add({ p: 'drums', k: 'dw', b: B + 2, d: 2, v: 0.4, dt: 0 });
         }
         continue;
@@ -8582,6 +8603,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       if (bar === 0) S.drum('crash', B, 0.38, 0, H());
       if (bar === 8) S.drum('crash', B, 0.3, 0, H());
       if (bar === C) S.drum('crash', B, 0.55, 0, H());
+      if (bar === C + 2) S.drum('crash', B, 0.4, 0, H());
       if (bar === 7) S.add({ p: 'drums', k: 'dw', b: B + 3, d: 1, v: 0.28, dt: 0 });
       if (bar === C - 1) S.add({ p: 'drums', k: 'dw', b: B + 2, d: 2, v: 0.4, dt: 0 });
     }
@@ -8591,29 +8613,36 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       const R = S.rng('bs', sg.b), H = S.rng('bsh', sg.b), p = part(sg.bar), odd = sg.bar % 2 === 1;
       const r = nearPc(sg.pc, prev, 31, 43), T = nearPc(sg.next.pc, r, 31, 43);
       const five = r + 7 <= 50 ? r + 7 : r - 5, oct = r + 12 <= 55 ? r + 12 : r;
-      const app = approachNote(T, r, R, 28, 50, sg.Q.sc.map((x) => (sg.pc + x) % 12)), moves = sg.next.pc !== sg.pc;
+      const moves = sg.next.pc !== sg.pc, app = moves ? approachNote(T, r, R, 28, 50, sg.Q.sc.map((x) => (sg.pc + x) % 12)) : five;
       const b = (at, m, d, v) => S.add({ p: 'bass', k: 'b', b: sg.b + at, n: m, d, v: v * (0.94 + 0.12 * H()), dt: hz(H, 4, 6), lp: 650, x: null });
       prev = r;
       if (p === 'D') {
         // a held note with a sub under it, so the bridge still has a floor once the beat drops
         b(0, r, sg.len - 0.2, 0.78);
-        S.add({ p: 'bass', k: 'sb', b: sg.b, n: r, d: sg.len - 0.15, v: 0.85, dt: 0, x: { patch: 'sub' } });
+        const L = held(sg);
+        if (L) S.add({ p: 'bass', k: 'sb', b: sg.b, n: r, d: L - 0.15, v: 0.85, dt: 0, x: { patch: 'sub' } });
+        return;
+      }
+      if (p === 'B') {
+        // two chords a measure: land each change, push with the kick, lead into the next chord
+        const first = sg.b % 4 === 0;
+        (first ? (odd ? [[0, r, 0.7, 0.92], [0.75, r, 0.6, 0.55], [1.5, five, 0.45, 0.55]] : [[0, r, 1.5, 0.92], [1.75, moves ? app : oct, 0.25, 0.6]])
+          : [[0, r, 0.45, 0.85], [0.5, r, 0.9, 0.8], [1.5, app, 0.45, 0.6]]).forEach((x) => b(...x));
         return;
       }
       if (sg.len < 4) { b(0, r, sg.len - 0.3, 0.9); return; }
       if (p === 'C') { [[0, r, 1.5, 0.95], [1.75, r, 0.6, 0.66], [2.5, five, 0.45, 0.78], [3, oct, 0.4, 0.7], [3.5, app, 0.45, 0.66]].forEach((x) => b(...x)); return; }
       if (!odd) {
         b(0, r, 1.5, 0.92);
-        b(1.75, p === 'B' ? oct : r, p === 'B' ? 0.25 : 0.6, 0.6);
+        b(1.75, r, 0.6, 0.6);
         b(2.5, r, 0.9, 0.8);
-        if (p === 'B') b(3.5, moves ? app : five, 0.4, 0.62);
-        else if (moves && R() < 0.5) b(3.5, app, 0.45, 0.58);
+        if (moves && R() < 0.5) b(3.5, app, 0.45, 0.58);
       } else {
         b(0, r, 0.7, 0.92);
         b(0.75, r, 0.6, 0.55);
         b(2.25, five, 0.25, 0.5);
         b(2.5, r, 0.9, 0.8);
-        if (moves && (p === 'B' || R() < 0.5)) b(3.5, app, 0.45, 0.6);
+        if (moves && R() < 0.5) b(3.5, app, 0.45, 0.6);
       }
     });
     // Guitar: nylon strings, fingerpicked. Low in the neck at first, up the neck as the verse climbs.
@@ -8629,58 +8658,64 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     };
     for (let bar = 0; bar < S.nb; bar++) {
       const H = S.rng('gth', bar), B = bar * 4, p = part(bar), odd = bar % 2 === 1;
-      const pos = p === 'D' ? 3 : p === 'C' ? 5 : lift(bar) ? 9 : bar === C - 1 ? 4 : 2;
+      const posOf = (sg) => (p === 'D' ? 3 : p === 'C' ? 5 : lift(sg) ? 9 : p === 'B' ? 4 : 2);
       const pick = (roles, b, v, x) => {
-        const sg = S.segAt(B + b), sh = shapeOf(sg, pos), left = sg.b + sg.len - (B + b);
+        const sg = S.segAt(B + b), sh = shapeOf(sg, posOf(sg)), left = sg.b + sg.len - (B + b);
+        if (b > 0 && Math.abs(sg.b - (B + b)) < 1e-9) roles = roles.replace(/^a/, 'p'); // a new chord: the thumb takes its root
         S.add({ p: 'gtr', k: 'g', b: B + b, v: v * (0.9 + 0.2 * H()), n: roles.split(' ').map((r) => sh[r]), dt: hz(H, 5, 4),
           x: Object.assign({ amp: 'nylon', hold: Math.min(2.5, left + 0.1), a: 0.36, rel: 0.3, gap: 0.004 }, x) });
       };
       if (p === 'D') {
-        // each chord rolled slowly, like a harp, then a few notes picked over it
-        const sgs = S.segs.filter((s) => s.bar === bar);
-        sgs.forEach((sg) => S.add({ p: 'gtr', k: 'g', b: sg.b, v: 0.62 * (0.9 + 0.2 * H()), n: shapeOf(sg, pos).all, dt: hz(H, 5, 4), x: { amp: 'nylon', hold: sg.len + 0.1, a: 0.3, rel: 0.4, gap: 0.05 } }));
-        (bar === D ? [['t1', 2], ['t2', 2.5], ['t0', 3]] : [['t0', 3.5], ['t1', 3.75]]).forEach(([r, b]) => pick(r, b, 0.42));
+        // each chord rolled slowly, like a harp, and left to ring while it lasts, then a few notes picked over it
+        S.segs.filter((s) => s.bar === bar && held(s)).forEach((sg) => S.add({ p: 'gtr', k: 'g', b: sg.b, v: 0.62 * (0.9 + 0.2 * H()), n: shapeOf(sg, posOf(sg)).all, dt: hz(H, 5, 4), x: { amp: 'nylon', hold: held(sg) + 0.1, a: 0.3, rel: 0.4, gap: 0.05 } }));
+        NWM_GTR.D[Math.min(3, bar - D)].forEach(([r, b]) => pick(r, b, 0.42));
         continue;
       }
       const pat = p === 'C' ? NWM_GTR.C : p === 'B' ? (odd ? NWM_GTR.B2 : NWM_GTR.B) : odd ? NWM_GTR.A2 : NWM_GTR.A;
       pat.forEach(([r, b]) => pick(r, b, r[0] === 'p' || r[0] === 'a' ? 0.62 : b % 1 === 0 ? 0.52 : 0.46));
     }
     // Keys: the pad changes with the section: warm, then airy an octave up, then strings, then warm again.
-    let pw = null, pa = null, ps = null, pt = null, pr = null;
+    // A chord carried into the next measure keeps ringing.
+    let pw = null, pa = null, ps = null, pr = null;
     S.segs.forEach((sg) => {
-      const p = part(sg.bar), iv = sg.Q.ivs.slice(0, 4), H = S.rng('kyh', sg.b);
+      const p = part(sg.bar), iv = sg.Q.ivs.slice(0, 4), L = held(sg);
+      if (!L) return;
       if (p === 'C') {
         const low = nearPc(sg.pc, 50, 45, 56);
         ps = preVoice(sg.pc, iv.length > 3 ? iv.slice(1) : iv, ps, 62, 80, 70);
-        S.add({ p: 'keys', k: 'sy', b: sg.b, d: sg.len, n: [low, low + 7].concat(ps), v: 0.8, dt: 0, x: { patch: 'strings', att: 0.6, rel: 1.6 } });
+        S.add({ p: 'keys', k: 'sy', b: sg.b, d: L, n: [low, low + 7].concat(ps), v: 0.8, dt: 0, x: { patch: 'strings', att: 0.6, rel: 1.6 } });
         return;
       }
-      if (lift(sg.bar)) {
+      if (lift(sg)) {
         pa = preVoice(sg.pc, iv, pa, 65, 80, 72);
-        S.add({ p: 'keys', k: 'sy', b: sg.b, d: sg.len, n: pa, v: 0.72, dt: 0, x: { patch: 'airy' } });
+        S.add({ p: 'keys', k: 'sy', b: sg.b, d: L, n: pa, v: 0.72, dt: 0, x: { patch: 'airy' } });
         return;
       }
       pw = preVoice(sg.pc, iv, pw, 53, 67, 60);
-      S.add({ p: 'keys', k: 'sy', b: sg.b, d: sg.len, n: pw, v: p === 'D' ? 0.6 : 0.8, dt: 0, x: { patch: 'warm' } });
-      if (p === 'D') {
-        // the bridge's electric piano, with a little tape wobble
-        pr = preVoice(sg.pc, iv, pr, 55, 70, 62);
-        (sg.len >= 4 ? [[0, 1.4, 0.13], [1.5, 0.9, 0.09], [3, 0.9, 0.1]] : [[0, 1.3, 0.13], [1.5, 0.45, 0.085]])
-          .forEach(([b, d, v]) => S.add({ p: 'keys', k: 'r', b: sg.b + b, d, n: pr, v: v * (0.92 + 0.16 * H()), dt: hz(H, 5, 8), x: { wow: true, spread: 0.02 } }));
-      } else {
+      S.add({ p: 'keys', k: 'sy', b: sg.b, d: L, n: pw, v: p === 'D' ? 0.6 : 0.8, dt: 0, x: { patch: 'warm' } });
+      if (p !== 'D') {
         // the soft triangle synth struck on each change
         const lo = nearPc(sg.pc, 50, 45, 56);
-        pt = [lo, lo + sg.Q.ivs[1], lo + (sg.Q.ivs[2] != null ? sg.Q.ivs[2] : 7), lo + 12];
-        S.add({ p: 'keys', k: 'tri', b: sg.b, d: sg.len, n: pt, v: 0.95, dt: 0 });
+        S.add({ p: 'keys', k: 'tri', b: sg.b, d: L, n: [lo, lo + sg.Q.ivs[1], lo + (sg.Q.ivs[2] != null ? sg.Q.ivs[2] : 7), lo + 12], v: 0.95, dt: 0 });
       }
     });
+    // The bridge's electric piano, with a little tape wobble: a different figure each measure.
+    const EP = [[[0, 1.4, 0.13], [1.5, 0.9, 0.09], [3, 0.9, 0.1]], [[0, 2.4, 0.12], [2.5, 1.2, 0.09]]];
+    for (let bar = D; bar < S.nb; bar++) {
+      const H = S.rng('kyh', bar), sg = S.segAt(bar * 4);
+      pr = preVoice(sg.pc, sg.Q.ivs.slice(0, 4), pr, 55, 70, 62);
+      EP[(bar - D) % 2].forEach(([b, d, v]) => S.add({ p: 'keys', k: 'r', b: bar * 4 + b, d, n: pr, v: v * (0.92 + 0.16 * H()), dt: hz(H, 5, 8), x: { wow: true, spread: 0.02 } }));
+    }
     // Bells answering the guitar in the climb and the chorus: a dotted rhythm through the echo.
     for (let bar = 8; bar < D; bar++) {
-      const c = part(bar) === 'C';
-      if (!c && !lift(bar)) continue;
-      const H = S.rng('blh', bar), B = bar * 4;
-      const hits = c ? [[0, 3], [0.75, 2], [1.5, 1], [2.5, 2], [3, 3], [3.5, 4]] : bar % 2 ? [[0, 2], [1.5, 0], [3, 1]] : [[0, 3], [1.5, 1], [3, 2]];
-      hits.forEach(([b, k]) => S.add({ p: 'keys', k: 'pl', b: B + b, d: 0.5, n: synArpTones(S.segAt(B + b), 66, 61, 72)[k], v: (b === 0 ? 0.72 : 0.6) * (0.9 + 0.2 * H()), dt: hz(H, 3, 2), x: { patch: 'bell' } }));
+      const c = part(bar) === 'C', H = S.rng('blh', bar), B = bar * 4;
+      const hits = c ? (bar % 2 ? [[0, 4], [0.75, 3], [1.5, 2], [2.5, 1], [3, 2], [3.5, 3]] : [[0, 3], [0.75, 2], [1.5, 1], [2.5, 2], [3, 3], [3.5, 4]])
+        : bar % 2 ? [[0, 2], [1.5, 0], [3, 1]] : [[0, 3], [1.5, 1], [3, 2]];
+      hits.forEach(([b, k]) => {
+        const sg = S.segAt(B + b);
+        if (!c && !lift(sg)) return;
+        S.add({ p: 'keys', k: 'pl', b: B + b, d: 0.5, n: synArpTones(sg, 66, 61, 72)[k], v: (b === 0 ? 0.72 : 0.6) * (0.9 + 0.2 * H()), dt: hz(H, 3, 2), x: { patch: 'bell' } });
+      });
     }
   };
 
@@ -12055,7 +12090,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-11-11b';
+  const APP_VERSION = '2026-11-11c';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;

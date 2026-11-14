@@ -3229,6 +3229,51 @@ const PRE_LIST = [
       },
     },
   },
+  {
+    // From the user's score (electric guitar and drums), in A minor. 32 of its 92 measures: repeats
+    // of the verse, the chorus, the bridge and the drum break are left out. The score has no bass,
+    // organ or steel drums; those are added around it.
+    id: 'reggae', fam: 'groove', name: 'Reggae', tag: 'One drop',
+    meter: '4/4', beats: 4, sub: 4, bpm: 80, min: 60, max: 110, wet: 0.2, gen: 'reggae',
+    parts: ['drums', 'bass', 'gtr', 'keys'], sets: ['electric', 'bass'], names: { gtr: 'Electric', keys: 'Organ & steel drums' },
+    lv: { drums: 1.25, bass: 1, gtr: 1, keys: 1.4 }, trim: -2.5,
+    secs: [[0, 'Intro'], [2, 'Verse'], [8, 'Chorus'], [16, 'Bridge'], [24, 'Break'], [28, 'Outro']],
+    v: {
+      major: {
+        form: ['VI:m', 'VI:m', 'VI:m', 'II:m/VI', 'VI:m', 'II:m/VI', 'VI:m', 'II:m/VI', 'IV:/I', 'I:', 'VI:m', 'VI:m', 'IV:/I', 'I:', 'VI:m', 'VI:m',
+          'VI:m', 'II:m/VI', 'IV:', 'I:/III', 'VI:m', 'VI:m', 'IV:', 'I:/III', 'VI:m', 'VI:m', 'VI:m', 'VI:m', 'I:', 'II:m', 'VI:m', 'II:m'],
+        scales: ['major', 'pentatonic'],
+      },
+      minor: {
+        form: ['I:m', 'I:m', 'I:m', 'IV:m/I', 'I:m', 'IV:m/I', 'I:m', 'IV:m/I', 'bVI:/bIII', 'bIII:', 'I:m', 'I:m', 'bVI:/bIII', 'bIII:', 'I:m', 'I:m',
+          'I:m', 'IV:m/I', 'bVI:', 'bIII:/V', 'I:m', 'I:m', 'bVI:', 'bIII:/V', 'I:m', 'I:m', 'I:m', 'I:m', 'bIII:', 'IV:m', 'I:m', 'IV:m'],
+        scales: ['pentatonic', 'natural'],
+      },
+    },
+  },
+  {
+    // Bass guitar and drums in F# minor at 240 (a half-time grunge feel): the key, tempo, line-up
+    // and kind of sections of a score the user shared, with an original bass line and drum parts.
+    id: 'grunge', fam: 'rock', name: 'Grunge Beat', tag: 'Grunge',
+    meter: '4/4', beats: 4, sub: 2, bpm: 240, min: 160, max: 250, wet: 0.1, gen: 'grunge',
+    parts: ['drums', 'bass'], sets: ['bass'],
+    lv: { drums: 1, bass: 1.5 }, trim: -7.8,
+    secs: [[0, 'Intro'], [4, 'Verse'], [12, 'Build'], [16, 'Chorus'], [24, 'Verse 2'], [32, 'Build'], [36, 'Chorus'], [44, 'Bridge']],
+    v: {
+      major: {
+        form: ['VI:m', 'VI:m', 'IV:', 'V:', 'VI:m', 'VI:m', 'IV:', 'V:', 'VI:m', 'VI:m', 'IV:', 'V:', 'II:m', 'II:m', 'IV:', 'V:',
+          'I:', 'V:', 'VI:m', 'IV:', 'I:', 'V:', 'IV:', 'V:', 'VI:m', 'VI:m', 'IV:', 'V:', 'VI:m', 'VI:m', 'IV:', 'V:', 'II:m', 'II:m', 'IV:', 'V:',
+          'I:', 'V:', 'VI:m', 'IV:', 'I:', 'V:', 'IV:', 'V:', 'II:m', 'II:m', 'IV:', 'III:', 'II:m', 'II:m', 'IV:', 'III:'],
+        scales: ['pentatonic', 'major'],
+      },
+      minor: {
+        form: ['I:m', 'I:m', 'bVI:', 'bVII:', 'I:m', 'I:m', 'bVI:', 'bVII:', 'I:m', 'I:m', 'bVI:', 'bVII:', 'IV:m', 'IV:m', 'bVI:', 'bVII:',
+          'bIII:', 'bVII:', 'I:m', 'bVI:', 'bIII:', 'bVII:', 'bVI:', 'bVII:', 'I:m', 'I:m', 'bVI:', 'bVII:', 'I:m', 'I:m', 'bVI:', 'bVII:', 'IV:m', 'IV:m', 'bVI:', 'bVII:',
+          'bIII:', 'bVII:', 'I:m', 'bVI:', 'bIII:', 'bVII:', 'bVI:', 'bVII:', 'IV:m', 'IV:m', 'bVI:', 'V:', 'IV:m', 'IV:m', 'bVI:', 'V:'],
+        scales: ['pentatonic', 'natural'],
+      },
+    },
+  },
 ];
 const preById = (id) => PRE_LIST.find((p) => p.id === id);
 </script>
@@ -6558,6 +6603,24 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     o.stop(end + 0.02); lfo.stop(end + 0.02);
     preDone(o, [lp, g, depth, lfo]);
   }
+  // A steel drum: a mallet tick, the note's own tone, and its octave swelling in just after the
+  // strike and dying sooner (the pan's "bwong"), with a faint twelfth for shine.
+  function steelNote(m, t, dur, v, dest) {
+    const f = mtof(m), end = t + dur + 0.9;
+    [[1, 1, 0.003, 0.7], [2, 0.6, 0.03, 0.28], [3, 0.16, 0.002, 0.12]].forEach(([k, a, at, tau]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.setValueAtTime(f * k * 1.008, t);
+      o.frequency.exponentialRampToValueAtTime(f * k, t + 0.04);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.05 * v * a, t + at);
+      g.gain.setTargetAtTime(0, t + at, tau);
+      g.gain.setTargetAtTime(0, t + dur, 0.12);
+      o.connect(g); g.connect(dest);
+      o.start(t); o.stop(end);
+      preDone(o, [g]);
+    });
+    noiseHit(t, 0.012 * v, 'bandpass', 3200, 1, 0.0005, 0.008, dest);
+  }
   // Synth basses: 'sub' (deep and pure, with a touch of its octave so small speakers find it) and
   // 'saw' (a buzzy synthwave bass with a snapping filter). One oscillator a note, with the sub's
   // tone built into its waveform, so a busy line stays quick to render.
@@ -6963,6 +7026,36 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     }
     return m[f];
   }
+  // A picked rock bass with grit: the clean low end, plus a driven, mid-forward copy of everything
+  // above it, so the line cuts through on small speakers.
+  let gritCurveArr = null;
+  const bassGrits = new WeakMap();
+  function bassGrit(dest) {
+    let n = bassGrits.get(dest);
+    if (n) return n;
+    if (!gritCurveArr) {
+      gritCurveArr = new Float32Array(2048);
+      for (let i = 0; i < 2048; i++) { const x = (i / 2047) * 2 - 1; gritCurveArr[i] = Math.tanh(2.5 * (x + 0.08 * x * x)) / Math.tanh(2.5); }
+    }
+    const filt = (type, f, q, gain) => {
+      const b = ctx.createBiquadFilter();
+      b.type = type; b.frequency.value = f; b.Q.value = q;
+      if (gain != null) b.gain.value = gain;
+      return b;
+    };
+    n = ctx.createGain();
+    const lo = filt('lowpass', 240, 0.6), dry = ctx.createGain();
+    dry.gain.value = 1.25;
+    const hp = filt('highpass', 200, 0.6), drive = ctx.createGain(), sh = ctx.createWaveShaper();
+    drive.gain.value = 5;
+    sh.curve = gritCurveArr; sh.oversample = '2x';
+    const mid = filt('peaking', 850, 0.9, 4), top = filt('lowpass', 3200, 0.7), wet = ctx.createGain();
+    wet.gain.value = 0.2;
+    n.connect(lo); lo.connect(dry); dry.connect(dest);
+    n.connect(hp); hp.connect(drive); drive.connect(sh); sh.connect(mid); mid.connect(top); top.connect(wet); wet.connect(dest);
+    bassGrits.set(dest, n);
+    return n;
+  }
 
   /* ---------- Playing one event ---------- */
   function preFire(e, t, sec, dest) {
@@ -6976,6 +7069,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     if (k === 'b') {
       const x = e.x || {};
       if (e.lp) dest = bassTone(dest, e.lp);
+      if (e.grit) dest = bassGrit(dest);
       if (x.g) {
         // A dead note: the fretting hand just touches the string. Mostly thump.
         const lp = ctx.createBiquadFilter();
@@ -7010,10 +7104,25 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
         return;
       }
       const gap = x.gap == null ? 0.012 : x.gap, hold = x.hold != null ? x.hold * sec : null;
+      let gc = ch;
+      if (x.wah) {
+        // An auto-wah: the chord goes through a resonant band that opens with the strike ("wa"),
+        // then settles, with a little of the plain sound under it.
+        const wi = ctx.createGain(), bp = ctx.createBiquadFilter(), wet = ctx.createGain(), dry = ctx.createGain();
+        bp.type = 'bandpass'; bp.Q.value = 2.6;
+        bp.frequency.setValueAtTime(480, t);
+        bp.frequency.exponentialRampToValueAtTime(1900, t + 0.075);
+        bp.frequency.setTargetAtTime(1050, t + 0.075, 0.14);
+        wet.gain.value = 1.6; dry.gain.value = 0.35;
+        wi.connect(bp); bp.connect(wet); wet.connect(ch.input);
+        wi.connect(dry); dry.connect(ch.input);
+        gc = Object.create(ch);
+        gc.input = wi;
+      }
       e.n.forEach((n, i) => {
         const a = (x.a || 0.42) * e.v * (i === 0 ? 1.08 : 1);
-        if (x.soft != null) preSoftNote(ch, n.s, n.m, t + i * gap, a, hold, x.rel || 0.05, x.soft);
-        else preGNote(ch, n.s, n.m, t + i * gap, a, hold, x.rel || 0.05, x.sl);
+        if (x.soft != null) preSoftNote(gc, n.s, n.m, t + i * gap, a, hold, x.rel || 0.05, x.soft);
+        else preGNote(gc, n.s, n.m, t + i * gap, a, hold, x.rel || 0.05, x.sl);
       });
       return;
     }
@@ -7023,6 +7132,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     if (k === 'pl') { (Array.isArray(e.n) ? e.n : [e.n]).forEach((m) => synPluck(m, t, e.d * sec, e.v, dest, e.x, sec)); return; }
     if (k === 'sb') { synBass(e.n, t, e.d * sec, e.v, dest, e.x); return; }
     if (k === 'th') { thereminNote(e.n, t, e.d * sec, e.v, dest, e.x); return; }
+    if (k === 'st') { steelNote(e.n, t, e.d * sec, e.v, dest); return; }
     if (k === 'p') pianoChord(e.n, t, e.d * sec, e.v, dest, e.x && e.x.spread);
   }
 
@@ -9009,6 +9119,199 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
         else if (c === 'o') S.add({ p: 'drums', k: 'd', x: 'hatO', b, v: hum(0.34), dt: hz(H, 4, 5), r: H(), cut: 0.9 });
         else if (c === 'c') S.drum('crash', b, 0.42, 0, H());
         else S.drum({ t: 'tomH', m: 'tomM', f: 'tomF' }[c], b, hum(0.5), hz(H, 4, 6), H());
+      });
+    });
+  };
+
+  /* Reggae: the user's score (electric guitar and drums) as written, in A minor and moved as a whole
+     to other keys, with a bass line, a soft organ bubble between the guitar's chops and a few steel
+     drum phrases added. Measures are keyed by their number in the score. */
+  const RG_BARS = [3, 4, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 31, 32, 33, 34, 35, 36, 37, 46, 77, 78, 79, 80, 81, 82, 83, 84];
+  // The guitar's chords, as voiced in the score (sounding pitches), and each measure's chord. It
+  // plays on beats 1 and 3, eighth notes, except sixteenths from score bar 16 to 29.
+  const RG_VOICE = { Am: [69, 72, 76], Dm: [62, 65, 69], Dm1: [65, 69, 74], F: [60, 65, 69], C: [64, 67, 72] };
+  const RG_GTR = { 3: 'Am', 4: 'Am', 9: 'Am', 10: 'Dm', 11: 'Am', 12: 'Dm', 15: 'Am', 16: 'Dm', 17: 'F', 18: 'C', 19: 'Am', 20: 'Am', 21: 'F', 22: 'C', 23: 'Am', 24: 'Am',
+    31: 'Am', 32: 'Dm1', 33: 'F', 34: 'C', 35: 'Am', 36: 'Am', 37: 'F', 46: 'C', 81: 'Am', 82: 'Dm', 83: 'Am', 84: 'Dm' };
+  // Drums, a letter and a beat for each hit: H all eight hi-hats, h one hi-hat, o open hi-hat,
+  // s snare, k kick, r ride, c a light cymbal, C crash, t high tom, x rim click.
+  const RG_DRUMS = {
+    3: 'h0 h0.5 h1 r1 h1.5 h2 h2.5 h3 h3.5 k1', 4: 'h0 h0.5 h1 r1 h1.5 h2 h2.5 c3 h3.5 k1 k3',
+    9: 'H s1', 10: 'H s1 k2.5 k3', 11: 'H s1', 12: 'o0 h1 h1.5 h2 h2.5 h3 h3.5 s1 k2 k3', 15: 'H s1', 16: 'o0 h1 h1.5 h2 h2.5 c3 s1 k2 k3',
+    17: 'H s1 k3', 18: 'H s1 k3', 19: 'H s1', 20: 'o0 h1 h1.5 h2 h2.5 h3 h3.5 s1 k2 k3', 21: 'H s1 k3', 22: 'h0 h0.5 h1 h1.5 h2 h2.5 c3 s1 k2.5 k3',
+    23: 'H k1 k2.5 k3', 24: 'h0 h0.5 h1 h1.5 h2 h2.5 c3 k0.5 k1 k3',
+    31: 'H s1', 32: 'o0 h1 h1.5 h2 h2.5 c3 s1 k2 k3', 33: 'H s1 k3', 34: 'H s1 k3', 35: 'H s1', 36: 'o0 h1 h1.5 h2 h2.5 h3 h3.5 s1 k2 k3', 37: 'H s1 k3',
+    46: 'h0 h0.5 h1 h2 h2.5 c3 h3.5 s1 k2.5 k3',
+    77: 'H s1 t2', 78: 'H t0 s1 t2 s3 k2.5 k3', 79: 'H s0 x0.5 s1 s2 s2.5 s3.5', 80: 'C0 h0 s0 s0.75 h1 s1 h1.5 s1.5 h2 s2 h3 c3 k3 h3.5',
+    81: 'H x0.5 s1', 82: 'C0 H s1 x3', 83: 'H x0.5 s1 x2', 84: 'C0 H s1 x3',
+  };
+  // Bass (not in the score): [beat, note, length in beats]. It leaves the snare's beat open and
+  // walks into each change.
+  const rgB = (a, b, c, d, e) => [[0, a, 0.9], [1.5, b, 0.4], [2, c, 0.45], [2.5, d, 0.45]].concat(e);
+  const RG_HOME = rgB('A1', 'A1', 'E2', 'G2', [[3, 'A2', 0.9]]), RG_TO_A = rgB('A1', 'A1', 'C2', 'E2', [[3, 'D2', 0.45], [3.5, 'B1', 0.45]]);
+  const RG_DM = rgB('A1', 'A1', 'D2', 'F2', [[3, 'C2', 0.45], [3.5, 'B1', 0.45]]), RG_FC = rgB('C2', 'C2', 'F2', 'A2', [[3, 'G2', 0.9]]);
+  const RG_C = rgB('C2', 'G1', 'C2', 'E2', [[3, 'D2', 0.45], [3.5, 'B1', 0.45]]), RG_UP = rgB('A1', 'A1', 'C2', 'E2', [[3, 'E2', 0.45], [3.5, 'G1', 0.45]]);
+  const RG_BASS = {
+    3: RG_HOME, 4: RG_UP, 9: RG_TO_A, 10: RG_DM, 11: RG_HOME, 12: RG_DM, 15: RG_TO_A,
+    16: rgB('A1', 'A1', 'F2', 'E2', [[3, 'D2', 0.45], [3.5, 'B1', 0.45]]), 17: RG_FC, 18: RG_C, 19: RG_HOME,
+    20: rgB('A1', 'C2', 'E2', 'G2', [[3, 'E2', 0.45], [3.5, 'D2', 0.45]]), 21: RG_FC, 22: RG_C, 23: RG_HOME, 24: RG_UP,
+    31: rgB('A1', 'A1', 'E2', 'G2', [[3, 'E2', 0.45], [3.5, 'B1', 0.45]]), 32: rgB('A1', 'A1', 'D2', 'C2', [[3, 'A1', 0.45], [3.5, 'G1', 0.45]]),
+    33: rgB('F1', 'F1', 'A1', 'C2', [[3, 'C2', 0.45], [3.5, 'D2', 0.45]]), 34: rgB('E2', 'E2', 'C2', 'E2', [[3, 'D2', 0.45], [3.5, 'B1', 0.45]]),
+    35: RG_HOME, 36: rgB('A1', 'A1', 'C2', 'B1', [[3, 'A1', 0.45], [3.5, 'G1', 0.45]]), 37: rgB('F1', 'F1', 'A1', 'C2', [[3, 'G2', 0.45], [3.5, 'F2', 0.45]]),
+    46: rgB('E2', 'E2', 'G2', 'E2', [[3, 'C2', 0.45], [3.5, 'B1', 0.45]]),
+    77: [[0, 'A1', 0.9], [1.5, 'A1', 0.4], [2, 'E2', 0.9], [3, 'A1', 0.9]], 78: [[0, 'A1', 0.9], [1.5, 'A1', 0.4], [2.5, 'E2', 0.45], [3, 'A1', 0.9]],
+    79: rgB('A1', 'C2', 'E2', 'G2', [[3, 'A2', 0.9]]), 80: [[0, 'A1', 1.9], [3, 'B1', 0.45], [3.5, 'B1', 0.45]],
+    81: rgB('C2', 'C2', 'E2', 'G2', [[3, 'E2', 0.45], [3.5, 'E2', 0.45]]), 82: rgB('D2', 'D2', 'F2', 'A2', [[3, 'C2', 0.45], [3.5, 'B1', 0.45]]),
+    83: rgB('A1', 'A1', 'E2', 'G2', [[3, 'F2', 0.45], [3.5, 'E2', 0.45]]), 84: rgB('D2', 'D2', 'F2', 'E2', [[3, 'C2', 0.45], [3.5, 'B1', 0.45]]),
+  };
+  // Organ bubble between the guitar's chops: each measure's chord (by its bass), soft and short.
+  const RG_ORG = { Am: [57, 60, 64], Dm: [57, 62, 65], F: [57, 60, 65], C: [55, 60, 64] };
+  const RG_ORG_CH = { 17: 'F', 18: 'C', 21: 'F', 22: 'C', 33: 'F', 34: 'C', 37: 'F', 46: 'C', 81: 'C', 10: 'Dm', 12: 'Dm', 16: 'Dm', 32: 'Dm', 82: 'Dm', 84: 'Dm' };
+  // Steel drums, here and there: [beat, note, length in beats].
+  const RG_STEEL = {
+    19: [[1, 'E5', 0.5], [1.5, 'D5', 0.5], [2.5, 'C5', 0.5], [3, 'A4', 1]], 20: [[0.5, 'A4', 0.5], [1, 'C5', 0.5], [1.5, 'D5', 0.5], [2.5, 'E5', 1.5]],
+    23: [[1, 'G5', 0.5], [1.5, 'E5', 0.5], [2.5, 'D5', 0.5], [3, 'E5', 1]], 24: [[1, 'C5', 0.5], [1.5, 'A4', 2]],
+    35: [[1.5, 'C5', 0.5], [2.5, 'E5', 0.5], [3, 'A5', 0.5], [3.5, 'G5', 0.5]], 36: [[1, 'E5', 1], [2.5, 'D5', 0.5], [3, 'C5', 1]],
+    77: [[0, 'E5', 0.5], [0.5, 'G5', 0.5], [1, 'A5', 1], [2.5, 'G5', 0.5], [3, 'E5', 1]], 78: [[0.5, 'D5', 0.5], [1, 'E5', 0.5], [1.5, 'D5', 0.5], [2, 'C5', 1], [3, 'A4', 1]],
+    79: [[0, 'C5', 0.5], [0.5, 'D5', 0.5], [1, 'E5', 0.5], [1.5, 'G5', 0.5], [2, 'A5', 0.75], [2.75, 'G5', 0.25], [3, 'E5', 1]], 80: [[0, 'D5', 0.5], [1, 'C5', 0.5], [1.5, 'A4', 2.5]],
+    83: [[1.5, 'E5', 0.5], [2.5, 'C5', 0.5], [3, 'D5', 0.5], [3.5, 'E5', 0.5]], 84: [[1, 'F5', 1], [2.5, 'D5', 0.5], [3, 'A4', 1]],
+  };
+  PRE_GEN.reggae = (S) => {
+    // Everything moves together from A minor; the bass goes up an octave where it would drop below E.
+    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = nearPc(tm, 45, 40, 51) - 45, TB = T + (T < -2 ? 12 : 0);
+    RG_BARS.forEach((n, bar) => {
+      const B = bar * 4;
+      // Electric guitar: the score's chops on beats 1 and 3, through an auto-wah.
+      const ch = RG_GTR[n];
+      if (ch) {
+        const Hg = S.rng('gth', bar), short = n >= 16 && n <= 29, notes = RG_VOICE[ch].map((m, i) => ({ s: 3 + i, m: m + T }));
+        [0, 2].forEach((b) => S.add({ p: 'gtr', k: 'g', b: B + b, v: (b ? 0.86 : 0.92) * (0.94 + 0.12 * Hg()), n: notes, dt: hz(Hg, 5, 6),
+          x: { amp: 'clear', hold: short ? 0.22 : 0.42, a: 0.42, rel: 0.04, gap: 0.007, wah: true } }));
+      }
+      // Drums, as written.
+      const H = S.rng('drh', bar), hum = (v) => v * (0.92 + 0.16 * H());
+      RG_DRUMS[n].replace('H', 'h0 h0.5 h1 h1.5 h2 h2.5 h3 h3.5').split(' ').forEach((tok) => {
+        const c = tok[0], b = B + parseFloat(tok.slice(1)), off = b % 1;
+        if (c === 'k') S.drum('kickSoft', b, hum(0.66), hz(H, 4, 4), H());
+        else if (c === 's') S.drum('snTight', b, hum(off ? 0.4 : 0.6), hz(H, 5, 8), H());
+        else if (c === 'h') S.drum('hatC', b, hum(off ? 0.24 : 0.32), hz(H, 4, 5), H());
+        else if (c === 'o') S.add({ p: 'drums', k: 'd', x: 'hatO', b, v: hum(0.32), dt: hz(H, 4, 5), r: H(), cut: 1 });
+        else if (c === 'r') S.drum('ride', b, hum(0.34), hz(H, 4, 5), H());
+        else if (c === 'c') S.drum('cymSoft', b, hum(0.34), 0, H());
+        else if (c === 'C') S.drum('crash', b, 0.38, 0, H());
+        else if (c === 't') S.drum('tomH', b, hum(0.5), hz(H, 4, 6), H());
+        else if (c === 'x') S.drum('xstick', b, hum(0.5), hz(H, 4, 6), H());
+      });
+      // Bass.
+      const Hb = S.rng('bsh', bar);
+      RG_BASS[n].forEach(([b, note, len]) => S.add({ p: 'bass', k: 'b', b: B + b, n: LPB_NOTE(note) + TB, d: len,
+        v: (b === 0 ? 0.95 : b % 1 ? 0.84 : 0.9) * (0.95 + 0.1 * Hb()), dt: hz(Hb, 5, 6), lp: 1300 }));
+      // Organ: a soft bubble on the "and" of 2 and 4 (doubled every fourth measure), not in the drum fills.
+      if (n !== 79 && n !== 80) {
+        const Ho = S.rng('orh', bar), og = RG_ORG[RG_ORG_CH[n] || 'Am'].map((m) => m + T);
+        (bar % 4 === 3 ? [1.5, 1.75, 3.5, 3.75] : [1.5, 3.5]).forEach((b) => S.add({ p: 'keys', k: 'o', b: B + b, d: b % 0.5 ? 0.18 : 0.26, n: og,
+          v: (b % 0.5 ? 0.75 : 0.9) * (0.92 + 0.16 * Ho()), dt: hz(Ho, 5, 8), x: { sw: [0.9, 0.7, 0.6], reg: 'soft' } }));
+      }
+      // Steel drums.
+      const Hs = S.rng('sth', bar);
+      (RG_STEEL[n] || []).forEach(([b, note, len]) => S.add({ p: 'keys', k: 'st', b: B + b, d: len, n: LPB_NOTE(note) + T,
+        v: (b % 1 ? 0.82 : 0.92) * (0.94 + 0.12 * Hs()), dt: hz(Hs, 6, 8) }));
+    });
+  };
+
+  /* Grunge Beat: an original bass line and drum parts in F# minor at 240, in a half-time grunge
+     feel, moved as a whole to other keys. The bass is out front with a gritty pick tone and walks
+     into every change; the drums are loud and punchy. */
+  // Bass lines: [beat, note, length in beats]; 'x' is a dead note (the fretting hand just touches
+  // the string).
+  const GB_BASS = {
+    // Verse riff: F#m F#m D E.
+    v1: [[0, 'F#1', 1.5], [1.5, 'F#1', 0.5], [2, 'C#2', 1], [3, 'F#2', 1]],
+    v2: [[0, 'E2', 1], [1, 'C#2', 1], [2, 'A1', 1], [3, 'C#2', 1]],
+    v3: [[0, 'D2', 1.5], [1.5, 'D2', 0.5], [2, 'A1', 1], [3, 'D#2', 1]],
+    v4: [[0, 'E2', 1.5], [1.5, 'E2', 0.5], [2, 'B1', 1], [3, 'G#1', 1]],
+    toB: [[0, 'E2', 1], [1, 'D2', 1], [2, 'C#2', 1], [3, 'C2', 1]],
+    // The riff again in the second verse, busier.
+    w1: [[0, 'F#1', 1.5], [1.5, 'F#1', 0.5], [2, 'C#2', 1], [3, 'F#2', 0.5], [3.5, 'x', 0.5]],
+    w2: [[0, 'E2', 1], [1, 'C#2', 1], [2, 'A1', 0.5], [2.5, 'B1', 0.5], [3, 'C#2', 1]],
+    w3: [[0, 'D2', 1.5], [1.5, 'D2', 0.5], [2, 'F#2', 1], [3, 'D#2', 1]],
+    w4: [[0, 'E2', 1.5], [1.5, 'E2', 0.5], [2, 'B1', 0.5], [2.5, 'A1', 0.5], [3, 'G#1', 1]],
+    // Build (pre-chorus): Bm Bm D E, a driving pulse that climbs into the chorus.
+    p1: [[0, 'B1', 1], [1, 'B1', 1], [2, 'B1', 1], [3, 'D2', 1]],
+    p2: [[0, 'B1', 1], [1, 'B1', 1], [2, 'A1', 1], [3, 'C#2', 1]],
+    p3: [[0, 'D2', 1], [1, 'D2', 1], [2, 'F#2', 1], [3, 'D2', 1]],
+    p4: [[0, 'E2', 1], [1, 'E2', 1], [2, 'F#2', 1], [3, 'G#2', 1]],
+    // Chorus: A E F#m D A E D E.
+    c1: [[0, 'A2', 1], [1, 'A1', 1], [2, 'A1', 1], [3, 'E2', 1]],
+    c2: [[0, 'E2', 1], [1, 'E2', 1], [2, 'B1', 1], [3, 'G#1', 1]],
+    c3: [[0, 'F#1', 1], [1, 'F#1', 1], [2, 'F#2', 1], [3, 'C#2', 1]],
+    c4: [[0, 'D2', 1], [1, 'D2', 1], [2, 'C#2', 1], [3, 'B1', 1]],
+    c5: [[0, 'A1', 1], [1, 'A1', 1], [2, 'A2', 1], [3, 'A1', 1]],
+    c6: [[0, 'E2', 1], [1, 'E2', 1], [2, 'E2', 1], [3, 'C#2', 1]],
+    c7: [[0, 'D2', 1], [1, 'D2', 1], [2, 'A1', 1], [3, 'D#2', 1]],
+    c8: [[0, 'E2', 1], [1, 'E2', 1], [2, 'G#1', 1], [3, 'E1', 1]],
+    c8b: [[0, 'E2', 1], [1, 'D2', 1], [2, 'C#2', 1], [3, 'A#1', 1]],
+    // Bridge: Bm Bm D C#, twice, in long notes.
+    b1: [[0, 'B1', 2], [2, 'B1', 1], [3, 'D2', 1]],
+    b2: [[0, 'B1', 1.5], [1.5, 'A1', 0.5], [2, 'F#1', 1], [3, 'A1', 1]],
+    b3: [[0, 'D2', 2], [2, 'A1', 1], [3, 'C2', 1]],
+    b4: [[0, 'C#2', 2], [2, 'G#1', 1], [3, 'C#2', 1]],
+    b8: [[0, 'C#2', 1], [1, 'C#2', 1], [2, 'G#1', 1], [3, 'G#1', 0.5], [3.5, 'x', 0.5]],
+  };
+  // Drums, a letter and a beat for each hit: h hi-hat, o open hi-hat, r ride, C crash, k kick,
+  // s snare, g ghost snare, t m f high, middle and floor toms. The snare is on beat 3.
+  const GB_DRUMS = {
+    I1C: 'C0 k0 h1 h2 h3', I1: 'h0 h1 h2 h3 k0', I4: 'h0 h1 h2 k0 s3 s3.5',
+    AC: 'C0 h1 h2 h3 k0 s2 k3', A: 'h0 h1 h2 h3 k0 s2 k3', B: 'h0 h1 h2 h3 k0 k1 s2',
+    F4: 'h0 h1 h2 k0 k1 s2 s3 s3.5', F8: 'h0 h1 k0 k1 s2 t2.5 m3 f3.5',
+    PC: 'C0 f1 f2 f3 k0 s2', P2: 'f0 f1 f2 f3 k0 k1.5 s2', P3: 'f0 f1 f2 f3 k0 s2 k3', P4: 'k0 k1 k2 k3 s0 s0.5 s1 s1.5 s2 s2.5 s3 s3.5',
+    CC: 'C0 o1 o2 o3 k0 s2 k3', CB: 'o0 o1 o2 o3 k0 k1.5 s2 s3.5', CA: 'o0 o1 o2 o3 k0 s2 k3', C4: 'o0 o1 o2 o3 k0 k1 s2 s3 s3.5',
+    C8: 'o0 k0 k1 s1.5 s2 t2.5 m3 f3.5', C8b: 'k0 k1 k2 k3 s0 s0.5 s1 s1.5 t2 t2.5 f3 f3.5',
+    VAC: 'C0 o1 h2 h3 k0 s2 k3 g3.5', VA: 'h0 o1 h2 h3 k0 s2 k3 g3.5', VB: 'h0 h1 h2 o3 k0 k1 g1.5 s2', VF4: 'h0 o1 h2 k0 k1 s2 s3 s3.5',
+    BRC: 'C0 r1 r2 r3 k0 k1.5 s2 f3', BR: 'r0 r1 r2 r3 k0 k1.5 s2 f3', BR2: 'r0 r1 r2 r3 k0 f1 s2 k3', BR4: 'r0 r1 r2 k0 k1.5 s2 f3 f3.5',
+    BR8: 'k0 k1 k2 k3 s0 s0.5 t1 t1.5 m2 m2.5 f3 f3.5',
+  };
+  // Fills where the drums build up through the measure.
+  const GB_ROLL = { P4: 1, C8b: 1, BR8: 1 };
+  // Each measure: [bass line, drums].
+  const GB_PRE = [['p1', 'PC'], ['p2', 'P2'], ['p3', 'P3'], ['p4', 'P4']];
+  const GB_CHORUS = [['c1', 'CC'], ['c2', 'CB'], ['c3', 'CA'], ['c4', 'C4'], ['c5', 'CC'], ['c6', 'CB'], ['c7', 'CA']];
+  const GB_FORM = [].concat(
+    [['v1', 'I1C'], ['v2', 'I1'], ['v3', 'I1'], ['v4', 'I4']], // intro: bass and hi-hat
+    [['v1', 'AC'], ['v2', 'B'], ['v3', 'A'], ['v4', 'F4'], ['v1', 'A'], ['v2', 'B'], ['v3', 'A'], ['toB', 'F8']],
+    GB_PRE, GB_CHORUS, [['c8', 'C8']],
+    [['w1', 'VAC'], ['w2', 'VB'], ['w3', 'VA'], ['w4', 'VF4'], ['w1', 'VA'], ['w2', 'VB'], ['w3', 'VA'], ['toB', 'F8']],
+    GB_PRE, GB_CHORUS, [['c8b', 'C8b']],
+    [['b1', 'BRC'], ['b2', 'BR2'], ['b3', 'BR'], ['b4', 'BR4'], ['b1', 'BRC'], ['b2', 'BR2'], ['b3', 'BR'], ['b8', 'BR8']],
+  );
+  PRE_GEN.grunge = (S) => {
+    // Everything moves together from F# minor, keeping the bass between C#1 and G#3.
+    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = nearPc(tm, 30, 27, 38) - 30;
+    let last = LPB_NOTE('G#1');
+    GB_FORM.forEach(([bl, dr], bar) => {
+      const B = bar * 4;
+      // Bass, loud and gritty.
+      const Hb = S.rng('bsh', bar);
+      GB_BASS[bl].forEach(([b, note, len]) => {
+        const dead = note === 'x', m = dead ? last : LPB_NOTE(note) + T;
+        if (!dead) last = m;
+        S.add({ p: 'bass', k: 'b', b: B + b, n: m, d: len, v: (dead ? 0.8 : b === 0 ? 1 : b % 1 ? 0.86 : 0.93) * (0.95 + 0.1 * Hb()),
+          dt: hz(Hb, 4, 2), grit: true, x: dead ? { g: true } : null });
+      });
+      // Drums, loud and punchy.
+      const H = S.rng('drh', bar), hum = (v) => v * (0.94 + 0.12 * H()), roll = GB_ROLL[dr];
+      GB_DRUMS[dr].split(' ').forEach((tok) => {
+        const c = tok[0], o = parseFloat(tok.slice(1)), b = B + o, off = o % 1;
+        if (c === 'k') S.drum('kickTight', b, hum(o === 0 ? 0.9 : 0.8), hz(H, 3, 0), H());
+        else if (c === 's') S.drum('snTight', b, roll ? 0.5 + 0.13 * o : hum(off ? 0.72 : 0.96), hz(H, 3, 2), H());
+        else if (c === 'g') S.drum('snGhost', b, hum(0.42), hz(H, 4, 4), H());
+        else if (c === 'h') S.drum('hatC', b, hum(o % 2 ? 0.42 : 0.52), hz(H, 3, 0), H());
+        else if (c === 'o') S.add({ p: 'drums', k: 'd', x: 'hatO', b, v: hum(0.5), dt: hz(H, 3, 0), r: H(), cut: 0.9 });
+        else if (c === 'r') S.drum('ride', b, hum(o % 2 ? 0.5 : 0.6), hz(H, 3, 0), H());
+        else if (c === 'C') S.drum('crash', b, 0.75, 0, H());
+        else {
+          const tom = { t: 'tomH', m: 'tomM', f: 'tomF' }[c], groove = c === 'f' && !roll && /^[PB]/.test(dr) && !off;
+          S.drum(tom, b, roll ? 0.55 + 0.11 * o : hum(groove ? 0.62 : 0.84), hz(H, 3, 2), H());
+        }
       });
     });
   };
@@ -12420,7 +12723,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
      memory), nothing on the page can catch it. So a note goes in storage while the splitter works and
      comes out when it's done; finding it on the next visit means the page was closed. */
   // Shown at the bottom of the Splitter, so it's easy to tell which copy of the page a phone is running.
-  const APP_VERSION = '2026-11-13e';
+  const APP_VERSION = '2026-11-13g';
   $('appVer').textContent = 'Version ' + APP_VERSION + '.';
   const STEM_TRY = 'stem-splitter-attempt';
   let tryNote = null;

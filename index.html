@@ -1385,11 +1385,44 @@
   .trychip[aria-pressed="true"] { border-color: var(--brass); color: var(--brass-bright); background: rgba(232, 180, 92, 0.14); }
   @media (hover: hover) { .trychip:hover { border-color: var(--brass); } }
   #presetSide .strip { margin-bottom: 18px; }
-  .plib { margin-top: 18px; padding-top: 4px; border-top: 1px solid var(--line); }
-  .plib-fam { margin: 14px 0 7px; font-family: var(--sans); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--brass); }
-  .plib-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .tile.pcard { min-height: 48px; padding: 10px 8px; }
-  .pc-name { font-size: 15.5px; font-weight: 600; line-height: 1.15; }
+  .plib { padding-top: 10px; border-top: 1px solid var(--line); }
+  .plib-btn {
+    display: flex; align-items: center; gap: 10px; width: 100%; min-height: 50px; padding: 10px 14px;
+    border-radius: 8px; background: var(--well); border: 1px solid var(--line); color: var(--parchment);
+    font-family: var(--serif); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.15s ease;
+  }
+  .plib-btn[aria-expanded="true"] { border-color: var(--brass); border-radius: 8px 8px 0 0; }
+  @media (hover: hover) { .plib-btn:hover { border-color: var(--brass); } }
+  .plib-btn:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+  .plib-lbl { font-family: var(--sans); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--brass); }
+  .plib-cur { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .plib-chev {
+    flex: none; width: 8px; height: 8px; margin: 0 4px 4px; border-right: 1.5px solid var(--brass-bright);
+    border-bottom: 1.5px solid var(--brass-bright); transform: rotate(45deg); transition: transform 0.15s ease;
+  }
+  .plib-btn[aria-expanded="true"] .plib-chev { transform: rotate(-135deg); margin-bottom: -4px; }
+  .plib-menu {
+    border: 1px solid var(--brass); border-top: none; border-radius: 0 0 8px 8px; background: var(--well);
+    padding: 2px 0 10px; max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  .plib-menu[hidden] { display: none; }
+  /* Family names: a little lighter, flush with the menu's left edge. */
+  .plib-fam { margin: 14px 14px 4px; font-family: var(--sans); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--parchment); }
+  /* Preset names: indented under their family like sub-bullets, a little darker. */
+  .plib-item {
+    position: relative; display: block; width: 100%; padding: 8px 14px 8px 34px; background: none; border: none;
+    text-align: left; font-family: var(--serif); font-size: 16px; color: var(--parchment-dim); cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .plib-item::before {
+    content: ""; position: absolute; left: 22px; top: 50%; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--parchment-faint); transform: translateY(-50%);
+  }
+  .plib-item[aria-pressed="true"] { color: var(--brass-bright); font-weight: 600; }
+  .plib-item[aria-pressed="true"]::before { background: var(--brass-bright); }
+  @media (hover: hover) { .plib-item:hover { color: var(--parchment); background: rgba(232, 180, 92, 0.08); } }
+  .plib-item:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: -2px; }
   @media (max-width: 360px) { .pp-cur { font-size: 30px; } .pp-cur.long { font-size: 24px; } .ptile.two .pcn { font-size: 11.5px; } }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
@@ -17677,24 +17710,51 @@ self.onmessage = async (e) => {
     const off = PRE_PARTS.filter(([p]) => prePart(P, 'parts').includes(p) && !state.pre.mix[p].on).map(([p, n]) => ((P.names && P.names[p]) || n).toLowerCase());
     ppMixStat.textContent = off.length ? cap(andList(off)) + ' muted' : '';
   }
+  // The preset library: one dropdown under the mix levels. The button shows the preset that's on;
+  // opening it lists every preset under its family's name.
+  var pLibOpen = false;
   function renderPreLib() {
     pLib.innerHTML = '';
+    const cur = prePreset();
+    const btn = el('button', 'plib-btn');
+    btn.type = 'button';
+    btn.setAttribute('aria-expanded', String(pLibOpen));
+    btn.setAttribute('aria-controls', 'pLibMenu');
+    btn.append(el('span', 'plib-lbl', 'Preset'), el('span', 'plib-cur', cur.name), el('span', 'plib-chev'));
+    btn.addEventListener('click', () => {
+      pLibOpen = !pLibOpen;
+      renderPreLib();
+      pLib.querySelector('.plib-btn').focus({ preventScroll: true });
+    });
+    pLib.appendChild(btn);
+    const menu = el('div', 'plib-menu');
+    menu.id = 'pLibMenu';
+    menu.hidden = !pLibOpen;
     PRE_FAMILIES.forEach(([fam, name]) => {
       const list = PRE_LIST.filter((p) => p.fam === fam);
       if (!list.length) return;
-      pLib.appendChild(el('p', 'plib-fam', name));
-      const grid = el('div', 'plib-grid');
+      menu.appendChild(el('p', 'plib-fam', name));
       list.forEach((P) => {
-        const b = el('button', 'tile pcard');
+        const b = el('button', 'plib-item', P.name);
         b.type = 'button';
-        b.setAttribute('aria-pressed', String(P.id === state.pre.id));
-        b.appendChild(el('span', 'pc-name', P.name));
+        b.setAttribute('aria-pressed', String(P.id === cur.id));
         b.setAttribute('aria-label', P.name + ', ' + P.tag.toLowerCase());
-        b.addEventListener('click', () => preSelect(P.id));
-        grid.appendChild(b);
+        b.addEventListener('click', () => {
+          pLibOpen = false;
+          if (P.id === state.pre.id) renderPreLib();
+          else preSelect(P.id);
+          pLib.querySelector('.plib-btn').focus({ preventScroll: true });
+        });
+        menu.appendChild(b);
       });
-      pLib.appendChild(grid);
     });
+    menu.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      pLibOpen = false;
+      renderPreLib();
+      pLib.querySelector('.plib-btn').focus({ preventScroll: true });
+    });
+    pLib.appendChild(menu);
   }
   // While playing: light the measure, the beat and the chord.
   function preFrame(ev) {

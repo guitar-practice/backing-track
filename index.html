@@ -3254,22 +3254,18 @@ const PRE_LIST = [
   {
     // Bass guitar and drums in F# minor at 240 (a half-time grunge feel): the key, tempo, line-up
     // and kind of sections of a score the user shared, with an original bass line and drum parts.
-    id: 'grunge', fam: 'rock', name: 'Grunge Beat', tag: 'Grunge',
-    meter: '4/4', beats: 4, sub: 2, bpm: 240, min: 160, max: 250, wet: 0.1, gen: 'grunge',
-    parts: ['drums', 'bass'], sets: ['bass'],
-    lv: { drums: 1, bass: 1.5 }, trim: -7.8,
-    secs: [[0, 'Intro'], [4, 'Verse'], [12, 'Build'], [16, 'Chorus'], [24, 'Verse 2'], [32, 'Build'], [36, 'Chorus'], [44, 'Bridge']],
+        id: 'grunge', tkey: 'grunge2', fam: 'rock', name: 'Grunge Beat', tag: 'Grunge',
+    meter: '4/4', beats: 4, sub: 2, bpm: 120, min: 70, max: 200, wet: 0.14, gen: 'grunge',
+    parts: ['drums', 'gtr'], sets: ['electric'], names: { gtr: 'Electric' },
+    lv: { drums: 1, gtr: 0.3 }, trim: -7.8,
+    secs: [[0, 'Riff'], [5, 'Build'], [6, 'Chorus'], [14, 'Riff']],
     v: {
       major: {
-        form: ['VI:m', 'VI:m', 'IV:', 'V:', 'VI:m', 'VI:m', 'IV:', 'V:', 'VI:m', 'VI:m', 'IV:', 'V:', 'II:m', 'II:m', 'IV:', 'V:',
-          'I:', 'V:', 'VI:m', 'IV:', 'I:', 'V:', 'IV:', 'V:', 'VI:m', 'VI:m', 'IV:', 'V:', 'VI:m', 'VI:m', 'IV:', 'V:', 'II:m', 'II:m', 'IV:', 'V:',
-          'I:', 'V:', 'VI:m', 'IV:', 'I:', 'V:', 'IV:', 'V:', 'II:m', 'II:m', 'IV:', 'III:', 'II:m', 'II:m', 'IV:', 'III:'],
+        form: ['VI:m', 'V:5', 'VI:m', 'V:5', 'VI:m', 'V:', 'VI:sus4', 'I:', 'VI:sus4', 'I:', 'VI:sus4', 'I:', 'VI:sus4', 'I:', 'VI:m'],
         scales: ['pentatonic', 'major'],
       },
       minor: {
-        form: ['I:m', 'I:m', 'bVI:', 'bVII:', 'I:m', 'I:m', 'bVI:', 'bVII:', 'I:m', 'I:m', 'bVI:', 'bVII:', 'IV:m', 'IV:m', 'bVI:', 'bVII:',
-          'bIII:', 'bVII:', 'I:m', 'bVI:', 'bIII:', 'bVII:', 'bVI:', 'bVII:', 'I:m', 'I:m', 'bVI:', 'bVII:', 'I:m', 'I:m', 'bVI:', 'bVII:', 'IV:m', 'IV:m', 'bVI:', 'bVII:',
-          'bIII:', 'bVII:', 'I:m', 'bVI:', 'bIII:', 'bVII:', 'bVI:', 'bVII:', 'IV:m', 'IV:m', 'bVI:', 'V:', 'IV:m', 'IV:m', 'bVI:', 'V:'],
+        form: ['I:m', 'bVII:5', 'I:m', 'bVII:5', 'I:m', 'bVII:', 'I:sus4', 'bIII:', 'I:sus4', 'bIII:', 'I:sus4', 'bIII:', 'I:sus4', 'bIII:', 'I:m'],
         scales: ['pentatonic', 'natural'],
       },
     },
@@ -9283,21 +9279,43 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     GB_PRE, GB_CHORUS, [['c8b', 'C8b']],
     [['b1', 'BRC'], ['b2', 'BR2'], ['b3', 'BR'], ['b4', 'BR4'], ['b1', 'BRC'], ['b2', 'BR2'], ['b3', 'BR'], ['b8', 'BR8']],
   );
+    // Grunge Beat's clean electric guitar, from the user's tab (tuned D G C F A d, low to high).
+  // Each bar: [when, 'notes']. A note is a string letter and a fret: D (low), G, C, F, A, d (high).
+  // Every note rings to the end of its bar, or until its string is played again.
+  const GB_TUNING = { D: 38, G: 43, C: 48, F: 53, A: 57, d: 62 };
+  const GB_STRING = { D: 0, G: 1, C: 2, F: 3, A: 4, d: 5 };
+  const GB_GTR = {
+    1: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
+    2: [[0, 'D0'], [0.5, 'G2'], [1, 'D0'], [1.5, 'D0'], [2.5, 'G2'], [3, 'D0'], [3.5, 'D1']],
+    3: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
+    22: [[0, 'D0'], [0.5, 'G2'], [1, 'D0'], [1.5, 'D0'], [2.5, 'G2'], [3, 'D0'], [3.5, 'D1']],
+    23: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
+    24: [[0, 'D0'], [0.5, 'G2'], [1, 'D0'], [1.5, 'C2 F1 A0 d0'], [2.5, 'C2 F1 A0 d0'], [3, 'D0 G2 C2'], [3.5, 'G0 C0 F0']],
+    25: [[0, 'D2 G4 C4'], [1, 'D2 G4'], [1.5, 'F4 A2 d2'], [3, 'D2 G4 C4'], [3.5, 'G0 C0 F0']],
+    26: [[0, 'D5 G7 C7'], [0.5, 'D5 G7 C7 F6 A5'], [1, 'D5 G7 C7'], [1.5, 'C7 F6 A5 d5'], [2.5, 'C7 F6'], [3, 'D5 G7 C7 F6 A5 d5'], [3.5, 'G0 C0 F0']],
+    27: [[0, 'D2 G4 C4'], [1, 'D2 G4'], [1.5, 'F4 A2 d2'], [3, 'D2 G4 C4'], [3.5, 'G0 C0 F0']],
+    28: [[0, 'D5 G7 C7'], [0.5, 'D5 G7 C7 F6 A5'], [1, 'D5 G7 C7'], [1.5, 'C7 F6 A5 d5'], [2.5, 'G7 C7'], [3, 'D5 G7 C7 F6 A5 d5'], [3.5, 'G0 C0 F0']],
+    29: [[0, 'D2 G4 C4'], [1, 'D2 G4'], [1.5, 'F4 A2 d2'], [3, 'D2 G4 C4'], [3.5, 'G0 C0 F0']],
+    30: [[0, 'D5 G7 C7'], [0.5, 'D5 G7 C7 F6 A5'], [1, 'D5 G7 C7'], [1.5, 'C7 F6 A5 d5'], [3, 'D5 G7 C7 F6 A5 d5'], [3.5, 'G0 C0 F0']],
+    31: [[0, 'D2 G4 C4'], [1, 'D2 G4 C4'], [1.5, 'F4 A2 d2'], [3, 'D2 G4 C4'], [3.5, 'G0 C0 F0']],
+    32: [[0, 'D5 G7 C7'], [0.5, 'G7 C7 F6 A5 d5'], [1, 'D5 G7 C7'], [1.5, 'G7 C7 F6'], [2, 'D5 G7 C7 F6 A5 d5'], [3, 'D0'], [3.5, 'D1']],
+    33: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
+  };
+  // The bars in the order they play, and the drum beat under each.
+  const GB_ORDER = [[1, 'AC'], [2, 'B'], [3, 'A'], [22, 'B'], [23, 'A'], [24, 'F8'], [25, 'CC'], [26, 'CB'],
+    [27, 'CA'], [28, 'C4'], [29, 'CC'], [30, 'CB'], [31, 'CA'], [32, 'C8'], [33, 'A']];
   PRE_GEN.grunge = (S) => {
-    // Everything moves together from F# minor, keeping the bass between C#1 and G#3.
-    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = nearPc(tm, 30, 27, 38) - 30;
-    let last = LPB_NOTE('G#1');
-    GB_FORM.forEach(([bl, dr], bar) => {
-      const B = bar * 4;
-      // Bass, loud and gritty.
-      const Hb = S.rng('bsh', bar);
-      GB_BASS[bl].forEach(([b, note, len]) => {
-        const dead = note === 'x', m = dead ? last : LPB_NOTE(note) + T;
-        if (!dead) last = m;
-        S.add({ p: 'bass', k: 'b', b: B + b, n: m, d: len, v: (dead ? 0.8 : b === 0 ? 1 : b % 1 ? 0.86 : 0.93) * (0.95 + 0.1 * Hb()),
-          dt: hz(Hb, 4, 2), grit: true, x: dead ? { g: true } : null });
+    // The tab is in E minor; the guitar moves to the key picked, at most 6 half steps either way.
+    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = ((tm - 4 + 18) % 12) - 6;
+    GB_ORDER.forEach(([n, dr], bar) => {
+      const B = bar * 4, Hg = S.rng('gth', bar);
+      GB_GTR[n].forEach(([b, notes]) => {
+        const strum = notes.split(' ').map((tok) => ({ s: GB_STRING[tok[0]], m: GB_TUNING[tok[0]] + Number(tok.slice(1)) + T }))
+          .sort((x, y) => x.s - y.s);
+        const v = (b % 1 ? 0.78 : b % 2 ? 0.86 : 0.94) * (0.94 + 0.12 * Hg());
+        S.add({ p: 'gtr', k: 'g', b: B + b, v, n: strum, dt: hz(Hg, 5, 4),
+          x: { amp: 'clear', hold: Math.max(0.25, 4 - b), a: 0.36, rel: 0.15, gap: 0.012 } });
       });
-      // Drums, loud and punchy.
       const H = S.rng('drh', bar), hum = (v) => v * (0.94 + 0.12 * H()), roll = GB_ROLL[dr];
       GB_DRUMS[dr].split(' ').forEach((tok) => {
         const c = tok[0], o = parseFloat(tok.slice(1)), b = B + o, off = o % 1;

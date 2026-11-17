@@ -9214,76 +9214,13 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     });
   };
 
-  /* Grunge Beat: an original bass line and drum parts in F# minor at 240, in a half-time grunge
-     feel, moved as a whole to other keys. The bass is out front with a gritty pick tone and walks
-     into every change; the drums are loud and punchy. */
-  // Bass lines: [beat, note, length in beats]; 'x' is a dead note (the fretting hand just touches
-  // the string).
-  const GB_BASS = {
-    // Verse riff: F#m F#m D E.
-    v1: [[0, 'F#1', 1.5], [1.5, 'F#1', 0.5], [2, 'C#2', 1], [3, 'F#2', 1]],
-    v2: [[0, 'E2', 1], [1, 'C#2', 1], [2, 'A1', 1], [3, 'C#2', 1]],
-    v3: [[0, 'D2', 1.5], [1.5, 'D2', 0.5], [2, 'A1', 1], [3, 'D#2', 1]],
-    v4: [[0, 'E2', 1.5], [1.5, 'E2', 0.5], [2, 'B1', 1], [3, 'G#1', 1]],
-    toB: [[0, 'E2', 1], [1, 'D2', 1], [2, 'C#2', 1], [3, 'C2', 1]],
-    // The riff again in the second verse, busier.
-    w1: [[0, 'F#1', 1.5], [1.5, 'F#1', 0.5], [2, 'C#2', 1], [3, 'F#2', 0.5], [3.5, 'x', 0.5]],
-    w2: [[0, 'E2', 1], [1, 'C#2', 1], [2, 'A1', 0.5], [2.5, 'B1', 0.5], [3, 'C#2', 1]],
-    w3: [[0, 'D2', 1.5], [1.5, 'D2', 0.5], [2, 'F#2', 1], [3, 'D#2', 1]],
-    w4: [[0, 'E2', 1.5], [1.5, 'E2', 0.5], [2, 'B1', 0.5], [2.5, 'A1', 0.5], [3, 'G#1', 1]],
-    // Build (pre-chorus): Bm Bm D E, a driving pulse that climbs into the chorus.
-    p1: [[0, 'B1', 1], [1, 'B1', 1], [2, 'B1', 1], [3, 'D2', 1]],
-    p2: [[0, 'B1', 1], [1, 'B1', 1], [2, 'A1', 1], [3, 'C#2', 1]],
-    p3: [[0, 'D2', 1], [1, 'D2', 1], [2, 'F#2', 1], [3, 'D2', 1]],
-    p4: [[0, 'E2', 1], [1, 'E2', 1], [2, 'F#2', 1], [3, 'G#2', 1]],
-    // Chorus: A E F#m D A E D E.
-    c1: [[0, 'A2', 1], [1, 'A1', 1], [2, 'A1', 1], [3, 'E2', 1]],
-    c2: [[0, 'E2', 1], [1, 'E2', 1], [2, 'B1', 1], [3, 'G#1', 1]],
-    c3: [[0, 'F#1', 1], [1, 'F#1', 1], [2, 'F#2', 1], [3, 'C#2', 1]],
-    c4: [[0, 'D2', 1], [1, 'D2', 1], [2, 'C#2', 1], [3, 'B1', 1]],
-    c5: [[0, 'A1', 1], [1, 'A1', 1], [2, 'A2', 1], [3, 'A1', 1]],
-    c6: [[0, 'E2', 1], [1, 'E2', 1], [2, 'E2', 1], [3, 'C#2', 1]],
-    c7: [[0, 'D2', 1], [1, 'D2', 1], [2, 'A1', 1], [3, 'D#2', 1]],
-    c8: [[0, 'E2', 1], [1, 'E2', 1], [2, 'G#1', 1], [3, 'E1', 1]],
-    c8b: [[0, 'E2', 1], [1, 'D2', 1], [2, 'C#2', 1], [3, 'A#1', 1]],
-    // Bridge: Bm Bm D C#, twice, in long notes.
-    b1: [[0, 'B1', 2], [2, 'B1', 1], [3, 'D2', 1]],
-    b2: [[0, 'B1', 1.5], [1.5, 'A1', 0.5], [2, 'F#1', 1], [3, 'A1', 1]],
-    b3: [[0, 'D2', 2], [2, 'A1', 1], [3, 'C2', 1]],
-    b4: [[0, 'C#2', 2], [2, 'G#1', 1], [3, 'C#2', 1]],
-    b8: [[0, 'C#2', 1], [1, 'C#2', 1], [2, 'G#1', 1], [3, 'G#1', 0.5], [3.5, 'x', 0.5]],
-  };
-  // Drums, a letter and a beat for each hit: h hi-hat, o open hi-hat, r ride, C crash, k kick,
-  // s snare, g ghost snare, t m f high, middle and floor toms. The snare is on beat 3.
-  const GB_DRUMS = {
-    I1C: 'C0 k0 h1 h2 h3', I1: 'h0 h1 h2 h3 k0', I4: 'h0 h1 h2 k0 s3 s3.5',
-    AC: 'C0 h1 h2 h3 k0 s2 k3', A: 'h0 h1 h2 h3 k0 s2 k3', B: 'h0 h1 h2 h3 k0 k1 s2',
-    F4: 'h0 h1 h2 k0 k1 s2 s3 s3.5', F8: 'h0 h1 k0 k1 s2 t2.5 m3 f3.5',
-    PC: 'C0 f1 f2 f3 k0 s2', P2: 'f0 f1 f2 f3 k0 k1.5 s2', P3: 'f0 f1 f2 f3 k0 s2 k3', P4: 'k0 k1 k2 k3 s0 s0.5 s1 s1.5 s2 s2.5 s3 s3.5',
-    CC: 'C0 o1 o2 o3 k0 s2 k3', CB: 'o0 o1 o2 o3 k0 k1.5 s2 s3.5', CA: 'o0 o1 o2 o3 k0 s2 k3', C4: 'o0 o1 o2 o3 k0 k1 s2 s3 s3.5',
-    C8: 'o0 k0 k1 s1.5 s2 t2.5 m3 f3.5', C8b: 'k0 k1 k2 k3 s0 s0.5 s1 s1.5 t2 t2.5 f3 f3.5',
-    VAC: 'C0 o1 h2 h3 k0 s2 k3 g3.5', VA: 'h0 o1 h2 h3 k0 s2 k3 g3.5', VB: 'h0 h1 h2 o3 k0 k1 g1.5 s2', VF4: 'h0 o1 h2 k0 k1 s2 s3 s3.5',
-    BRC: 'C0 r1 r2 r3 k0 k1.5 s2 f3', BR: 'r0 r1 r2 r3 k0 k1.5 s2 f3', BR2: 'r0 r1 r2 r3 k0 f1 s2 k3', BR4: 'r0 r1 r2 k0 k1.5 s2 f3 f3.5',
-    BR8: 'k0 k1 k2 k3 s0 s0.5 t1 t1.5 m2 m2.5 f3 f3.5',
-  };
-  // Fills where the drums build up through the measure.
-  const GB_ROLL = { P4: 1, C8b: 1, BR8: 1 };
-  // Each measure: [bass line, drums].
-  const GB_PRE = [['p1', 'PC'], ['p2', 'P2'], ['p3', 'P3'], ['p4', 'P4']];
-  const GB_CHORUS = [['c1', 'CC'], ['c2', 'CB'], ['c3', 'CA'], ['c4', 'C4'], ['c5', 'CC'], ['c6', 'CB'], ['c7', 'CA']];
-  const GB_FORM = [].concat(
-    [['v1', 'I1C'], ['v2', 'I1'], ['v3', 'I1'], ['v4', 'I4']], // intro: bass and hi-hat
-    [['v1', 'AC'], ['v2', 'B'], ['v3', 'A'], ['v4', 'F4'], ['v1', 'A'], ['v2', 'B'], ['v3', 'A'], ['toB', 'F8']],
-    GB_PRE, GB_CHORUS, [['c8', 'C8']],
-    [['w1', 'VAC'], ['w2', 'VB'], ['w3', 'VA'], ['w4', 'VF4'], ['w1', 'VA'], ['w2', 'VB'], ['w3', 'VA'], ['toB', 'F8']],
-    GB_PRE, GB_CHORUS, [['c8b', 'C8b']],
-    [['b1', 'BRC'], ['b2', 'BR2'], ['b3', 'BR'], ['b4', 'BR4'], ['b1', 'BRC'], ['b2', 'BR2'], ['b3', 'BR'], ['b8', 'BR8']],
-  );
-    // Grunge Beat's clean electric guitar, from the user's tab (tuned D G C F A d, low to high).
-  // Each bar: [when, 'notes']. A note is a string letter and a fret: D (low), G, C, F, A, d (high).
-  // Every note rings to the end of its bar, or until its string is played again.
-  const GB_TUNING = { D: 38, G: 43, C: 48, F: 53, A: 57, d: 62 };
-  const GB_STRING = { D: 0, G: 1, C: 2, F: 3, A: 4, d: 5 };
+  /* Grunge Beat: a clean electric guitar playing the user's tab, with drums, in E minor and moved as
+     a whole to other keys. One of the tab's quarter notes is two of the app's beats, so 240 here
+     sounds like 120. */
+  // The guitar, bar by bar, numbered as in the tab: [beat, notes]. Beats count the tab's quarter
+  // notes from 0 (0 is beat 1, 1.5 the "and" of 2, 3.5 the "and" of 4). A note is a string and a
+  // fret, with the strings named D G C F A d, low to high. Every note rings to the end of its bar,
+  // or until its string is picked again.
   const GB_GTR = {
     1: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
     2: [[0, 'D0'], [0.5, 'G2'], [1, 'D0'], [1.5, 'D0'], [2.5, 'G2'], [3, 'D0'], [3.5, 'D1']],
@@ -9301,35 +9238,60 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     32: [[0, 'D5 G7 C7'], [0.5, 'G7 C7 F6 A5 d5'], [1, 'D5 G7 C7'], [1.5, 'G7 C7 F6'], [2, 'D5 G7 C7 F6 A5 d5'], [3, 'D0'], [3.5, 'D1']],
     33: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
   };
-  // The bars in the order they play, and the drum beat under each.
-  const GB_ORDER = [[1, 'AC'], [2, 'B'], [3, 'A'], [22, 'B'], [23, 'A'], [24, 'F8'], [25, 'CC'], [26, 'CB'],
-    [27, 'CA'], [28, 'C4'], [29, 'CC'], [30, 'CB'], [31, 'CA'], [32, 'C8'], [33, 'A']];
+  // The tuning: each string's open note (MIDI numbers), D2 G2 C3 F3 A3 D4.
+  const GB_TUNE = { D: 38, G: 43, C: 48, F: 53, A: 57, d: 62 };
+  // The guitar's sound: 'clear' is a clean amp.
+  const GB_AMP = 'clear';
+  // Drums, one pattern per bar, with beats counted like the tab (0 is beat 1, 1.5 the "and" of 2):
+  // a letter and a beat for each hit. h hi-hat, o open hi-hat, r ride, C crash, k kick, s snare,
+  // g ghost snare, t m f high, middle and floor toms.
+  const GB_DRUMS = {
+    // The user's drum score, measures 1 to 5.
+    D1: 'f1 f2 f3',
+    D2: 'C0 r0 r1 r2 r3 k0 s2',
+    D3: 'r0 r1 r2 r3 k0 k1 k3 s2',
+    D4: 'r0 r1 r2 r3 k0 k1 k3 s2',
+    D5: 'r0 r1 r2 r3 k1 k3 s2',
+    // The build and the chorus.
+    BUILD: 'h0 h0.5 h1 h1.5 h2 h2.5 k0 k1.5 k2 k2.5 s1 s3 t3.25 m3.5 f3.75',
+    CH1: 'C0 o0.5 o1 o1.5 o2 o2.5 o3 o3.5 k0 k1.5 k2 k2.75 s1 s3 s3.75',
+    CH2: 'o0 o0.5 o1 o1.5 o2 o2.5 o3 o3.5 k0 k1.5 k2 k2.5 s1 s3 s3.5 s3.75',
+    CH8: 'o0 o0.5 o1 o1.5 o2 k0 k1.5 k2 k2.5 s1 s2.75 s3 t3.25 m3.5 f3.75',
+  };
+  // The order the tab's bars play in, and the drums under each: [tab bar, drums].
+  const GB_ORDER = [
+    [1, 'D1'], [2, 'D2'], [3, 'D3'], [22, 'D4'], [3, 'D5'], // riff: the drum score, measure for measure
+    [22, 'D3'], [3, 'D4'], [22, 'D5'], [3, 'D3'], [22, 'D4'], [3, 'D5'], // then measures 3 to 5 over and over
+    [22, 'D3'], [3, 'D4'], [22, 'D5'], [23, 'D3'],
+    [24, 'BUILD'], // build
+    [25, 'CH1'], [26, 'CH2'], [27, 'CH1'], [28, 'CH2'], [29, 'CH1'], [30, 'CH2'], [31, 'CH1'], [32, 'CH8'], // chorus
+    [33, 'D3'], // riff
+  ];
   PRE_GEN.grunge = (S) => {
-    // The tab is in E minor; the guitar moves to the key picked, at most 6 half steps either way.
-    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = ((tm - 4 + 18) % 12) - 6;
-    GB_ORDER.forEach(([n, dr], bar) => {
-      const B = bar * 4, Hg = S.rng('gth', bar);
+    // The tab is in E minor: everything moves to the key picked, at most 9 half steps up or 2 down.
+    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = ((tm + 10) % 12) - 2;
+    GB_ORDER.forEach(([n, dr], i) => {
+      // Guitar: each tab bar takes up two of the app's measures.
+      const B = i * 8, Hg = S.rng('gth', i);
       GB_GTR[n].forEach(([b, notes]) => {
-        const strum = notes.split(' ').map((tok) => ({ s: GB_STRING[tok[0]], m: GB_TUNING[tok[0]] + Number(tok.slice(1)) + T }))
+        const strum = notes.split(' ').map((tok) => ({ s: 'DGCFAd'.indexOf(tok[0]), m: GB_TUNE[tok[0]] + Number(tok.slice(1)) + T }))
           .sort((x, y) => x.s - y.s);
-        const v = (b % 1 ? 0.78 : b % 2 ? 0.86 : 0.94) * (0.94 + 0.12 * Hg());
-        S.add({ p: 'gtr', k: 'g', b: B + b, v, n: strum, dt: hz(Hg, 5, 4),
-          x: { amp: 'clear', hold: Math.max(0.25, 4 - b), a: 0.36, rel: 0.15, gap: 0.012 } });
+        const v = (b % 1 ? 0.8 : b % 2 ? 0.88 : 0.95) * (0.94 + 0.12 * Hg());
+        S.add({ p: 'gtr', k: 'g', b: B + b * 2, v, n: strum, dt: hz(Hg, 5, 4),
+          x: { amp: GB_AMP, hold: (4 - b) * 2 - 0.1, a: strum.length > 1 ? 0.34 : 0.42, rel: 0.12, gap: 0.011 } });
       });
-      const H = S.rng('drh', bar), hum = (v) => v * (0.94 + 0.12 * H()), roll = GB_ROLL[dr];
+      // Drums, loud and punchy.
+      const H = S.rng('drh', i), hum = (v) => v * (0.94 + 0.12 * H());
       GB_DRUMS[dr].split(' ').forEach((tok) => {
-        const c = tok[0], o = parseFloat(tok.slice(1)), b = B + o, off = o % 1;
+        const c = tok[0], o = parseFloat(tok.slice(1)), b = B + o * 2, off = (o * 2) % 1;
         if (c === 'k') S.drum('kickTight', b, hum(o === 0 ? 0.9 : 0.8), hz(H, 3, 0), H());
-        else if (c === 's') S.drum('snTight', b, roll ? 0.5 + 0.13 * o : hum(off ? 0.72 : 0.96), hz(H, 3, 2), H());
+        else if (c === 's') S.drum('snTight', b, hum(off ? 0.72 : 0.96), hz(H, 3, 2), H());
         else if (c === 'g') S.drum('snGhost', b, hum(0.42), hz(H, 4, 4), H());
-        else if (c === 'h') S.drum('hatC', b, hum(o % 2 ? 0.42 : 0.52), hz(H, 3, 0), H());
+        else if (c === 'h') S.drum('hatC', b, hum(o % 1 ? 0.42 : 0.52), hz(H, 3, 0), H());
         else if (c === 'o') S.add({ p: 'drums', k: 'd', x: 'hatO', b, v: hum(0.5), dt: hz(H, 3, 0), r: H(), cut: 0.9 });
-        else if (c === 'r') S.drum('ride', b, hum(o % 2 ? 0.5 : 0.6), hz(H, 3, 0), H());
+        else if (c === 'r') S.drum('ride', b, hum(o % 1 ? 0.5 : 0.6), hz(H, 3, 0), H());
         else if (c === 'C') S.drum('crash', b, 0.75, 0, H());
-        else {
-          const tom = { t: 'tomH', m: 'tomM', f: 'tomF' }[c], groove = c === 'f' && !roll && /^[PB]/.test(dr) && !off;
-          S.drum(tom, b, roll ? 0.55 + 0.11 * o : hum(groove ? 0.62 : 0.84), hz(H, 3, 2), H());
-        }
+        else S.drum({ t: 'tomH', m: 'tomM', f: 'tomF' }[c], b, hum(0.84), hz(H, 3, 2), H());
       });
     });
   };

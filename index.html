@@ -9296,6 +9296,112 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     });
   };
 
+  
+  /* As You Are: a clean electric guitar playing the user's tab, with the user's drum score and the
+     user's chorus bass line, in E minor and moved as a whole to other keys. One of the tab's quarter
+     notes is two of the app's beats, so 240 here sounds like 120. Each of the app's measures (half a
+     tab bar) is one measure of the drum and bass scores. */
+  // The guitar, bar by bar, numbered as in the tab: [beat, notes]. Beats count the tab's quarter
+  // notes from 0 (0 is beat 1, 1.5 the "and" of 2, 3.5 the "and" of 4). A note is a string and a
+  // fret, with the strings named D G C F A d, low to high. Every note rings to the end of its bar,
+  // or until its string is picked again.
+  const AY_GTR = {
+    1: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
+    2: [[0, 'D0'], [0.5, 'G2'], [1, 'D0'], [1.5, 'D0'], [2.5, 'G2'], [3, 'D0'], [3.5, 'D1']],
+    3: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
+    22: [[0, 'D0'], [0.5, 'G2'], [1, 'D0'], [1.5, 'D0'], [2.5, 'G2'], [3, 'D0'], [3.5, 'D1']],
+    23: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
+    24: [[0, 'D0'], [0.5, 'G2'], [1, 'D0'], [1.5, 'C2 F1 A0 d0'], [2.5, 'C2 F1 A0 d0'], [3, 'D0 G2 C2'], [3.5, 'G0 C0 F0']],
+    25: [[0, 'D2 G4 C4'], [1, 'D2 G4'], [1.5, 'F4 A2 d2'], [3, 'D2 G4 C4'], [3.5, 'G0 C0 F0']],
+    26: [[0, 'D5 G7 C7'], [0.5, 'D5 G7 C7 F6 A5'], [1, 'D5 G7 C7'], [1.5, 'C7 F6 A5 d5'], [2.5, 'C7 F6'], [3, 'D5 G7 C7 F6 A5 d5'], [3.5, 'G0 C0 F0']],
+    27: [[0, 'D2 G4 C4'], [1, 'D2 G4'], [1.5, 'F4 A2 d2'], [3, 'D2 G4 C4'], [3.5, 'G0 C0 F0']],
+    28: [[0, 'D5 G7 C7'], [0.5, 'D5 G7 C7 F6 A5'], [1, 'D5 G7 C7'], [1.5, 'C7 F6 A5 d5'], [2.5, 'G7 C7'], [3, 'D5 G7 C7 F6 A5 d5'], [3.5, 'G0 C0 F0']],
+    29: [[0, 'D2 G4 C4'], [1, 'D2 G4'], [1.5, 'F4 A2 d2'], [3, 'D2 G4 C4'], [3.5, 'G0 C0 F0']],
+    30: [[0, 'D5 G7 C7'], [0.5, 'D5 G7 C7 F6 A5'], [1, 'D5 G7 C7'], [1.5, 'C7 F6 A5 d5'], [3, 'D5 G7 C7 F6 A5 d5'], [3.5, 'G0 C0 F0']],
+    31: [[0, 'D2 G4 C4'], [1, 'D2 G4 C4'], [1.5, 'F4 A2 d2'], [3, 'D2 G4 C4'], [3.5, 'G0 C0 F0']],
+    32: [[0, 'D5 G7 C7'], [0.5, 'G7 C7 F6 A5 d5'], [1, 'D5 G7 C7'], [1.5, 'G7 C7 F6'], [2, 'D5 G7 C7 F6 A5 d5'], [3, 'D0'], [3.5, 'D1']],
+    33: [[0, 'D2'], [1, 'G0'], [1.5, 'D2'], [2, 'G0'], [2.5, 'D2'], [3, 'D2'], [3.5, 'D1']],
+  };
+  // The tuning: each string's open note (MIDI numbers), D2 G2 C3 F3 A3 D4.
+  const AY_TUNE = { D: 38, G: 43, C: 48, F: 53, A: 57, d: 62 };
+  // The guitar's sound: 'clear' is a clean amp.
+  const AY_AMP = 'clear';
+  // The order the tab's bars play in: the verse (bars 3 and 4 five times in all), the build, the
+  // chorus, and the verse again.
+  const AY_ORDER = [1, 2, 3, 22, 3, 22, 3, 22, 3, 22, 3, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33];
+  const AY_BUILD = [24], AY_CHORUS_BARS = [25, 26, 27, 28, 29, 30, 31, 32];
+  // Drums, one measure of the drum score each, with a letter and a beat for each hit (beats 0 to 3.5,
+  // 0 is beat 1): r ride, h hi-hat, C crash, k kick, s snare, t m f high, middle and floor toms.
+  const AY_DRUMS = {
+    // Verse score, measure 1: under the very first measure only.
+    V1: 'f1 f2 f3',
+    // Verse score, measures 2 to 5: these loop under the rest of the verse.
+    V2: 'C0 r0 r1 r2 r3 k0 s2',
+    V3: 'r0 r1 r2 r3 k0 k1 k3 s2',
+    V4: 'r0 r1 r2 r3 k0 k1 k3 s2',
+    V5: 'r0 r1 r2 r3 k1 k3 s2',
+    // Chorus score, measures 1 to 4: these loop under the whole chorus.
+    C1: 'C0 C2 k0 s2',
+    C2: 'C0 C2 k0 k1 k3 s2',
+    C3: 'C0 k0 k1 k2 k3 s1 s1.5 s2 s2.5 s3 s3.5',
+    C4: 'k0 k1 k2 k3 s0 s0.5 s1 s1.5 s2 s2.5 s3 s3.5',
+    // The build (unchanged): a beat, then a fill into the chorus.
+    B1: 'h0 h1 h2 h3 k0 s2 k3',
+    B2: 'h0 h1 k0 k1 s2 t2.5 m3 f3.5',
+  };
+  const AY_VERSE_LOOP = ['V2', 'V3', 'V4', 'V5'], AY_CHORUS_LOOP = ['C1', 'C2', 'C3', 'C4'];
+  // Chorus bass, one measure of the bass score each, looping under the whole chorus:
+  // [beat, fret on the lowest string (tuned to D like the guitar), length in beats].
+  const AY_BASS = [
+    [[0, 2, 2], [2, 2, 1], [3, 2, 1]],
+    [[0, 2, 1], [1, 2, 1], [2, 2, 1], [3, 4, 1]],
+    [[0, 5, 1], [1, 5, 1], [2, 5, 1], [3, 5, 1]],
+    [[0, 5, 1], [1, 5, 1], [2, 5, 1], [3, 0, 1]],
+  ];
+  const AY_BASS_LOW = 26; // the bass's lowest string, open: D1
+  PRE_GEN.asyouare = (S) => {
+    // The tab is in E minor: everything moves to the key picked, at most 9 half steps up or 2 down.
+    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = ((tm + 10) % 12) - 2;
+    let verse = 0, chorus = 0;
+    AY_ORDER.forEach((n, i) => {
+      // Guitar: each tab bar takes up two of the app's measures.
+      const B = i * 8, Hg = S.rng('gth', i);
+      AY_GTR[n].forEach(([b, notes]) => {
+        const strum = notes.split(' ').map((tok) => ({ s: 'DGCFAd'.indexOf(tok[0]), m: AY_TUNE[tok[0]] + Number(tok.slice(1)) + T }))
+          .sort((x, y) => x.s - y.s);
+        const v = (b % 1 ? 0.8 : b % 2 ? 0.88 : 0.95) * (0.94 + 0.12 * Hg());
+        S.add({ p: 'gtr', k: 'g', b: B + b * 2, v, n: strum, dt: hz(Hg, 5, 4),
+          x: { amp: AY_AMP, hold: (4 - b) * 2 - 0.1, a: strum.length > 1 ? 0.34 : 0.42, rel: 0.12, gap: 0.011 } });
+      });
+      [0, 1].forEach((h) => {
+        const bar = i * 2 + h, B2 = bar * 4;
+        // Which drum measure plays here, and in the chorus which bass measure.
+        let dr, bass = null;
+        if (AY_CHORUS_BARS.includes(n)) { dr = AY_CHORUS_LOOP[chorus % 4]; bass = AY_BASS[chorus % 4]; chorus++; }
+        else if (AY_BUILD.includes(n)) dr = h ? 'B2' : 'B1';
+        else if (bar === 0) dr = 'V1';
+        else { dr = AY_VERSE_LOOP[verse % 4]; verse++; }
+        // Drums, loud and punchy.
+        const H = S.rng('drh', bar), hum = (v) => v * (0.94 + 0.12 * H());
+        AY_DRUMS[dr].split(' ').forEach((tok) => {
+          const c = tok[0], o = parseFloat(tok.slice(1)), b = B2 + o, off = o % 1;
+          if (c === 'k') S.drum('kickTight', b, hum(o === 0 ? 0.9 : 0.8), hz(H, 3, 0), H());
+          else if (c === 's') S.drum('snTight', b, hum(off ? 0.72 : 0.96), hz(H, 3, 2), H());
+          else if (c === 'h') S.drum('hatC', b, hum(o % 2 ? 0.42 : 0.52), hz(H, 3, 0), H());
+          else if (c === 'r') S.drum('ride', b, hum(o % 2 ? 0.5 : 0.6), hz(H, 3, 0), H());
+          else if (c === 'C') S.drum('crash', b, o === 0 ? 0.75 : 0.6, 0, H());
+          else S.drum({ t: 'tomH', m: 'tomM', f: 'tomF' }[c], b, hum(0.84), hz(H, 3, 2), H());
+        });
+        // Bass: punchy picked notes, a little grit so it cuts through.
+        if (bass) {
+          const Hb = S.rng('bsh', bar);
+          bass.forEach(([b, fret, len]) => S.add({ p: 'bass', k: 'b', b: B2 + b, n: AY_BASS_LOW + fret + T, d: len,
+            v: (b === 0 ? 1 : 0.92) * (0.95 + 0.1 * Hb()), dt: hz(Hb, 4, 2), grit: true }));
+        }
+      });
+    });
+  };
+
   /* ---------- Compiling a preset for one key ---------- */
   function preCompile(P, vk, root) {
     const V = P.v[vk] || P.v[Object.keys(P.v)[0]];

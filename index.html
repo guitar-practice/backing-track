@@ -3270,6 +3270,30 @@ const PRE_LIST = [
       },
     },
   },
+  {
+    // As You Are: a clean electric guitar playing the user's tab, the user's drum score, and the
+    // user's bass line in the chorus, in E minor at 240 (one of the tab's quarter notes is two beats
+    // here, so 240 sounds like 120).
+    id: 'asyouare', fam: 'rock', name: 'As You Are', tag: 'Grunge',
+    meter: '4/4', beats: 4, sub: 2, bpm: 240, min: 160, max: 250, wet: 0.14, gen: 'asyouare',
+    parts: ['drums', 'bass', 'gtr'], sets: ['electric', 'bass'], names: { gtr: 'Clean electric' },
+    lv: { drums: 1, bass: 2.3, gtr: 1 }, trim: -8.6,
+    secs: [[0, 'Verse'], [26, 'Build'], [28, 'Chorus'], [44, 'Verse']],
+    v: {
+      major: {
+        form: ['VI:m', 'VI:m', 'V:5', 'V:5', 'VI:m', 'VI:m', 'V:5', 'V:5', 'VI:m', 'VI:m', 'V:5', 'V:5', 'VI:m', 'VI:m', 'V:5', 'V:5', 'VI:m', 'VI:m', 'V:5', 'V:5', 'VI:m', 'VI:m', 'V:5', 'V:5', 'VI:m', 'VI:m', 'V:', 'V:',
+          'VI:5', 'VI:sus4 VI:5', 'I:', 'I:', 'VI:5', 'VI:sus4 VI:5', 'I:', 'I:', 'VI:5', 'VI:sus4 VI:5', 'I:', 'I:', 'VI:5', 'VI:sus4 VI:5', 'I:', 'I:',
+          'VI:m', 'VI:m'],
+        scales: ['pentatonic', 'major'],
+      },
+      minor: {
+        form: ['I:m', 'I:m', 'bVII:5', 'bVII:5', 'I:m', 'I:m', 'bVII:5', 'bVII:5', 'I:m', 'I:m', 'bVII:5', 'bVII:5', 'I:m', 'I:m', 'bVII:5', 'bVII:5', 'I:m', 'I:m', 'bVII:5', 'bVII:5', 'I:m', 'I:m', 'bVII:5', 'bVII:5', 'I:m', 'I:m', 'bVII:', 'bVII:',
+          'I:5', 'I:sus4 I:5', 'bIII:', 'bIII:', 'I:5', 'I:sus4 I:5', 'bIII:', 'bIII:', 'I:5', 'I:sus4 I:5', 'bIII:', 'bIII:', 'I:5', 'I:sus4 I:5', 'bIII:', 'bIII:',
+          'I:m', 'I:m'],
+        scales: ['pentatonic', 'natural'],
+      },
+    },
+  },
 ];
 const preById = (id) => PRE_LIST.find((p) => p.id === id);
 </script>

@@ -1637,7 +1637,11 @@
           <button type="button" data-d="10" aria-label="10 bpm faster">+10</button>
         </div>
       </div>
-
+      <div class="layers">
+        <span class="sublbl" id="ppLayerLbl">Layer on top</span>
+        <div class="layerchips" id="ppLayerChips" role="group" aria-labelledby="ppLayerLbl"></div>
+        <div class="layerinsts" id="ppLayerInsts" hidden></div>
+      </div>
       <details class="mix" id="ppMixBox">
         <summary><span>Mix levels</span><span class="mixstat" id="ppMixStat"></span></summary>
         <div class="mixrows" id="ppMixRows"></div>
@@ -3470,7 +3474,9 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     pre: {
       side: 'build', id: 'slowburn', minor: false, mode: 'dorian', bpm: {}, root: 9, build: null, mixOpen: false,
       mix: { drums: { on: true, vol: 80 }, bass: { on: true, vol: 80 }, gtr: { on: true, vol: 80 }, keys: { on: true, vol: 80 } },
-    },
+      // Layers on top of a preset (the same ones Build has): which are on, the Drums layer's beat,
+      // instrument picks, and their level in the mix.
+      layer: [], layerKit: 'rock', layerInst: {}, layers: { on: true, vol: 70 },    },
   };
   load();
   const hash = (location.hash || '').slice(1);
@@ -3616,7 +3622,12 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
           });
         }
         d.mixOpen = pr.mixOpen === true;
-        const b = pr.build;
+        if (Array.isArray(pr.layer)) d.layer = LAYERS.map((l) => l.id).filter((id) => pr.layer.includes(id));
+        if (DRUM_KITS.some((k) => k.id === pr.layerKit)) d.layerKit = pr.layerKit;
+        if (pr.layers && typeof pr.layers === 'object') {
+          d.layers = { on: pr.layers.on !== false, vol: Number.isFinite(pr.layers.vol) ? Math.max(0, Math.min(100, Math.round(pr.layers.vol))) : 70 };
+        }
+        d.layerInst = cleanLayerInst(pr.layerInst, d.layer);        const b = pr.build;
         if (pr.side === 'presets' && b && typeof b === 'object' && Number.isInteger(b.root) && b.root >= 0 && b.root < 12 && SCALE_ORDER.includes(b.scale)) {
           d.side = 'presets';
           d.build = { root: b.root, scale: b.scale };
@@ -3633,7 +3644,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   }
   // Everything that changes what the backing track sounds like.
   const audioSig = () => (preOn() ? JSON.stringify(['pre', state.pre.id, preVk(prePreset()), state.root, preBpmOf(prePreset()), state.pre.mix,
-    state.realInst, booted && state.realInst ? readySets() : '']) : JSON.stringify([state.root, state.scale, state.slots, state.preset, state.meter, state.bpm,
+    state.pre.layer, state.pre.layerKit, state.pre.layerInst, state.pre.layers,    state.realInst, booted && state.realInst ? readySets() : '']) : JSON.stringify([state.root, state.scale, state.slots, state.preset, state.meter, state.bpm,
     state.mix.drums, state.mix.chords, state.mix.bass, state.mix.layers, state.mix.layer, state.mix.drumKit,
     state.mix.inst, state.mix.layerInst, state.mix.strum,
     state.realInst, booted && state.realInst ? readySets() : '']));
@@ -4867,7 +4878,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   // A gain per mix part (Build's or a preset's) into dest.
   function makeParts(c, dest) {
     const g = {};
-    (preOn() ? PRE_PARTS : MIX_PARTS).forEach(([p]) => {
+    (preOn() ? PRE_PARTS.concat([['layers', 'Layers']]) : MIX_PARTS).forEach(([p]) => {
       const n = c.createGain();
       n.gain.value = preOn() ? preGain(p) : partGain(p);
       n.connect(dest);
@@ -5283,7 +5294,11 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   }
   function setsNeeded() {
     const need = new Set(['acoustic', 'bass']); // note previews, drills and every bass line
-    if (preOn()) { prePreset().sets.forEach((x) => need.add(x)); return need; }
+    if (preOn()) {
+      prePreset().sets.forEach((x) => need.add(x));
+      preLayerList().forEach((L) => { const i = L.src && preLayerInst(L); if (i) need.add(instById(i).set); });
+      return need;
+    }
     const add = (inst) => { if (inst) need.add(instById(inst).set); };
     add(mainInst());
     activeLayers().forEach((L) => { if (L.src) add(layerInstOf(L)); });
@@ -9608,9 +9623,65 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
         preFire(e, Math.max(0, t + off * sec + (e.dt || 0)), sec, gains[e.p]);
       }
     }
+    preLayerStep(sc, pos, t, gains);
     if (live) uiQueue.push({ t, step: pos % sc.spb, slot: Math.floor(pos / sc.spb), inSlot: pos % sc.spb, len: sc.spb, pos, sc });
   }
 
+  /* Layers on top of a preset: the same sounds Build can layer, playing the preset's chords at its
+     tempo, in its meter (6/8 and 12/8 use Build's 6/8 patterns). Presets over 170 bpm layer at
+     half time so strums don't race. */
+  function preLayerList() { return state.pre.layer.map(layerById).filter(Boolean); }
+  function preLayerInst(L) { return instFor(presetById(L.src), state.pre.layerInst[L.id]); }
+  function preLayerKit() { return DRUM_KITS.find((k) => k.id === state.pre.layerKit) || DRUM_KITS[0]; }
+  function preLayerPattern(p, meter) {
+    const key = p.id + '|' + meter;
+    return patternCache[key] || (patternCache[key] = compilePattern(p, meter));
+  }
+  const preLayerChords = new WeakMap();
+  function preLayerStep(sc, pos, t, gains) {
+    const list = preLayerList();
+    if (!list.length || !gains.layers) return;
+    const P = sc.P, bpm = preBpmOf(P, sc.vk), sec = 60 / bpm;
+    const dotted = P.meter === '6/8' || P.meter === '12/8', half = !dotted && bpm > 170;
+    const meter = dotted ? '6/8' : P.meter === '3/4' ? '3/4' : '4/4';
+    // Layer steps (16ths) per preset beat, steps in one of the layer's measures, and in the whole loop.
+    const spb = dotted ? 6 : half ? 2 : 4, n = meter === '4/4' ? 16 : 12, all = Math.round(sc.N * spb);
+    const b0 = pos / sc.sub, g0 = Math.ceil(b0 * spb - 1e-6), g1 = Math.ceil(((pos + 1) / sc.sub) * spb - 1e-6);
+    if (g0 >= g1) return;
+    const saved = [state.meter, state.bpm];
+    try {
+      // The chord players time their notes from Build's meter and tempo, so borrow them for a moment.
+      state.meter = meter;
+      state.bpm = half ? bpm / 2 : bpm;
+      for (let g = g0; g < g1; g++) {
+        const beat = g / spb, step = g % n;
+        let k = 0;
+        while (k < sc.segs.length - 1 && sc.segs[k + 1].b <= beat + 1e-9) k++;
+        const sg = sc.segs[k], s0 = Math.ceil(sg.b * spb - 1e-6);
+        const s1 = k + 1 < sc.segs.length ? Math.ceil(sc.segs[k + 1].b * spb - 1e-6) : all;
+        let ch = preLayerChords.get(sg);
+        if (!ch || ch.ki !== keyInfo) { ch = { ki: keyInfo, c: preChord(sg) }; preLayerChords.set(sg, ch); }
+        let tt = t + (beat - b0) * sec;
+        if (!dotted && !half && P.sw8 && g % 4 === 2) tt += (P.sw8(bpm) - 0.5) * sec;
+        else if (!dotted && !half && P.sw16 && g % 2 === 1) tt += P.sw16 * sec;
+        list.forEach((L) => {
+          if (L.drums) {
+            const DP = preLayerPattern(preLayerKit(), meter);
+            for (const d in DRUMS) {
+              const c = DP.tracks[d] && DP.tracks[d][step];
+              if (c && c !== '-') DRUMS[d](tt, VEL[c] || 0.7, gains.layers);
+            }
+            return;
+          }
+          const src = presetById(L.src);
+          playPart(ch.c, src, preLayerPattern(src, meter), step, g - s0, s1 - g, s1 - s0, tt, gains.layers, preLayerInst(L));
+        });
+      }
+    } finally {
+      state.meter = saved[0];
+      state.bpm = saved[1];
+    }
+  }
   /* ---------- Scheduler ---------- */
   // loopPos counts 16th-note steps through the whole progression. Bars restart when the loop does.
   let loopPos = 0, nextTime = 0, timer = null;
@@ -17535,7 +17606,12 @@ self.onmessage = async (e) => {
 
   // A preset's parts, levels and room (a Modal Jam mode can bring its own).
   const prePart = (P, k) => { const V = preV(P); return V[k] != null ? V[k] : P[k]; };
+  const PRE_LAYER_LV = 1.3; // the layers' level next to a preset
   function preGain(p) {
+    if (p === 'layers') {
+      const m = state.pre.layers;
+      return m.on ? (m.vol / 80) * (m.vol / 80) * PRE_LAYER_LV : 0;
+    }
     const P = prePreset(), m = state.pre.mix[p];
     if (!m || !m.on || !prePart(P, 'parts').includes(p)) return 0;
     const x = m.vol / 80;
@@ -17573,7 +17649,7 @@ self.onmessage = async (e) => {
       partGains = makeParts(ctx, bus);
       return;
     }
-    ['bass', 'gtr', 'keys'].forEach((p) => {
+    ['bass', 'gtr', 'keys', 'layers'].forEach((p) => {
       const old = partGains[p];
       fadeOut(old, preGain(p));
       const g = ctx.createGain();
@@ -17685,6 +17761,7 @@ self.onmessage = async (e) => {
     renderPreNow(playing && ppLast.sc ? ppLast.sc : sc);
     renderPreTry(P);
     renderPreMix();
+    renderPreLayers();
     renderPreLib();
   }
   function renderPreTempo() {
@@ -17776,8 +17853,98 @@ self.onmessage = async (e) => {
       row.append(lab, r);
       ppMixRows.appendChild(row);
     });
+    // Layers: one row for everything layered on top (greyed out when no layer is on).
+    const lm = state.pre.layers, lhas = state.pre.layer.length > 0, li = ppMixRows.children.length;
+    const lrow = el('div', 'mixrow' + (lhas ? '' : ' none') + (lm.on ? '' : ' off'));
+    const lb = el('button', 'toggle', 'Layers');
+    lb.type = 'button';
+    lb.disabled = !lhas;
+    lb.setAttribute('aria-pressed', String(lhas && lm.on));
+    lb.setAttribute('aria-label', lhas ? 'Layers' + (lm.on ? ', on' : ', muted') : 'Layers, none on');
+    lb.addEventListener('click', () => {
+      lm.on = !lm.on;
+      save();
+      applyPreGain('layers');
+      renderPreMix();
+      const again = ppMixRows.children[li];
+      if (again) again.querySelector('button').focus({ preventScroll: true });
+    });
+    const lr = document.createElement('input');
+    lr.type = 'range'; lr.min = '0'; lr.max = '100'; lr.step = '1';
+    lr.value = String(lm.vol);
+    lr.disabled = !lhas;
+    lr.setAttribute('aria-label', 'Layers volume');
+    lr.addEventListener('input', () => { lm.vol = Number(lr.value); applyPreGain('layers'); });
+    lr.addEventListener('change', save);
+    lrow.append(lb, lr);
+    ppMixRows.appendChild(lrow);
     const off = PRE_PARTS.filter(([p]) => prePart(P, 'parts').includes(p) && !state.pre.mix[p].on).map(([p, n]) => ((P.names && P.names[p]) || n).toLowerCase());
+    if (lhas && !lm.on) off.push('layers');
     ppMixStat.textContent = off.length ? cap(andList(off)) + ' muted' : '';
+  }
+
+  // Layer on top, Presets side: the same layers as Build, playing along with whichever preset is on.
+  const ppLayerChips = $('ppLayerChips'), ppLayerInsts = $('ppLayerInsts');
+  function setPreLayer(id, on) {
+    const list = state.pre.layer;
+    state.pre.layer = LAYERS.map((l) => l.id).filter((x) => (x === id ? on : list.includes(x)));
+    if (!on) delete state.pre.layerInst[id]; // back on later means back to its own instrument
+  }
+  function preLayersChanged(focus) {
+    save();
+    renderPreLayers();
+    renderPreMix();
+    const f = focus && document.querySelector(focus);
+    if (f) f.focus({ preventScroll: true });
+  }
+  function renderPreLayers() {
+    // One instrument menu for each layer that is on and can switch.
+    ppLayerInsts.innerHTML = '';
+    const sw = preLayerList().filter((L) => L.src && presetById(L.src).pick);
+    ppLayerInsts.hidden = !sw.length;
+    sw.forEach((L) => {
+      const p = presetById(L.src), row = el('label', 'layerinst'), sel = document.createElement('select');
+      INSTRUMENTS.forEach((i) => sel.add(new Option(i.name + (i.id === p.inst ? ' (default)' : ''), i.id)));
+      sel.value = preLayerInst(L);
+      sel.addEventListener('change', () => {
+        if (sel.value === p.inst) delete state.pre.layerInst[L.id];
+        else state.pre.layerInst[L.id] = sel.value;
+        save();
+        if (!playing) previewInst(preLayerInst(L));
+      });
+      row.append(el('span', null, L.name + ' layer'), sel);
+      ppLayerInsts.appendChild(row);
+    });
+    ppLayerChips.innerHTML = '';
+    LAYERS.forEach((L) => {
+      const on = state.pre.layer.includes(L.id), kit = L.drums ? preLayerKit() : null;
+      const b = el('button', 'tile layerchip');
+      b.type = 'button';
+      b.dataset.layer = L.id;
+      b.setAttribute('aria-pressed', String(on));
+      b.setAttribute('aria-label', L.drums ? 'Drums layer, ' + kit.name + ' beat' : L.name + ' layer, from the ' + L.from + ' beat');
+      b.append(el('span', 'ln', L.name), el('span', 'lf', L.drums ? kit.name : L.from));
+      b.addEventListener('click', () => {
+        setPreLayer(L.id, !state.pre.layer.includes(L.id));
+        preLayersChanged('#ppLayerChips [data-layer="' + L.id + '"]');
+      });
+      if (!L.drums) { ppLayerChips.appendChild(b); return; }
+      // Drums: a toggle plus a menu of beats. Picking a beat also switches the layer on.
+      const wrap = el('div', 'layercombo' + (on ? ' on' : ''));
+      const sel = document.createElement('select');
+      sel.className = 'kitsel';
+      sel.id = 'ppKitSel';
+      sel.setAttribute('aria-label', 'Drum beat for the Drums layer');
+      DRUM_KITS.forEach((k) => sel.add(new Option(k.name, k.id)));
+      sel.value = state.pre.layerKit;
+      sel.addEventListener('change', () => {
+        state.pre.layerKit = sel.value;
+        setPreLayer('drums', true);
+        preLayersChanged('#ppKitSel');
+      });
+      wrap.append(b, sel);
+      ppLayerChips.appendChild(wrap);
+    });
   }
   // The preset library: one dropdown under the mix levels. The button shows the preset that's on;
   // opening it lists every preset under its family's name.

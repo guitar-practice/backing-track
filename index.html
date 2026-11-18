@@ -3327,6 +3327,23 @@ const PRE_LIST = [
       },
     },
   },
+    {
+    // I Will Follow: an acoustic guitar playing the user's tab (capo on the 5th fret), in D minor at 155.
+    id: 'iwillfollow', fam: 'roots', name: 'I Will Follow', tag: 'Acoustic',
+    meter: '4/4', beats: 4, sub: 2, bpm: 155, min: 80, max: 210, wet: 0.16, gen: 'iwillfollow',
+    parts: ['gtr'], sets: ['acoustic'], names: { gtr: 'Acoustic' },
+    lv: { gtr: 1 }, trim: 1.5,
+    v: {
+      major: {
+        form: ['VI:m', 'I:', 'IV:', 'I: V:', 'VI:m', 'I:', 'V:', 'V:', 'VI:m', 'I:', 'III:', 'VI:m', 'IV:', 'IV:m', 'I:', 'I:'],
+        scales: ['major', 'pentatonic'],
+      },
+      minor: {
+        form: ['I:m', 'bIII:', 'bVI:', 'bIII: bVII:', 'I:m', 'bIII:', 'bVII:', 'bVII:', 'I:m', 'bIII:', 'V:', 'I:m', 'bVI:', 'bVI:m', 'bIII:', 'bIII:'],
+        scales: ['natural', 'pentatonic'],
+      },
+    },
+  },
 ];
 const preById = (id) => PRE_LIST.find((p) => p.id === id);
 </script>
@@ -9457,6 +9474,58 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
         }
       });
     });
+  };
+  
+  /* I Will Follow: an acoustic guitar playing the user's tab, capo on the 5th fret, in D minor and
+     moved as a whole to other keys. */
+  // The guitar, bar by bar, numbered as in the tab: [beat, notes]. Beats count quarter notes from 0
+  // (0 is beat 1, 1.5 the "and" of 2, 3.5 the "and" of 4). A note is a string and a fret counted
+  // from the capo, with the strings named E A D G B e, low to high; x is a muted (dead) string.
+  // Every note rings to the end of its bar, or until its string is played again.
+  const IF_GTR = {
+    1: [[0, 'A0'], [1, 'Ax D2 G2'], [1.5, 'B1'], [2, 'A0'], [2.5, 'G2'], [3, 'Ax D2 G2'], [3.5, 'B1']],
+    2: [[0, 'A3'], [1, 'Ax D2 G0'], [1.5, 'B1'], [2, 'A3'], [2.5, 'G0'], [3, 'Ax D2 G0'], [3.5, 'B1']],
+    3: [[0, 'E1'], [1, 'Ax D3 G2'], [1.5, 'B1'], [2, 'E1'], [2.5, 'G2'], [3, 'Ax D3 G2'], [3.5, 'B1']],
+    4: [[0, 'A3'], [0.5, 'D2'], [1, 'Ax D2 G0'], [1.5, 'B1'], [2, 'A2'], [2.5, 'D0'], [3, 'Ax D0 G0'], [3.5, 'B1']],
+    5: [[0, 'A0'], [1, 'Ax D2 G2'], [1.5, 'B1'], [2, 'A0'], [2.5, 'G2'], [3, 'Ax D2 G2'], [3.5, 'B1']],
+    6: [[0, 'A3'], [1, 'Ax D2 G0'], [1.5, 'B1'], [2, 'A3'], [2.5, 'G0'], [3, 'Ax D2 G0'], [3.5, 'B1']],
+    7: [[0, 'E3'], [1, 'Ex Ax D0 G0'], [1.5, 'B3'], [2, 'E3'], [2.5, 'G0'], [3, 'Ex Ax D0 G0'], [3.5, 'B3']],
+    8: [[0, 'E3'], [1, 'Ex Ax D0 G0'], [1.5, 'B3'], [2, 'E3'], [2.5, 'G0'], [3, 'Ex Ax D0 G0'], [3.5, 'B3']],
+    9: [[0, 'A0'], [1, 'Ex Ax D2 G2'], [1.5, 'B1'], [2, 'A0'], [2.5, 'G2'], [3, 'Ex Ax D2 G2'], [3.5, 'B1']],
+    10: [[0, 'A3'], [1, 'Ex Ax D2 G0'], [1.5, 'B1'], [2, 'A3'], [2.5, 'G0'], [3, 'Ex Ax D2 G0'], [3.5, 'B1']],
+    11: [[0, 'E0'], [1, 'Ex Ax D2 G1'], [1.5, 'B0'], [2, 'E0'], [2.5, 'G1'], [3, 'Ex Ax D2 G1'], [3.5, 'B0']],
+    12: [[0, 'A0'], [0.5, 'G2'], [1, 'Ex Ax D2 G2'], [1.5, 'B1'], [2, 'E3'], [2.5, 'G2'], [3, 'Ex Ax D2 G2'], [3.5, 'B1']],
+    13: [[0, 'E1'], [1, 'D3'], [1.5, 'G2'], [2, 'E1'], [2.5, 'D3'], [3, 'G2'], [3.5, 'D3']],
+    14: [[0, 'E1 A3 D3 G1 B1'], [1, 'D3'], [1.5, 'B1'], [2, 'E1'], [2.5, 'G1'], [3, 'D3'], [3.5, 'G1']],
+    15: [[0, 'A3'], [1, 'D2 G0'], [1.5, 'B1'], [2, 'E3'], [2.5, 'G0'], [3, 'D2'], [3.5, 'B1']],
+    16: [[0, 'A3'], [1, 'D2 G0'], [1.5, 'B1'], [2, 'E3'], [2.5, 'G0'], [3, 'D2'], [3.5, 'B1']],
+  };
+  // Standard tuning (each string's open note as a MIDI number), and the capo.
+  const IF_TUNE = { E: 40, A: 45, D: 50, G: 55, B: 59, e: 64 };
+  const IF_CAPO = 5;
+  // The guitar's sound.
+  const IF_AMP = 'acoustic';
+  PRE_GEN.iwillfollow = (S) => {
+    // With the capo on 5 the tab sounds in D minor: everything moves to the key picked, at most
+    // 6 half steps down or 5 up.
+    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = ((tm + 16) % 12) - 6;
+    const gap = 0.011;
+    for (let i = 0; i < 16; i++) {
+      const B = i * 4, H = S.rng('ifg', i);
+      IF_GTR[i + 1].forEach(([b, notes]) => {
+        const toks = notes.split(' ').map((tok) => ({ s: 'EADGBe'.indexOf(tok[0]), f: tok.slice(1) }))
+          .sort((x, y) => x.s - y.s);
+        const pitch = (t) => IF_TUNE['EADGBe'[t.s]] + IF_CAPO + (t.f === 'x' ? 0 : Number(t.f)) + T;
+        const dead = toks.filter((t) => t.f === 'x'), live = toks.filter((t) => t.f !== 'x');
+        const v = (b % 1 ? 0.84 : b % 2 ? 0.9 : 0.96) * (0.94 + 0.12 * H()), dt = hz(H, 5, 4);
+        // Muted strings: a short percussive click as the strum crosses them.
+        if (dead.length) S.add({ p: 'gtr', k: 'g', b: B + b, v: v * 0.55, n: dead.map((t) => ({ s: t.s, m: pitch(t) })), dt,
+          x: { amp: IF_AMP, hold: 0.08, a: 0.32, rel: 0.03, gap } });
+        // Fretted and open strings, ringing to the end of the bar.
+        if (live.length) S.add({ p: 'gtr', k: 'g', b: B + b, v, n: live.map((t) => ({ s: t.s, m: pitch(t) })), dt: dt + dead.length * gap,
+          x: { amp: IF_AMP, hold: 4 - b - 0.05, a: live.length > 1 ? 0.36 : 0.44, rel: 0.12, gap } });
+      });
+    }
   };
 
   /* ---------- Compiling a preset for one key ---------- */

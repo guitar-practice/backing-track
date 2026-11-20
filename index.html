@@ -3331,19 +3331,25 @@ const PRE_LIST = [
       },
     },
   },
-    {
-    // I Will Follow: an acoustic guitar playing the user's tab (capo on the 5th fret), in D minor at 155.
+  {
+    // I Will Follow: an acoustic guitar playing the user's tab (capo on the 5th fret), in D minor at
+    // 155: 16 bars alone, then the same 16 twice more with a string quartet and a soft beat.
     id: 'iwillfollow', fam: 'roots', name: 'I Will Follow', tag: 'Acoustic',
-    meter: '4/4', beats: 4, sub: 2, bpm: 155, min: 80, max: 210, wet: 0.16, gen: 'iwillfollow',
-    parts: ['gtr'], sets: ['acoustic'], names: { gtr: 'Acoustic' },
-    lv: { gtr: 1 }, trim: 1.5,
+    meter: '4/4', beats: 4, sub: 2, bpm: 155, min: 80, max: 210, wet: 0.18, gen: 'iwillfollow',
+    parts: ['drums', 'gtr', 'keys'], sets: ['acoustic'], names: { gtr: 'Acoustic', keys: 'Strings' },
+    lv: { drums: 0.45, gtr: 1, keys: 2 }, trim: 1.5,
+    secs: [[0, 'Guitar'], [16, 'Strings'], [32, 'Strings']],
     v: {
       major: {
-        form: ['VI:m', 'I:', 'IV:', 'I: V:', 'VI:m', 'I:', 'V:', 'V:', 'VI:m', 'I:', 'III:', 'VI:m', 'IV:', 'IV:m', 'I:', 'I:'],
+        form: ['VI:m', 'I:', 'IV:', 'I: V:', 'VI:m', 'I:', 'V:', 'V:', 'VI:m', 'I:', 'III:', 'VI:m', 'IV:', 'IV:m', 'I:', 'I:',
+          'VI:m', 'I:', 'IV:', 'I: V:', 'VI:m', 'I:', 'V:', 'V:', 'VI:m', 'I:', 'III:', 'VI:m', 'IV:', 'IV:m', 'I:', 'I:',
+          'VI:m', 'I:', 'IV:', 'I: V:', 'VI:m', 'I:', 'V:', 'V:', 'VI:m', 'I:', 'III:', 'VI:m', 'IV:', 'IV:m', 'I:', 'I:'],
         scales: ['major', 'pentatonic'],
       },
       minor: {
-        form: ['I:m', 'bIII:', 'bVI:', 'bIII: bVII:', 'I:m', 'bIII:', 'bVII:', 'bVII:', 'I:m', 'bIII:', 'V:', 'I:m', 'bVI:', 'bVI:m', 'bIII:', 'bIII:'],
+        form: ['I:m', 'bIII:', 'bVI:', 'bIII: bVII:', 'I:m', 'bIII:', 'bVII:', 'bVII:', 'I:m', 'bIII:', 'V:', 'I:m', 'bVI:', 'bVI:m', 'bIII:', 'bIII:',
+          'I:m', 'bIII:', 'bVI:', 'bIII: bVII:', 'I:m', 'bIII:', 'bVII:', 'bVII:', 'I:m', 'bIII:', 'V:', 'I:m', 'bVI:', 'bVI:m', 'bIII:', 'bIII:',
+          'I:m', 'bIII:', 'bVI:', 'bIII: bVII:', 'I:m', 'bIII:', 'bVII:', 'bVII:', 'I:m', 'bIII:', 'V:', 'I:m', 'bVI:', 'bVI:m', 'bIII:', 'bIII:'],
         scales: ['natural', 'pentatonic'],
       },
     },
@@ -9492,7 +9498,8 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   };
   
   /* I Will Follow: an acoustic guitar playing the user's tab, capo on the 5th fret, in D minor and
-     moved as a whole to other keys. */
+     moved as a whole to other keys. Bars 1-16 are the guitar alone; then the same 16 bars twice more
+     (bars 17-48) with a string quartet underneath, and a soft, slow beat in the last 8 of each 16. */
   // The guitar, bar by bar, numbered as in the tab: [beat, notes]. Beats count quarter notes from 0
   // (0 is beat 1, 1.5 the "and" of 2, 3.5 the "and" of 4). A note is a string and a fret counted
   // from the capo, with the strings named E A D G B e, low to high; x is a muted (dead) string.
@@ -9520,14 +9527,35 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   const IF_CAPO = 5;
   // The guitar's sound.
   const IF_AMP = 'acoustic';
+  // The string quartet, one entry per bar for 16 bars, played under bars 17-32 and again under
+  // bars 33-48. Notes are written as if there were no capo, like the guitar's shapes (A minor), and
+  // move with it. One note fills the bar; two split it in half; - is a rest. A note held into the
+  // next bar is tied. All four play from bar 17, at full volume the whole way.
+  const IF_STRINGS = {
+    // Cello: the roots, low and long.
+    cello: ['A2', 'C3', 'F2', 'C3 G2', 'A2', 'C3', 'G2', 'G2', 'A2', 'C3', 'E2', 'A2 G2', 'F2', 'F2', 'C3 G2', 'C3'],
+    // Viola: a quiet middle voice holding each chord's 3rd or 5th.
+    viola: ['C4', 'E4', 'F4', 'E4 D4', 'E4', 'E4', 'D4', 'D4', 'E4', 'E4', 'E4', 'E4', 'F4', 'F4', 'E4', 'E4'],
+    // First violin: a slow, sad melody.
+    violin1: ['E5', 'G5 E5', 'F5', 'E5 D5', 'E5', 'G5 E5', 'D5', 'D5 B4', 'C5', 'E5 G5', 'B4', 'C5', 'A5', 'G#5', 'G5 E5', 'E5'],
+    // Second violin: harmony under the melody.
+    violin2: ['A4', 'C5', 'C5', 'C5 B4', 'A4', 'C5', 'B4', 'B4', 'A4', 'C5', 'G#4', 'A4', 'C5', 'C5', 'C5', 'C5'],
+  };
+  const IF_STR_VOL = { cello: 0.8, viola: 0.55, violin1: 0.72, violin2: 0.52 };
+  // A soft, slow beat for the last 8 bars of each 16 with strings: kick on 1 and the "and" of 3,
+  // cross-stick on 3, a quiet shaker on the "ands" and a brush sweeping underneath.
+  const IF_BEAT = 'k0 k2.5 x2 h0.5 h1.5 h2.5 h3.5';
+  const IF_NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const ifMidi = (nm) => 12 * (Number(nm.slice(-1)) + 1) + IF_NOTE[nm[0]] + (nm.includes('#') ? 1 : nm.includes('b') ? -1 : 0);
   PRE_GEN.iwillfollow = (S) => {
     // With the capo on 5 the tab sounds in D minor: everything moves to the key picked, at most
     // 6 half steps down or 5 up.
     const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = ((tm + 16) % 12) - 6;
     const gap = 0.011;
-    for (let i = 0; i < 16; i++) {
-      const B = i * 4, H = S.rng('ifg', i);
-      IF_GTR[i + 1].forEach(([b, notes]) => {
+    for (let i = 0; i < 48; i++) {
+      // The guitar plays the same 16 bars three times, exactly the same every time.
+      const B = i * 4, H = S.rng('ifg', i % 16);
+      IF_GTR[(i % 16) + 1].forEach(([b, notes]) => {
         const toks = notes.split(' ').map((tok) => ({ s: 'EADGBe'.indexOf(tok[0]), f: tok.slice(1) }))
           .sort((x, y) => x.s - y.s);
         const pitch = (t) => IF_TUNE['EADGBe'[t.s]] + IF_CAPO + (t.f === 'x' ? 0 : Number(t.f)) + T;
@@ -9540,6 +9568,42 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
         if (live.length) S.add({ p: 'gtr', k: 'g', b: B + b, v, n: live.map((t) => ({ s: t.s, m: pitch(t) })), dt: dt + dead.length * gap,
           x: { amp: IF_AMP, hold: 4 - b - 0.05, a: live.length > 1 ? 0.36 : 0.44, rel: 0.12, gap } });
       });
+    }
+    // The string quartet, bars 17-48 (its 16 bars twice): each voice's notes, repeated notes tied over.
+    Object.keys(IF_STRINGS).forEach((voice) => {
+      const held = [];
+      IF_STRINGS[voice].concat(IF_STRINGS[voice]).forEach((bar, j) => {
+        const parts = bar.split(' '), len = 4 / parts.length;
+        parts.forEach((nm, k) => {
+          const b = 64 + j * 4 + k * len, last = held[held.length - 1];
+          if (nm === '-') return;
+          if (last && last.nm === nm && last.b + last.d === b && !(j === 16 && k === 0)) last.d += len; // fresh bow at bar 33
+          else held.push({ nm, b, d: len, j });
+        });
+      });
+      held.forEach((h) => {
+        let m = ifMidi(h.nm) + IF_CAPO + T;
+        if (m > 88) m -= 12; // in the highest keys, keep the violins from getting shrill
+        S.add({ p: 'keys', k: 'sy', b: h.b, d: h.d - 0.1, n: [m], v: IF_STR_VOL[voice], dt: 0,
+          x: { patch: 'strings', att: voice === 'cello' ? 0.7 : 0.9, rel: 1.8 } });
+      });
+    });
+    // The beat, bars 25-32 and 41-48, each time with a soft cymbal swelling into it.
+    [24, 40].forEach((s) => S.add({ p: 'drums', k: 'dw', b: (s - 1) * 4 + 2, d: 2, v: 0.3, dt: 0 }));
+    for (let i = 24; i < 48; i++) {
+      if (i >= 32 && i < 40) continue;
+      const B = i * 4, H = S.rng('ifd', i < 32 ? i : i - 16), hum = (v) => v * (0.92 + 0.16 * H());
+      if (i === 24 || i === 40) S.drum('cymSoft', B, 0.45, 0, H());
+      S.swish(B, 2, 0.22);
+      S.swish(B + 2, 2, 0.22);
+      IF_BEAT.split(' ').forEach((tok) => {
+        const c = tok[0], o = parseFloat(tok.slice(1));
+        if (c === 'k') S.drum('kickSoft', B + o, hum(o === 0 ? 0.62 : 0.42), hz(H, 4, 4), H());
+        else if (c === 'x') S.drum('xstick', B + o, hum(0.5), hz(H, 4, 6), H());
+        else S.drum('shaker', B + o, hum(0.22), hz(H, 4, 4), H());
+      });
+      // Bars 32 and 48: two soft floor-tom notes lead into the next 16.
+      if (i === 31 || i === 47) [[3, 0.36], [3.5, 0.42]].forEach(([o, v]) => S.drum('tomF', B + o, v, 0, H()));
     }
   };
 

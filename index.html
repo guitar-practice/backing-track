@@ -90,7 +90,7 @@
   /* Tabs */
   .tabs {
     display: grid;
-    grid-template-columns: repeat(7, auto);
+    grid-template-columns: repeat(8, auto);
     justify-content: space-between;
     border-bottom: 1px solid var(--line);
     margin: 0 -6px 20px;
@@ -1317,7 +1317,7 @@
     body { padding: 20px 12px; }
     .rig { padding: 14px 16px 20px; }
     .tabs { margin: 0 -4px 18px; }
-    .tab { font-size: 12.5px; }
+    .tab { font-size: 11.5px; }
     .cname { font-size: 16px; }
     .cname.long { font-size: 13px; }
     .cname.longer { font-size: 11.5px; }
@@ -1427,6 +1427,39 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
   }
+  /* ---------- Tuner ---------- */
+  .tu-head { position: relative; width: 100%; max-width: 330px; margin: 0 auto; }
+  .tu-head svg { display: block; width: 100%; height: auto; }
+  .tu-peg {
+    position: absolute; transform: translate(-50%, -50%); width: 56px; height: 56px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+    border: 1px solid var(--line); background: radial-gradient(circle at 35% 30%, #4a3424, #24170f);
+    color: var(--parchment); font-family: var(--serif); cursor: pointer; -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45); transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  }
+  .tu-peg .pn { font-size: 21px; font-weight: 600; }
+  .tu-peg .ps { font-family: var(--sans); font-size: 10px; color: var(--parchment-faint); margin-top: 4px; }
+  .tu-peg[aria-pressed="true"], .tu-peg.on {
+    border-color: var(--brass-bright); color: var(--brass-bright);
+    box-shadow: 0 0 0 3px rgba(232, 180, 92, 0.28), 0 3px 8px rgba(0, 0, 0, 0.45);
+  }
+  .tu-peg.done::after {
+    content: "\2713"; position: absolute; top: -3px; right: -3px; width: 19px; height: 19px; border-radius: 50%;
+    background: var(--good); color: var(--ink); font: 700 12px/19px var(--sans); text-align: center;
+  }
+  .tu-peg:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 3px; }
+  @media (hover: hover) { .tu-peg:hover { border-color: var(--brass); } }
+  .tu-gauge { text-align: center; }
+  .tu-gauge svg { display: block; width: 100%; max-width: 320px; height: auto; margin: 0 auto; }
+  .tu-read { display: flex; justify-content: center; align-items: baseline; gap: 12px; margin-top: -6px; }
+  .tu-note { font-family: var(--serif); font-size: 46px; font-weight: 600; color: var(--parchment); min-width: 1.3em; }
+  .tu-cents { font-family: var(--sans); font-size: 15px; color: var(--parchment-dim); font-variant-numeric: tabular-nums; min-width: 6.5em; text-align: left; }
+  .tu-say { margin: 2px 0 0; font-family: var(--sans); font-size: 15px; color: var(--parchment-dim); min-height: 1.4em; }
+  .tu-gauge.good .tu-note, .tu-gauge.good .tu-say { color: var(--good); }
+  .tu-gauge.idle .tu-note, .tu-gauge.idle .tu-cents { color: var(--parchment-faint); }
+  #tuNeedle { transition: transform 0.08s linear; }
+  .tu-bar { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  @media (max-width: 380px) { .tab { font-size: 10.6px; } }
 </style>
 </head>
 <body>
@@ -1440,6 +1473,7 @@
     <button type="button" class="tab" role="tab" id="tab-saved" data-tab="saved" aria-controls="panel-saved" aria-selected="false" tabindex="-1">Saved</button>
     <button type="button" class="tab" role="tab" id="tab-stems" data-tab="stems" aria-controls="panel-stems" aria-selected="false" tabindex="-1">Splitter</button>
     <button type="button" class="tab" role="tab" id="tab-looper" data-tab="looper" aria-controls="panel-looper" aria-selected="false" tabindex="-1">Looper</button>
+    <button type="button" class="tab" role="tab" id="tab-tuner" data-tab="tuner" aria-controls="panel-tuner" aria-selected="false" tabindex="-1">Tuner</button>
   </div>
 
   <div class="head">
@@ -2161,7 +2195,25 @@
     </div>
   </section>
 
-  <div class="toast" id="toast" role="status" hidden></div>
+  <!-- Tuner -->
+  <section class="panel flow" id="panel-tuner" data-tab="tuner" role="tabpanel" aria-labelledby="tab-tuner" hidden>
+    <div class="seg two" role="group" aria-label="How to tune" id="tuModeSeg">
+      <button type="button" data-v="ear" aria-pressed="true">By ear</button>
+      <button type="button" data-v="mic" aria-pressed="false">Microphone</button>
+    </div>
+    <label class="field"><span>Tuning</span><select id="tuTuningSel"></select></label>
+    <div class="tu-gauge idle" id="tuGauge" hidden>
+      <svg viewBox="0 0 300 150" aria-hidden="true" id="tuDial"></svg>
+      <div class="tu-read"><span class="tu-note" id="tuNote">&ndash;</span><span class="tu-cents" id="tuCents"></span></div>
+      <p class="tu-say" id="tuSay" aria-live="polite"></p>
+    </div>
+    <div class="tu-head" id="tuHead" role="group" aria-label="Tuning pegs"></div>
+    <p class="caption" id="tuHint"></p>
+    <div class="tu-bar">
+      <button type="button" class="toggle" id="tuRepeat" aria-pressed="true">Repeat the note</button>
+      <button type="button" class="btn primary" id="tuMicBtn" hidden>Start listening</button>
+    </div>
+  </section>  <div class="toast" id="toast" role="status" hidden></div>
 </main>
 
 <script>
@@ -3424,9 +3476,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
 
   /* ---------- State ---------- */
   const STORE = 'backing-track-builder-v1';
-  const TABS = ['track', 'map', 'lab', 'drills', 'saved', 'stems', 'looper'];
-  const TAB_TITLES = { track: 'Backing Track', map: 'Key Map', lab: 'Chord Lab', drills: 'Drills', saved: 'Saved Setups', stems: 'Song Splitter', looper: 'Looper' };
-  const LP_BARS = [1, 2, 4, 8, 16];
+  const TABS = ['track', 'map', 'lab', 'drills', 'saved', 'stems', 'looper', 'tuner'];  const TAB_TITLES = { track: 'Backing Track', map: 'Key Map', lab: 'Chord Lab', drills: 'Drills', saved: 'Saved Setups', stems: 'Song Splitter', looper: 'Looper', tuner: 'Tuner' };  const LP_BARS = [1, 2, 4, 8, 16];
   const LP_METRO = ['off', 'count', 'always'];
   // The drills, in the order the dropdown lists them. The m... ones learn the modes step by step.
   const DRILL_GROUPS = [
@@ -4862,6 +4912,8 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     if (t === 'stems') renderStems();
     if (t === 'looper') lpShow();
     else if (was === 'looper') lpLeave();
+        if (t === 'tuner') tuShow();
+    else if (was === 'tuner') tuLeave();
   }
   tabBtns.forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
   $('tabs').addEventListener('keydown', (e) => {
@@ -18304,7 +18356,324 @@ self.onmessage = async (e) => {
     Object.defineProperties(window.__PRE_TEST, { pl: { get: () => pl }, partGains: { get: () => partGains }, ctx: { get: () => ctx }, bgRender: { get: () => bgRender } });
   }
 
-  /* ---------- Keyboard ---------- */
+  /* ---------- Tuner ----------
+     A guitar headstock with a button on each tuning peg. By ear: tapping a peg plays that string's
+     note, again every few seconds until it's tapped again. Microphone: listens, finds the pitch
+     (the YIN method) and shows, live, how many cents the string is above or below the nearest
+     string of the tuning, or of the one string whose peg is tapped. */
+  const TU_TUNINGS = [
+    { id: 'std', name: 'Standard (E A D G B E)', m: [40, 45, 50, 55, 59, 64], n: ['E', 'A', 'D', 'G', 'B', 'E'] },
+    { id: 'dropd', name: 'Drop D (D A D G B E)', m: [38, 45, 50, 55, 59, 64], n: ['D', 'A', 'D', 'G', 'B', 'E'] },
+    { id: 'half', name: 'Half step down (E\u266d A\u266d D\u266d G\u266d B\u266d E\u266d)', m: [39, 44, 49, 54, 58, 63], n: ['E\u266d', 'A\u266d', 'D\u266d', 'G\u266d', 'B\u266d', 'E\u266d'] },
+    { id: 'whole', name: 'Whole step down (D G C F A D)', m: [38, 43, 48, 53, 57, 62], n: ['D', 'G', 'C', 'F', 'A', 'D'] },
+    { id: 'dropc', name: 'Drop C (C G C F A D)', m: [36, 43, 48, 53, 57, 62], n: ['C', 'G', 'C', 'F', 'A', 'D'] },
+    { id: 'dadgad', name: 'DADGAD', m: [38, 45, 50, 55, 57, 62], n: ['D', 'A', 'D', 'G', 'A', 'D'] },
+    { id: 'openg', name: 'Open G (D G D G B D)', m: [38, 43, 50, 55, 59, 62], n: ['D', 'G', 'D', 'G', 'B', 'D'] },
+    { id: 'opend', name: 'Open D (D A D F\u266f A D)', m: [38, 45, 50, 54, 57, 62], n: ['D', 'A', 'D', 'F\u266f', 'A', 'D'] },
+  ];
+  const TU_ORD = ['6th', '5th', '4th', '3rd', '2nd', '1st'];
+  // Where each string's peg sits on the drawing (viewBox 300 x 380): bass side on the left with the
+  // low E nearest the nut, treble side on the right with the high E nearest the nut.
+  const TU_PEGS = [[44, 214], [44, 154], [44, 94], [256, 94], [256, 154], [256, 214]];
+  const TU_POSTS = [[112, 214], [112, 154], [112, 94], [188, 94], [188, 154], [188, 214]];
+  const tu = { mode: 'ear', tuning: 'std', repeat: true, playing: -1, timer: 0, lock: -1, mic: null, opening: false,
+    raf: 0, frame: 0, hist: [], disp: 0, seen: 0, target: -1, goodSince: 0, done: new Set(), msg: '' };
+  try {
+    const s = JSON.parse(localStorage.getItem('bt-tuner') || 'null');
+    if (s && (s.mode === 'ear' || s.mode === 'mic')) tu.mode = s.mode;
+    if (s && TU_TUNINGS.some((x) => x.id === s.tuning)) tu.tuning = s.tuning;
+    if (s && typeof s.repeat === 'boolean') tu.repeat = s.repeat;
+  } catch (e) { /* storage blocked: defaults */ }
+  const tuSave = () => { try { localStorage.setItem('bt-tuner', JSON.stringify({ mode: tu.mode, tuning: tu.tuning, repeat: tu.repeat })); } catch (e) { /* ignore */ } };
+  const tuTuning = () => TU_TUNINGS.find((x) => x.id === tu.tuning) || TU_TUNINGS[0];
+  const tuHead = $('tuHead'), tuGauge = $('tuGauge'), tuSel = $('tuTuningSel');
+  TU_TUNINGS.forEach((x) => tuSel.add(new Option(x.name, x.id)));
+
+  // The headstock drawing: wood, the nut, six strings running to their posts, and a tuner on each.
+  (function tuDraw() {
+    const nutX = [128.5, 137.5, 146.5, 155.5, 164.5, 173.5], gauge = [2.4, 2.1, 1.8, 1.5, 1.1, 0.9];
+    let s = '<svg viewBox="0 0 300 380" aria-hidden="true">' +
+      '<defs><linearGradient id="tuWood" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a5232"/><stop offset="1" stop-color="#3b2415"/></linearGradient>' +
+      '<linearGradient id="tuMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1d79c"/><stop offset="1" stop-color="#a77a34"/></linearGradient></defs>' +
+      '<rect x="122" y="300" width="56" height="80" fill="#1d120b"/>' +
+      '<line x1="122" y1="352" x2="178" y2="352" stroke="rgba(214,200,170,0.55)" stroke-width="2"/>';
+    // tuner gears and shafts, behind the wood's edge
+    TU_PEGS.forEach(([px, py], i) => {
+      const left = i < 3, ex = left ? 97 : 203;
+      s += '<line x1="' + px + '" y1="' + py + '" x2="' + ex + '" y2="' + py + '" stroke="url(#tuMetal)" stroke-width="5" stroke-linecap="round"/>' +
+        '<rect x="' + (left ? 74 : 204) + '" y="' + (py - 10) + '" width="22" height="20" rx="4" fill="url(#tuMetal)"/>';
+    });
+    s += '<path d="M124 300 C112 268 101 236 99 200 L93 72 C93 42 118 28 150 28 C182 28 207 42 207 72 L201 200 C199 236 188 268 176 300 Z" fill="url(#tuWood)" stroke="rgba(232,180,92,0.35)" stroke-width="1.5"/>' +
+      '<path d="M140 286 L160 286 L156 254 Q150 246 144 254 Z" fill="rgba(0,0,0,0.35)"/>' +
+      '<rect x="120" y="295" width="60" height="9" rx="2" fill="#e9dfc8"/>';
+    nutX.forEach((x, i) => {
+      const [qx, qy] = TU_POSTS[i];
+      s += '<line x1="' + x + '" y1="380" x2="' + x + '" y2="299" stroke="' + (i < 3 ? '#c9b48a' : '#ddd3c2') + '" stroke-width="' + gauge[i] + '"/>' +
+        '<line x1="' + x + '" y1="299" x2="' + qx + '" y2="' + qy + '" stroke="' + (i < 3 ? '#c9b48a' : '#ddd3c2') + '" stroke-width="' + gauge[i] + '"/>';
+    });
+    TU_POSTS.forEach(([x, y]) => { s += '<circle cx="' + x + '" cy="' + y + '" r="8" fill="url(#tuMetal)"/><circle cx="' + x + '" cy="' + y + '" r="3" fill="#5a3d1c"/>'; });
+    tuHead.innerHTML = s + '</svg>';
+    // The pegs are real buttons, in string order (6th to 1st), placed over the drawing.
+    for (let i = 0; i < 6; i++) {
+      const b = el('button', 'tu-peg');
+      b.type = 'button';
+      b.dataset.s = String(i);
+      b.style.left = (TU_PEGS[i][0] / 3) + '%';
+      b.style.top = (TU_PEGS[i][1] / 3.8) + '%';
+      b.append(el('span', 'pn', ''), el('span', 'ps', TU_ORD[i]));
+      b.addEventListener('click', () => tuPeg(i));
+      tuHead.appendChild(b);
+    }
+  })();
+
+  // The dial: -50 to +50 cents across 120 degrees, with the in-tune zone (5 cents either way) marked.
+  (function tuDial() {
+    const cx = 150, cy = 140, R = 118, pt = (c, r) => { const a = (c * 1.2 - 90) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+    const arc = (c0, c1, r) => { const [x0, y0] = pt(c0, r), [x1, y1] = pt(c1, r); return 'M' + x0.toFixed(1) + ' ' + y0.toFixed(1) + ' A' + r + ' ' + r + ' 0 0 1 ' + x1.toFixed(1) + ' ' + y1.toFixed(1); };
+    let s = '<path d="' + arc(-50, 50, R) + '" fill="none" stroke="rgba(200,160,100,0.3)" stroke-width="2"/>' +
+      '<path d="' + arc(-5, 5, R) + '" fill="none" stroke="#a9cc92" stroke-width="7" stroke-linecap="round"/>';
+    for (let c = -50; c <= 50; c += 10) {
+      const big = c % 50 === 0 || c === 0, [x0, y0] = pt(c, R - (big ? 16 : 9)), [x1, y1] = pt(c, R);
+      s += '<line x1="' + x0.toFixed(1) + '" y1="' + y0.toFixed(1) + '" x2="' + x1.toFixed(1) + '" y2="' + y1.toFixed(1) + '" stroke="rgba(237,226,208,' + (big ? 0.7 : 0.4) + ')" stroke-width="' + (big ? 2 : 1.4) + '"/>';
+    }
+    const [fx, fy] = pt(-50, R + 4), [sx, sy] = pt(50, R + 4);
+    s += '<text x="' + (fx - 4).toFixed(1) + '" y="' + (fy + 18).toFixed(1) + '" fill="rgba(237,226,208,0.6)" font-size="18" text-anchor="middle" font-family="Georgia, serif">\u266d</text>' +
+      '<text x="' + (sx + 4).toFixed(1) + '" y="' + (sy + 18).toFixed(1) + '" fill="rgba(237,226,208,0.6)" font-size="18" text-anchor="middle" font-family="Georgia, serif">\u266f</text>' +
+      '<g id="tuNeedle" transform="rotate(0 ' + cx + ' ' + cy + ')"><line x1="' + cx + '" y1="' + cy + '" x2="' + cx + '" y2="' + (cy - R + 6) + '" stroke="#e8b45c" stroke-width="3" stroke-linecap="round"/></g>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="7" fill="#e8b45c"/>';
+    $('tuDial').innerHTML = s;
+  })();
+  const tuNeedle = $('tuNeedle');
+
+  function renderTuner() {
+    const T = tuTuning(), mic = tu.mode === 'mic';
+    tuSel.value = tu.tuning;
+    $('tuModeSeg').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === tu.mode)));
+    tuHead.querySelectorAll('.tu-peg').forEach((b, i) => {
+      b.querySelector('.pn').textContent = T.n[i];
+      const pressed = mic ? tu.lock === i : tu.playing === i;
+      b.setAttribute('aria-pressed', String(pressed));
+      b.classList.toggle('done', mic && tu.done.has(i));
+      const nm = T.n[i] + ', ' + TU_ORD[i] + ' string';
+      b.setAttribute('aria-label', mic ? (tu.lock === i ? nm + ', tuning this string only' : 'Tune only the ' + nm) : (tu.playing === i ? 'Stop ' + nm : 'Play ' + nm));
+    });
+    tuGauge.hidden = !mic;
+    $('tuRepeat').hidden = mic;
+    $('tuRepeat').setAttribute('aria-pressed', String(tu.repeat));
+    const mb = $('tuMicBtn');
+    mb.hidden = !mic;
+    mb.textContent = tu.opening ? 'Opening the microphone\u2026' : tu.mic ? 'Stop listening' : 'Start listening';
+    mb.disabled = tu.opening;
+    $('tuHint').textContent = tu.msg || (mic
+      ? (tu.lock >= 0
+        ? 'Tuning the ' + TU_ORD[tu.lock] + ' string (' + T.n[tu.lock] + ') only. Tap its peg again to let the tuner find the string itself.'
+        : 'Play one string at a time and let it ring. The tuner finds the closest string; tap a peg to tune just that string.')
+      : 'Tap a tuning peg to hear that string\'s note, then turn your peg until your string sounds the same. Tap it again to stop.');
+  }
+
+  function tuStopNote() {
+    clearTimeout(tu.timer);
+    tu.playing = -1;
+    if (earBus) { killBus(earBus); earBus = null; }
+  }
+  function tuPlay(i) {
+    if (tu.playing === i) { tuStopNote(); renderTuner(); return; }
+    if (!ensureCtx()) return;
+    if (playing) stop();
+    stopRun();
+    tuStopNote();
+    tu.playing = i;
+    renderTuner();
+    const ring = () => {
+      if (tu.playing !== i || state.tab !== 'tuner' || tu.mode !== 'ear') return;
+      pluck(tuTuning().m[i], ctx.currentTime + 0.03, freshEarBus(), 2.4, 1.4);
+      tu.timer = setTimeout(() => {
+        if (tu.repeat) ring();
+        else if (tu.playing === i) { tu.playing = -1; renderTuner(); }
+      }, 2700);
+    };
+    // The recorded guitar sounds best; wait a moment for it the first time, then go anyway.
+    if (state.realInst && !sReady('acoustic') && typeof fetch === 'function') Promise.race([loadSet('acoustic'), new Promise((r) => setTimeout(r, 1500))]).then(ring);
+    else ring();
+  }
+  function tuPeg(i) {
+    if (tu.mode === 'ear') { tuPlay(i); return; }
+    tu.lock = tu.lock === i ? -1 : i;
+    tu.hist = [];
+    renderTuner();
+  }
+
+  // Microphone
+  async function tuStartMic() {
+    if (tu.mic || tu.opening) return;
+    tu.msg = '';
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      tu.msg = inClaude ? 'The microphone isn\'t available inside the Claude app. Open your GitHub page in Safari to use the tuner\'s microphone.'
+        : 'This browser won\'t share the microphone with this page. Open it from its https web address in Safari or Chrome.';
+      renderTuner();
+      return;
+    }
+    if (!ensureCtx()) return;
+    if (playing) stop();
+    stopRun();
+    tuStopNote();
+    tu.opening = true;
+    renderTuner();
+    try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) { /* not supported */ }
+    let stream = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    } catch (e) {
+      tu.opening = false;
+      lpSessionPlayback();
+      const name = e && e.name;
+      tu.msg = name === 'NotAllowedError' || name === 'SecurityError'
+        ? (inClaude ? 'The microphone isn\'t available inside the Claude app. Open your GitHub page in Safari to use it.'
+          : 'The tuner needs the microphone. Allow it for this site (on iPhone: tap "aA" in the address bar, then Website Settings, then Microphone), then tap Start listening again.')
+        : name === 'NotFoundError' ? 'No microphone was found.' : 'Couldn\'t open the microphone' + (name ? ' (' + name + ')' : '') + '.';
+      renderTuner();
+      return;
+    }
+    tu.opening = false;
+    if (state.tab !== 'tuner' || tu.mode !== 'mic') { stream.getTracks().forEach((t) => t.stop()); lpSessionPlayback(); renderTuner(); return; }
+    if (ctx.state !== 'running') { try { await ctx.resume(); } catch (e) { /* retried on the next tap */ } }
+    const src = ctx.createMediaStreamSource(stream), hp = ctx.createBiquadFilter(), an = ctx.createAnalyser(), sink = ctx.createGain();
+    hp.type = 'highpass';
+    hp.frequency.value = 50;
+    an.fftSize = 4096;
+    sink.gain.value = 0; // keeps the analyser running; makes no sound
+    src.connect(hp); hp.connect(an); an.connect(sink); sink.connect(ctx.destination);
+    tu.mic = { stream, src, hp, an, sink, buf: new Float32Array(an.fftSize) };
+    tu.hist = [];
+    tu.seen = 0;
+    renderTuner();
+    cancelAnimationFrame(tu.raf);
+    tu.raf = requestAnimationFrame(tuLoop);
+  }
+  function tuStopMic() {
+    cancelAnimationFrame(tu.raf);
+    if (!tu.mic) return;
+    const M = tu.mic;
+    tu.mic = null;
+    M.stream.getTracks().forEach((t) => t.stop());
+    try { M.src.disconnect(); M.hp.disconnect(); M.an.disconnect(); M.sink.disconnect(); } catch (e) { /* ignore */ }
+    lpSessionPlayback();
+    tuShowReading(0);
+  }
+
+  // The pitch of a stretch of sound in Hz, or 0 when there's no clear note (YIN, on the sound
+  // averaged down to half the sample rate, which is plenty for a guitar and four times less work).
+  function tuPitch(buf, sr) {
+    const n = buf.length >> 1, x = tu.ds && tu.ds.length === n ? tu.ds : (tu.ds = new Float32Array(n));
+    let rms = 0;
+    for (let i = 0; i < n; i++) { const v = (buf[2 * i] + buf[2 * i + 1]) * 0.5; x[i] = v; rms += v * v; }
+    if (Math.sqrt(rms / n) < 0.005) return 0;
+    const fs = sr / 2, W = n >> 1, tMin = Math.floor(fs / 900), tMax = Math.min(W - 2, Math.ceil(fs / 60));
+    const d = tu.yd && tu.yd.length === tMax + 2 ? tu.yd : (tu.yd = new Float32Array(tMax + 2));
+    d[0] = 1;
+    let run = 0;
+    for (let tau = 1; tau <= tMax + 1; tau++) {
+      let s = 0;
+      for (let i = 0; i < W; i++) { const df = x[i] - x[i + tau]; s += df * df; }
+      run += s;
+      d[tau] = run ? (s * tau) / run : 1;
+    }
+    let tau = -1;
+    for (let t = tMin; t <= tMax; t++) {
+      if (d[t] < 0.12) { while (t < tMax && d[t + 1] < d[t]) t++; tau = t; break; }
+    }
+    if (tau < 0) {
+      let best = tMin;
+      for (let t = tMin; t <= tMax; t++) if (d[t] < d[best]) best = t;
+      if (d[best] > 0.3) return 0;
+      tau = best;
+    }
+    const a = d[tau - 1], b = d[tau], c = d[tau + 1], den = a - 2 * b + c;
+    return fs / (tau + (den ? (0.5 * (a - c)) / den : 0));
+  }
+  function tuLoop() {
+    tu.raf = requestAnimationFrame(tuLoop);
+    if (!tu.mic || (tu.frame++ & 1)) return; // about 30 readings a second
+    const M = tu.mic;
+    M.an.getFloatTimeDomainData(M.buf);
+    const f = tuPitch(M.buf, ctx.sampleRate), now = performance.now();
+    if (f > 0) {
+      const T = tuTuning(), mf = 69 + 12 * Math.log2(f / 440);
+      let i = tu.lock;
+      if (i < 0) { i = 0; T.m.forEach((m, k) => { if (Math.abs(mf - m) < Math.abs(mf - T.m[i])) i = k; }); }
+      let c = (mf - T.m[i]) * 100;
+      if (tu.lock >= 0) { while (c > 700) c -= 1200; while (c < -700) c += 1200; } // a string an octave off
+      if (i !== tu.target) { tu.hist = []; tu.target = i; tu.goodSince = 0; }
+      tu.hist.push(c);
+      if (tu.hist.length > 5) tu.hist.shift();
+      const med = tu.hist.slice().sort((p, q) => p - q)[tu.hist.length >> 1];
+      tu.disp = tu.seen && now - tu.seen < 300 ? tu.disp + (med - tu.disp) * 0.35 : med;
+      tu.seen = now;
+      tu.hz = f;
+      if (Math.abs(med) <= 4) {
+        if (!tu.goodSince) tu.goodSince = now;
+        if (now - tu.goodSince > 400 && !tu.done.has(i)) { tu.done.add(i); renderTuner(); }
+      } else tu.goodSince = 0;
+    }
+    tuShowReading(now);
+  }
+  let tuLastOn = -2;
+  function tuShowReading(now) {
+    const live = tu.mic && tu.target >= 0 && now - tu.seen < 900, T = tuTuning();
+    const c = live ? tu.disp : 0, good = live && Math.abs(c) <= 4;
+    tuNeedle.setAttribute('transform', 'rotate(' + (Math.max(-50, Math.min(50, c)) * 1.2).toFixed(2) + ' 150 140)');
+    tuNeedle.firstChild.setAttribute('stroke', good ? '#a9cc92' : '#e8b45c');
+    tuGauge.classList.toggle('idle', !live);
+    tuGauge.classList.toggle('good', good);
+    $('tuNote').textContent = live ? T.n[tu.target] : '\u2013';
+    const r = Math.round(c);
+    $('tuCents').textContent = live ? (r > 0 ? '+' : r < 0 ? '\u2212' : '') + Math.abs(r) + ' cents \u00b7 ' + tu.hz.toFixed(1) + ' Hz' : '';
+    $('tuSay').textContent = !tu.mic ? '' : !live ? 'Play a string' : good ? 'In tune' : c < 0 ? (c < -50 ? 'Far too low, tune up' : 'Too low, tune up') : (c > 50 ? 'Far too high, tune down' : 'Too high, tune down');
+    const on = live && tu.lock < 0 ? tu.target : -1;
+    if (on !== tuLastOn) { tuLastOn = on; tuHead.querySelectorAll('.tu-peg').forEach((b, k) => b.classList.toggle('on', k === on)); }
+  }
+
+  function tuShow() {
+    tu.msg = '';
+    renderTuner();
+    if (state.realInst && typeof fetch === 'function') loadSet('acoustic');
+  }
+  function tuLeave() {
+    tuStopNote();
+    tuStopMic();
+    tu.msg = '';
+    renderTuner();
+  }
+  $('tuModeSeg').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    if (b.dataset.v === tu.mode) return;
+    tu.mode = b.dataset.v;
+    tuSave();
+    tuStopNote();
+    tuStopMic();
+    tu.msg = '';
+    tu.lock = -1;
+    renderTuner();
+  }));
+  tuSel.addEventListener('change', () => {
+    tu.tuning = tuSel.value;
+    tuSave();
+    tu.done.clear();
+    tu.hist = [];
+    tu.target = -1;
+    const p = tu.playing;
+    if (p >= 0) { tuStopNote(); tuPlay(p); }
+    renderTuner();
+  });
+  $('tuRepeat').addEventListener('click', () => {
+    tu.repeat = !tu.repeat;
+    tuSave();
+    renderTuner();
+  });
+  $('tuMicBtn').addEventListener('click', () => {
+    if (tu.mic) { tuStopMic(); renderTuner(); } else tuStartMic();
+  });
+  // Let go of the microphone when the page is put away.
+  document.addEventListener('visibilitychange', () => { if (document.hidden && tu.mic) { tuStopMic(); renderTuner(); } });  /* ---------- Keyboard ---------- */
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && pickerSlot !== null) { closePicker(true); return; }
     if (e.key === 'Escape' && lpModalOpen()) { lpCloseModals(); return; }

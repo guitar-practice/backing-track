@@ -3354,6 +3354,29 @@ const PRE_LIST = [
       },
     },
   },
+    {
+    // License And: an acoustic guitar playing the user's tab (capo on the 2nd fret) with its repeats
+    // written out, and a string quartet for the last section, in A major (F# minor) at 115.
+    id: 'licenseand', fam: 'roots', name: 'License And', tag: 'Acoustic',
+    meter: '4/4', beats: 4, sub: 2, bpm: 115, min: 60, max: 165, wet: 0.18, gen: 'licenseand',
+    parts: ['gtr', 'keys'], sets: ['acoustic'], names: { gtr: 'Acoustic', keys: 'Strings' },
+    lv: { gtr: 1, keys: 2 }, trim: 1.5,
+    secs: [[0, 'Intro'], [11, 'Verse'], [22, 'Strings']],
+    v: {
+      major: {
+        form: ['VI:m', 'VI:m', 'V:sus4', 'I:', 'IV:maj7', 'IV:', 'VI:m', 'VI:m', 'V:sus4', 'I:', 'IV:maj7', 'VI:m',
+          'VI:m', 'V:sus4', 'I:', 'IV:maj7', 'IV:', 'VI:m', 'VI:m', 'V:sus4', 'I:', 'IV:maj7', 'IV:maj7', 'I:',
+          'II:m7', 'IV:maj7', 'I:', 'II:m7', 'IV:maj7', 'I:', 'II:m7', 'IV:maj7', 'I:', 'II:m7'],
+        scales: ['major', 'pentatonic'],
+      },
+      minor: {
+        form: ['I:m', 'I:m', 'bVII:sus4', 'bIII:', 'bVI:maj7', 'bVI:', 'I:m', 'I:m', 'bVII:sus4', 'bIII:', 'bVI:maj7', 'I:m',
+          'I:m', 'bVII:sus4', 'bIII:', 'bVI:maj7', 'bVI:', 'I:m', 'I:m', 'bVII:sus4', 'bIII:', 'bVI:maj7', 'bVI:maj7', 'bIII:',
+          'IV:m7', 'bVI:maj7', 'bIII:', 'IV:m7', 'bVI:maj7', 'bIII:', 'IV:m7', 'bVI:maj7', 'bIII:', 'IV:m7'],
+        scales: ['natural', 'pentatonic'],
+      },
+    },
+  },
 ];
 const preById = (id) => PRE_LIST.find((p) => p.id === id);
 </script>
@@ -9605,6 +9628,98 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       // Bars 32 and 48: two soft floor-tom notes lead into the next 16.
       if (i === 31 || i === 47) [[3, 0.36], [3.5, 0.42]].forEach(([o, v]) => S.drum('tomF', B + o, v, 0, H()));
     }
+  };
+    /* License And: an acoustic guitar playing the user's tab, capo on the 2nd fret, with the tab's
+     repeats played out in full, and a string quartet joining for the last section (bars 15-17,
+     four times). The guitar's shapes are in G major (E minor), so with the capo it sounds in
+     A major (F# minor); everything moves as a whole to other keys. */
+  // The guitar, bar by bar, numbered as in the tab: [beat, notes], or [beat, notes, 'roll'] for a
+  // chord rolled across the strings. Beats count quarter notes from 0 (0 is beat 1, 1.5 the "and"
+  // of 2, 3.5 the "and" of 4). A note is a string and a fret counted from the capo, with the
+  // strings named E A D G B e, low to high. A note ending in ~ is tied into the next bar; one ending
+  // in p is a pull-off (not picked, so softer). Every note rings to the end of its bar, or until its
+  // string is played again.
+  const LA_GTR = {
+    1: [[0, 'D2'], [1, 'G0'], [2, 'D2'], [2.5, 'G0'], [3, 'D2'], [3.5, 'G2']],
+    2: [[0, 'D2'], [0.5, 'B0'], [1, 'D2'], [1.5, 'G2'], [2, 'D2'], [2.5, 'G0'], [3, 'D2'], [3.5, 'A3']],
+    3: [[0, 'D0'], [1, 'G0'], [2, 'D0'], [2.5, 'G0'], [3, 'D0'], [3.5, 'G2']],
+    4: [[0, 'D0'], [0.5, 'B0'], [1, 'D0'], [1.5, 'G2'], [2, 'D0'], [2.5, 'G0'], [3, 'D0'], [3.5, 'G0']],
+    5: [[0, 'A3'], [1, 'A3'], [2, 'D2 G0 B0', 'roll'], [3, 'A3~'], [3.5, 'B3~']],
+    6: [[0.5, 'B0'], [1.5, 'B1'], [2.5, 'B0p'], [3, 'G2'], [3.5, 'G0p']],
+    7: [[0, 'A3'], [1, 'A3'], [2, 'D2 G0 B0', 'roll'], [3, 'A3'], [3.5, 'G0']],
+    8: [[0, 'D2'], [1, 'G0'], [2, 'D2'], [2.5, 'G0'], [3, 'D2'], [3.5, 'G2']],
+    9: [[0, 'D2'], [0.5, 'B0'], [1, 'D2'], [1.5, 'G2'], [2, 'D2'], [2.5, 'G0'], [3, 'D2'], [3.5, 'A3']],
+    10: [[0, 'D0'], [1, 'G0'], [2, 'D0'], [2.5, 'G0'], [3, 'D0'], [3.5, 'G2']],
+    11: [[0, 'D0'], [0.5, 'B0'], [1, 'D0'], [1.5, 'G2'], [2, 'D0'], [2.5, 'G0'], [3, 'D0'], [3.5, 'G0']],
+    12: [[0, 'A3'], [1, 'A3'], [2, 'D2 G0 B0', 'roll'], [3, 'A3~'], [3.5, 'B3~']],
+    13: [[0.5, 'B0'], [1.5, 'B1'], [2.5, 'B0p'], [3, 'G2'], [3.5, 'G0p']],
+    14: [[0, 'A3'], [1, 'A3'], [2, 'D2 G0 B0', 'roll'], [3, 'A3'], [3.5, 'G0']],
+    15: [[0, 'A3'], [0.5, 'G0'], [1, 'B0'], [1.5, 'A3'], [2, 'G0'], [2.5, 'B0'], [3, 'G0'], [3.5, 'D0']],
+    16: [[0, 'E3'], [0.5, 'G0'], [1, 'B0'], [1.5, 'E3'], [2, 'G0'], [2.5, 'B0'], [3, 'G0'], [3.5, 'D0']],
+    17: [[0, 'A0'], [0.5, 'G0'], [1, 'B0'], [1.5, 'G0'], [2, 'B1'], [2.5, 'B0p'], [3, 'A0'], [3.5, 'B0']],
+  };
+  // The order the bars play in, with the tab's repeats written out: bars 1-4 with the 1st ending
+  // (5-6), bars 1-4 again with the 2nd ending (7); bars 8-11 with the 1st ending (12-13), again with
+  // the 2nd ending (14); then bars 15-17 four times.
+  const LA_ORDER = [1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 8, 9, 10, 11, 14,
+    15, 16, 17, 15, 16, 17, 15, 16, 17, 15, 16, 17];
+  const LA_STRINGS_FROM = 22; // where the strings come in: the first time bar 15 plays
+  // Standard tuning (each string's open note as a MIDI number), and the capo.
+  const LA_TUNE = { E: 40, A: 45, D: 50, G: 55, B: 59, e: 64 };
+  const LA_CAPO = 2;
+  // The guitar's sound.
+  const LA_AMP = 'acoustic';
+  // The string quartet under bars 15-17 played four times (12 bars), one entry per bar. Notes are
+  // written as if there were no capo, like the guitar's shapes, and move with it. One note fills
+  // the bar; two split it in half; - is a rest. A note held into the next bar is tied.
+  const LA_STRINGS = {
+    // Cello: the roots, low and long (C, G, A).
+    cello: ['C3', 'G2', 'A2', 'C3', 'G2', 'A2', 'C3', 'G2', 'A2', 'C3', 'G2', 'A2'],
+    // Viola: a quiet middle voice.
+    viola: ['G4', 'D4', 'E4', 'G4', 'D4', 'E4', 'G4', 'D4', 'E4', 'G4', 'D4', 'E4'],
+    // First violin: a slow, sad melody that rises to its peak in the third time through.
+    violin1: ['E5', 'D5', 'C5', 'G5 E5', 'D5', 'E5', 'E5', 'G5', 'A5', 'G5 E5', 'D5 B4', 'C5'],
+    // Second violin: harmony under the melody.
+    violin2: ['C5', 'B4', 'A4', 'C5', 'B4', 'A4', 'C5', 'B4', 'C5', 'C5', 'B4', 'A4'],
+  };
+  const LA_STR_VOL = { cello: 0.8, viola: 0.55, violin1: 0.72, violin2: 0.52 };
+  const LA_NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const laMidi = (nm) => 12 * (Number(nm.slice(-1)) + 1) + LA_NOTE[nm[0]] + (nm.includes('#') ? 1 : nm.includes('b') ? -1 : 0);
+  PRE_GEN.licenseand = (S) => {
+    // With the capo on 2 the shapes sound in A major (F# minor): everything moves to the key picked,
+    // at most 6 half steps down or 5 up.
+    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = ((tm + 12) % 12) - 6;
+    LA_ORDER.forEach((n, i) => {
+      const B = i * 4, H = S.rng('lag', i);
+      LA_GTR[n].forEach(([b, notes, roll]) => {
+        const toks = notes.split(' ').map((tok) => ({
+          s: 'EADGBe'.indexOf(tok[0]), f: parseInt(tok.slice(1), 10), tie: tok.endsWith('~'), pull: tok.endsWith('p'),
+        })).sort((x, y) => x.s - y.s);
+        const tie = toks.some((t) => t.tie), pull = toks.some((t) => t.pull);
+        const v = (b % 1 ? 0.84 : b % 2 ? 0.9 : 0.96) * (pull ? 0.7 : 1) * (0.94 + 0.12 * H());
+        S.add({ p: 'gtr', k: 'g', b: B + b, v, n: toks.map((t) => ({ s: t.s, m: LA_TUNE['EADGBe'[t.s]] + LA_CAPO + t.f + T })),
+          dt: hz(H, 5, 4), x: { amp: LA_AMP, hold: 4 - b - 0.05 + (tie ? 4 : 0), a: toks.length > 1 ? 0.36 : 0.44, rel: 0.12, gap: roll ? 0.035 : 0.011 } });
+      });
+    });
+    // The string quartet: each voice's notes, with repeated notes tied over.
+    Object.keys(LA_STRINGS).forEach((voice) => {
+      const held = [];
+      LA_STRINGS[voice].forEach((bar, j) => {
+        const parts = bar.split(' '), len = 4 / parts.length;
+        parts.forEach((nm, k) => {
+          const b = (LA_STRINGS_FROM + j) * 4 + k * len, last = held[held.length - 1];
+          if (nm === '-') return;
+          if (last && last.nm === nm && last.b + last.d === b) last.d += len;
+          else held.push({ nm, b, d: len });
+        });
+      });
+      held.forEach((h) => {
+        let m = laMidi(h.nm) + LA_CAPO + T;
+        if (m > 88) m -= 12; // in the highest keys, keep the violins from getting shrill
+        S.add({ p: 'keys', k: 'sy', b: h.b, d: h.d - 0.1, n: [m], v: LA_STR_VOL[voice], dt: 0,
+          x: { patch: 'strings', att: voice === 'cello' ? 0.7 : 0.9, rel: 1.8 } });
+      });
+    });
   };
 
   /* ---------- Compiling a preset for one key ---------- */

@@ -1460,6 +1460,25 @@
   #tuNeedle { transition: transform 0.08s linear; }
   .tu-bar { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   @media (max-width: 380px) { .tab { font-size: 10.6px; } }
+
+  /* ---------- Loop bars (Presets) ---------- */
+  .pp-loop { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+  .pp-loopctl { display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-width: 0; }
+  .pp-loopctl[hidden] { display: none; }
+  .pp-looplbl { font-family: var(--sans); font-size: 12px; color: var(--parchment-dim); }
+  .pp-loopctl .seg { flex: 1; min-width: 0; }
+  .pp-loopctl .seg button { padding: 7px 0; }
+  .pp-loopctl .btn { padding: 7px 12px; }
+  .pp-loop .caption { flex-basis: 100%; margin: 0; }
+  .pp-loop .caption[hidden], #ppLoopAdd[hidden] { display: none; }
+  .pp-looplbl { white-space: nowrap; }
+  .pp-form.looping .ptile { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .pp-form.looping .ptile:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+  .ptile.inloop { border-color: var(--brass-bright); background: rgba(232, 180, 92, 0.16); box-shadow: inset 0 0 0 1px rgba(232, 180, 92, 0.5); }
+  .pp-form.looping .ptile.inloop:not(.loopsel) { background: rgba(232, 180, 92, 0.06); border-color: rgba(232, 180, 92, 0.45); box-shadow: none; }
+  .ptile[data-loop]::after { content: attr(data-loop); position: absolute; bottom: 2px; left: 5px; font: 600 9px/1 var(--sans); color: var(--brass-bright); }
+  .ptile.playing[data-loop]::after { color: var(--ink); }
+  .pp-bar { white-space: pre; }
 </style>
 </head>
 <body>
@@ -1643,6 +1662,22 @@
           </div>
         </div>
         <div class="pp-form" id="ppForm" role="list" aria-label="The chords of the form, a tile per measure"></div>
+        <div class="pp-loop">
+          <button type="button" class="toggle" id="ppLoopBtn" aria-pressed="false">Loop bars</button>
+          <button type="button" class="toggle" id="ppLoopAdd" aria-pressed="false" hidden>+ New loop</button>
+          <div class="pp-loopctl" id="ppLoopCtl" hidden>
+            <span class="pp-looplbl" id="ppLoopLbl">Loop</span>
+            <div class="seg five small" role="group" aria-labelledby="ppLoopLbl" id="ppLoopN">
+              <button type="button" data-n="1" aria-pressed="false">1&times;</button>
+              <button type="button" data-n="2" aria-pressed="false">2&times;</button>
+              <button type="button" data-n="3" aria-pressed="false">3&times;</button>
+              <button type="button" data-n="4" aria-pressed="false">4&times;</button>
+              <button type="button" data-n="5" aria-pressed="false">5&times;</button>
+            </div>
+            <button type="button" class="btn" id="ppLoopClear">Remove</button>
+          </div>
+          <p class="caption" id="ppLoopCap" hidden></p>
+        </div>
         <div class="pp-try" id="ppTry"></div>
       </div>
 
@@ -2213,7 +2248,9 @@
       <button type="button" class="toggle" id="tuRepeat" aria-pressed="true">Repeat the note</button>
       <button type="button" class="btn primary" id="tuMicBtn" hidden>Start listening</button>
     </div>
-  </section>  <div class="toast" id="toast" role="status" hidden></div>
+  </section>
+
+  <div class="toast" id="toast" role="status" hidden></div>
 </main>
 
 <script>
@@ -3476,7 +3513,9 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
 
   /* ---------- State ---------- */
   const STORE = 'backing-track-builder-v1';
-  const TABS = ['track', 'map', 'lab', 'drills', 'saved', 'stems', 'looper', 'tuner'];  const TAB_TITLES = { track: 'Backing Track', map: 'Key Map', lab: 'Chord Lab', drills: 'Drills', saved: 'Saved Setups', stems: 'Song Splitter', looper: 'Looper', tuner: 'Tuner' };  const LP_BARS = [1, 2, 4, 8, 16];
+  const TABS = ['track', 'map', 'lab', 'drills', 'saved', 'stems', 'looper', 'tuner'];
+  const TAB_TITLES = { track: 'Backing Track', map: 'Key Map', lab: 'Chord Lab', drills: 'Drills', saved: 'Saved Setups', stems: 'Song Splitter', looper: 'Looper', tuner: 'Tuner' };
+  const LP_BARS = [1, 2, 4, 8, 16];
   const LP_METRO = ['off', 'count', 'always'];
   // The drills, in the order the dropdown lists them. The m... ones learn the modes step by step.
   const DRILL_GROUPS = [
@@ -3551,7 +3590,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     // Track tab, Presets side. While it shows, root and scale above are the preset's (its key and the
     // scale it suggests) and Build's own key waits in build. bpm: each preset's tempo, when changed.
     pre: {
-      side: 'build', id: 'slowburn', minor: false, mode: 'dorian', bpm: {}, root: 9, build: null, mixOpen: false,
+      side: 'build', id: 'slowburn', minor: false, mode: 'dorian', bpm: {}, root: 9, build: null, mixOpen: false, loops: {},
       mix: { drums: { on: true, vol: 80 }, bass: { on: true, vol: 80 }, gtr: { on: true, vol: 80 }, keys: { on: true, vol: 80 } },
       // Layers on top of a preset (the same ones Build has): which are on, the Drums layer's beat,
       // instrument picks, and their level in the mix.
@@ -3690,7 +3729,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
         if (Number.isInteger(pr.root) && pr.root >= 0 && pr.root < 12) d.root = pr.root;
         if (pr.bpm && typeof pr.bpm === 'object') {
           PRE_LIST.forEach((P) => {
-            const ranges = P.modes ? P.modes.map((m) => [P.id + ':' + m, P.v[m].min || P.min, P.v[m].max || P.max]) : [[P.tkey || P.id, P.min, P.max]];
+            const ranges = P.modes ? P.modes.map((m) => [P.id + ':' + m, Math.min(60, P.v[m].bpm || P.bpm), 250]) : [[P.tkey || P.id, Math.min(60, P.bpm), 250]];
             ranges.forEach(([k, lo, hi]) => { const v = pr.bpm[k]; if (Number.isFinite(v) && v >= lo && v <= hi) d.bpm[k] = Math.round(v); });
           });
         }
@@ -3701,6 +3740,13 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
           });
         }
         d.mixOpen = pr.mixOpen === true;
+        if (pr.loops && typeof pr.loops === 'object') {
+          const ok = (L) => L && Number.isInteger(L.a) && Number.isInteger(L.b) && Number.isInteger(L.n) && L.a >= 0 && L.a <= L.b && L.n >= 1 && L.n <= 5;
+          Object.keys(pr.loops).forEach((id) => {
+            const list = [].concat(pr.loops[id]).filter(ok).map((L) => ({ a: L.a, b: L.b, n: L.n }));
+            if (preById(id) && list.length) d.loops[id] = list;
+          });
+        }
         if (Array.isArray(pr.layer)) d.layer = LAYERS.map((l) => l.id).filter((id) => pr.layer.includes(id));
         if (DRUM_KITS.some((k) => k.id === pr.layerKit)) d.layerKit = pr.layerKit;
         if (pr.layers && typeof pr.layers === 'object') {
@@ -3723,7 +3769,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   }
   // Everything that changes what the backing track sounds like.
   const audioSig = () => (preOn() ? JSON.stringify(['pre', state.pre.id, preVk(prePreset()), state.root, preBpmOf(prePreset()), state.pre.mix,
-    state.pre.layer, state.pre.layerKit, state.pre.layerInst, state.pre.layers,    state.realInst, booted && state.realInst ? readySets() : '']) : JSON.stringify([state.root, state.scale, state.slots, state.preset, state.meter, state.bpm,
+    state.pre.layer, state.pre.layerKit, state.pre.layerInst, state.pre.layers, state.pre.loops[state.pre.id] || null,    state.realInst, booted && state.realInst ? readySets() : '']) : JSON.stringify([state.root, state.scale, state.slots, state.preset, state.meter, state.bpm,
     state.mix.drums, state.mix.chords, state.mix.bass, state.mix.layers, state.mix.layer, state.mix.drumKit,
     state.mix.inst, state.mix.layerInst, state.mix.strum,
     state.realInst, booted && state.realInst ? readySets() : '']));
@@ -4912,7 +4958,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     if (t === 'stems') renderStems();
     if (t === 'looper') lpShow();
     else if (was === 'looper') lpLeave();
-        if (t === 'tuner') tuShow();
+    if (t === 'tuner') tuShow();
     else if (was === 'tuner') tuLeave();
   }
   tabBtns.forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
@@ -6134,7 +6180,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   // A preset's tempo range (Modal Jam's modes each have their own) and the tempo it's set to.
   const preRange = (P, vk) => {
     const V = P.modes ? P.v[vk || state.pre.mode] || {} : {};
-    return { key: P.modes ? P.id + ':' + (vk || state.pre.mode) : P.tkey || P.id, bpm: V.bpm || P.bpm, min: V.min || P.min, max: V.max || P.max };
+    return { key: P.modes ? P.id + ':' + (vk || state.pre.mode) : P.tkey || P.id, bpm: V.bpm || P.bpm, min: Math.min(60, V.bpm || P.bpm), max: 250 };
   };
   const preBpmOf = (P, vk) => { const g = preRange(P, vk), b = state.pre.bpm[g.key]; return Number.isFinite(b) ? b : g.bpm; };
 
@@ -9841,6 +9887,75 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     return sc;
   }
 
+  /* Looping bars in a preset: each run of bars picked plays n more times in a row before the track
+     carries on (a preset can have several runs). The loops are built from the compiled preset by
+     copying those bars' events (and chords) into the right places, so they sound exactly like the
+     bars themselves. */
+  const preLoopCache = new WeakMap();
+  // The preset's loops that fit it, in order, with none overlapping (or null when there are none).
+  function preLoopFor(base) {
+    const list = (state.pre.loops || {})[base.P.id];
+    if (!Array.isArray(list)) return null;
+    const ok = [];
+    list.slice().sort((x, y) => x.a - y.a).forEach((L) => {
+      if (L.a <= L.b && L.b < base.nb && (!ok.length || L.a > ok[ok.length - 1].b)) ok.push({ a: L.a, b: L.b, n: L.n });
+    });
+    return ok.length ? ok : null;
+  }
+  function preLoopScore(base, loops) {
+    const barMap = [], loopPass = [], loopTimes = [];
+    for (let i = 0, k = 0; i < base.nb;) {
+      const L = loops[k];
+      if (L && i === L.a) {
+        for (let r = 0; r <= L.n; r++) for (let j = L.a; j <= L.b; j++) { barMap.push(j); loopPass.push(r + 1); loopTimes.push(L.n + 1); }
+        i = L.b + 1;
+        k++;
+      } else { barMap.push(i); loopPass.push(0); loopTimes.push(0); i++; }
+    }
+    const { beats, sub, spb } = base, nb = barMap.length, N = nb * beats, total = nb * spb;
+    const steps = new Array(total), segs = [];
+    barMap.forEach((o, j) => {
+      const shift = (j - o) * beats;
+      for (let k = 0; k < spb; k++) {
+        const list = base.steps[o * spb + k];
+        if (list) steps[j * spb + k] = list.map((e) => Object.assign({}, e, { b: e.b + shift }));
+      }
+      base.segs.forEach((s) => { if (s.bar === o) segs.push(Object.assign({}, s, { bar: j, b: s.b + shift, orig: s })); });
+    });
+    segs.forEach((s, i) => { s.i = i; s.next = segs[(i + 1) % segs.length]; s.prev = segs[(i + segs.length - 1) % segs.length]; });
+    // How far back from the end a note starts that still rings over the loop point.
+    let ring = 0;
+    steps.forEach((list) => list && list.forEach((e) => {
+      const len = Math.max(e.d || 0, (e.x && e.x.hold) || 0);
+      if (e.b + len + 2 > N) ring = Math.max(ring, total - Math.floor(e.b * sub + 1e-6));
+    }));
+    const starts = [], lens = [];
+    for (let i = 0; i < nb; i++) { starts.push(i * spb); lens.push(spb); }
+    return Object.assign({}, base, { nb, N, total, segs, steps, ring, barMap, loopPass, loopTimes, base, loops, tl: { starts, lens, total } });
+  }
+  // The preset as it plays: with its loops, when it has any.
+  function prePlayScore() {
+    const base = preScore(), loops = preLoopFor(base);
+    if (!loops) return base;
+    const key = loops.map((L) => L.a + '-' + L.b + 'x' + L.n).join(','), hit = preLoopCache.get(base);
+    if (hit && hit.key === key) return hit.sc;
+    const sc = preLoopScore(base, loops);
+    preLoopCache.set(base, { key, sc });
+    return sc;
+  }
+  // The same spot in the music after the loops change: the same bar (and the same time round its
+  // loop, as far as the new loop goes) and the same step in it.
+  function preMovePos(old, neu, pos) {
+    const spb = old.spb, x = Math.floor(pos / spb) % old.nb, off = pos % spb;
+    const bar = old.barMap ? old.barMap[x] : x;
+    let pass = 0;
+    if (old.barMap) for (let j = 0; j < x; j++) if (old.barMap[j] === bar) pass++;
+    if (!neu.barMap) return bar * spb + off;
+    const at = [];
+    neu.barMap.forEach((o, j) => { if (o === bar) at.push(j); });
+    return (at.length ? at[Math.min(pass, at.length - 1)] : 0) * spb + off;
+  }
+
   // One step of a preset: every event that starts inside it, at its exact (swung, humanized) time.
   function preStep(sc, pos, t, live, gains) {
     const P = sc.P, bpm = preBpmOf(P, sc.vk), sec = 60 / bpm;
@@ -10111,7 +10226,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       partGains = makeParts(ctx, bus);
       loopPos = 0;
       nextTime = ctx.currentTime + 0.08;
-      pl = preOn() ? { sc: preScore() } : null;
+      pl = preOn() ? { sc: prePlayScore() } : null;
       if (pl) preWarm(pl.sc);
       scheduler();
     }
@@ -10209,7 +10324,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   // then folds the ringing tail back onto the start so the loop point is seamless.
   async function renderLoop() {
     const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    const pre = preOn(), sc = pre ? preScore() : null;
+    const pre = preOn(), sc = pre ? prePlayScore() : null;
     const tl = pre ? sc.tl : timeline(), sd = pre ? 60 / preBpmOf(sc.P, sc.vk) / sc.sub : stepDur(), n = pre ? sc.spb : stepsPerBar();
     const loopSec = tl.total * sd;
     const sr = loopSec > (pre ? 24 : 60) ? 32000 : 44100;
@@ -17897,12 +18012,20 @@ self.onmessage = async (e) => {
     }));
   }
   function preTick() {
-    const want = preScore();
+    const want = prePlayScore();
     if (!pl || !pl.sc) pl = { sc: want };
     if (want !== pl.sc) {
-      if (want.P !== pl.sc.P || (want.P.modes && want.vk !== pl.sc.vk)) {
+      if ((want.base || want) === (pl.sc.base || pl.sc)) {
+        // Only the loop changed: carry on from the same spot in the music, without a break.
+        loopPos = preMovePos(pl.sc, want, loopPos);
+        pl.sc = want;
+      } else if (want.P !== pl.sc.P || (want.P.modes && want.vk !== pl.sc.vk)) {
         if (loopPos % pl.sc.sub === 0 || loopPos >= pl.sc.total) { preLiveSwap(want, true); loopPos = 0; }
-      } else preLiveSwap(want, false);
+      } else {
+        const old = pl.sc;
+        preLiveSwap(want, false);
+        if (old.total !== want.total) loopPos = preMovePos(old, want, loopPos);
+      }
     }
     const sc = pl.sc;
     if (loopPos >= sc.total) loopPos = 0;
@@ -17958,6 +18081,14 @@ self.onmessage = async (e) => {
         return nm;
       });
       t.setAttribute('aria-label', 'Bar ' + (bar + 1) + ': ' + segs.map((s) => preChord(s).name).join(' then '));
+      // Loop bars: while it's on, a tap picks bars for the loop (and nothing else happens).
+      t.addEventListener('click', (e) => { if (!ppLoopOn) return; e.stopImmediatePropagation(); preLoopTap(bar); });
+      t.addEventListener('keydown', (e) => {
+        if (!ppLoopOn || (e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        preLoopTap(bar);
+      });
       if (playing && ppLast.bar === bar) t.classList.add('playing');
       if (state.guide) {
         // Chord guide: tap a tile while stopped to see its chord's scale (top or bottom half of a two-chord tile).
@@ -17983,18 +18114,106 @@ self.onmessage = async (e) => {
       ppForm.appendChild(t);
       ppTiles.push(t);
     }
+    renderPreLoop();
     ppBeats.innerHTML = '';
     ppBeatEls = [];
     for (let i = 0; i < P.beats; i++) { const d = el('span', 'pdot' + (i === 0 ? ' one' : '')); ppBeats.appendChild(d); ppBeatEls.push(d); }
     ppLast.beat = -1;
     if (!playing) ppBar.textContent = sc.nb + ' bars';
-    else if (ppLast.bar >= 0) ppBar.textContent = 'Bar ' + (ppLast.bar + 1) + ' of ' + sc.nb;
+    else if (ppLast.bar >= 0) ppLast.xbar = -1; // the counter is redrawn on the next frame
     renderPreNow(playing && ppLast.sc ? ppLast.sc : sc);
     renderPreTry(P);
     renderPreMix();
     renderPreLayers();
     renderPreLib();
   }
+  // Loop bars. With "Loop bars" on, a tap on a bar next to the picked loop adds it to that loop, a tap
+  // on either end of the picked loop takes that bar off, a tap on another loop picks that loop, and a
+  // tap anywhere else (or any tap after "New loop") starts a new loop there. Each loop plays 1-5 more
+  // times in a row before the track carries on.
+  var ppLoopOn = false, ppLoopNew = false, ppLoopSel = -1, ppLoopFor = '';
+  var ppLoopBtn = $('ppLoopBtn'), ppLoopAdd = $('ppLoopAdd'), ppLoopCtl = $('ppLoopCtl'), ppLoopLbl = $('ppLoopLbl');
+  var ppLoopCap = $('ppLoopCap'), ppLoopN = $('ppLoopN'), ppLoopClear = $('ppLoopClear');
+  function preLoopList() {
+    const list = (state.pre.loops || {})[prePreset().id];
+    return Array.isArray(list) ? list : [];
+  }
+  function preLoopKeep(list, sel) {
+    const id = prePreset().id, all = state.pre.loops || (state.pre.loops = {});
+    list.sort((x, y) => x.a - y.a);
+    if (list.length) all[id] = list; else delete all[id];
+    ppLoopSel = sel ? list.indexOf(sel) : -1;
+    save();
+    renderPreLoop();
+  }
+  function preLoopTap(bar) {
+    const list = preLoopList().slice(), hit = list.find((L) => bar >= L.a && bar <= L.b);
+    let sel = list[ppLoopSel] || null;
+    if (hit && (hit !== sel || ppLoopNew)) sel = hit;
+    else if (hit) {
+      if (hit.a === hit.b) { list.splice(list.indexOf(hit), 1); sel = null; }
+      else if (bar === hit.a) hit.a++;
+      else if (bar === hit.b) hit.b--;
+    } else if (sel && !ppLoopNew && bar === sel.b + 1) sel.b = bar;
+    else if (sel && !ppLoopNew && bar === sel.a - 1) sel.a = bar;
+    else { sel = { a: bar, b: bar, n: sel ? sel.n : 1 }; list.push(sel); }
+    ppLoopNew = false;
+    preLoopKeep(list, sel);
+    const t = ppTiles[bar];
+    if (t) t.focus({ preventScroll: true });
+  }
+  function preLoopBars(L, cap) {
+    return L.a === L.b ? (cap ? 'Bar ' : 'bar ') + (L.a + 1) + ' plays ' : (cap ? 'Bars ' : 'bars ') + (L.a + 1) + '–' + (L.b + 1) + ' play ';
+  }
+  function renderPreLoop() {
+    const list = preLoopList(), id = prePreset().id;
+    if (ppLoopFor !== id) { ppLoopFor = id; ppLoopSel = list.length - 1; ppLoopNew = false; }
+    if (ppLoopSel >= list.length) ppLoopSel = list.length - 1;
+    if (!ppLoopOn) ppLoopNew = false;
+    const sel = list[ppLoopSel] || null;
+    ppLoopBtn.setAttribute('aria-pressed', String(ppLoopOn));
+    ppForm.classList.toggle('looping', ppLoopOn);
+    ppTiles.forEach((t, bar) => {
+      const L = list.find((M) => bar >= M.a && bar <= M.b);
+      t.classList.toggle('inloop', !!L);
+      t.classList.toggle('loopsel', ppLoopOn && !ppLoopNew && !!L && L === sel);
+      if (L && bar === L.a) t.dataset.loop = '↻ ' + L.n + '×';
+      else delete t.dataset.loop;
+      if (ppLoopOn) {
+        t.tabIndex = 0;
+        t.setAttribute('role', 'button');
+        t.setAttribute('aria-pressed', String(!!L));
+      } else {
+        t.removeAttribute('tabindex');
+        t.setAttribute('role', 'listitem');
+        t.removeAttribute('aria-pressed');
+      }
+    });
+    ppLoopAdd.hidden = !ppLoopOn || !list.length;
+    ppLoopAdd.setAttribute('aria-pressed', String(ppLoopNew));
+    ppLoopCtl.hidden = !ppLoopOn || !sel || ppLoopNew;
+    if (sel) ppLoopLbl.textContent = sel.a === sel.b ? 'Bar ' + (sel.a + 1) : 'Bars ' + (sel.a + 1) + '–' + (sel.b + 1);
+    ppLoopN.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(!!sel && Number(b.dataset.n) === sel.n)));
+    ppLoopCap.textContent = ppLoopNew ? 'Tap a bar to start the new loop, then tap the bars next to it to add them.'
+      : list.length ? list.map((L, i) => preLoopBars(L, i === 0) + (L.n + 1) + ' times (looped ' + L.n + '×)').join(', ') + ', then the track carries on.'
+      : ppLoopOn ? 'Tap a bar to start a loop, then tap the bars next to it to add them.' : '';
+    ppLoopCap.hidden = !ppLoopCap.textContent;
+  }
+  ppLoopBtn.addEventListener('click', () => { ppLoopOn = !ppLoopOn; renderPreLoop(); });
+  ppLoopAdd.addEventListener('click', () => { ppLoopNew = !ppLoopNew; renderPreLoop(); });
+  ppLoopN.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    const list = preLoopList(), sel = list[ppLoopSel];
+    if (!sel) return;
+    sel.n = Number(b.dataset.n);
+    preLoopKeep(list.slice(), sel);
+  }));
+  ppLoopClear.addEventListener('click', () => {
+    const list = preLoopList().slice(), sel = list[ppLoopSel];
+    if (!sel) return;
+    list.splice(ppLoopSel, 1);
+    preLoopKeep(list, list[list.length - 1] || null);
+    ppLoopBtn.focus({ preventScroll: true });
+  });
   function renderPreTempo() {
     const P = prePreset(), bpm = preBpmOf(P), g = preRange(P);
     ppBpm.min = String(g.min);
@@ -18225,15 +18444,19 @@ self.onmessage = async (e) => {
   }
   // While playing: light the measure, the beat and the chord.
   function preFrame(ev) {
-    const sc = ev.sc || preScore();
+    const sc = ev.sc || prePlayScore();
     if (ev.pos == null || !sc) return;
-    const pos = ev.pos % sc.total, bar = Math.floor(pos / sc.spb), beat = Math.floor((pos % sc.spb) / sc.sub), b = pos / sc.sub;
+    const pos = ev.pos % sc.total, xbar = Math.floor(pos / sc.spb), beat = Math.floor((pos % sc.spb) / sc.sub), b = pos / sc.sub;
+    // With loops, the music's bars play out of their written order: show the written bar.
+    const bar = sc.barMap ? sc.barMap[xbar] : xbar, nb = sc.base ? sc.base.nb : sc.nb;
     let si = 0;
     while (si < sc.segs.length - 1 && sc.segs[si + 1].b <= b + 1e-9) si++;
-    if (bar !== ppLast.bar || sc !== ppLast.sc) {
-      ppTiles.forEach((t, i) => t.classList.toggle('playing', i === bar && ppTiles.length === sc.nb));
-      ppBar.textContent = 'Bar ' + (bar + 1) + ' of ' + sc.nb;
+    if (xbar !== ppLast.xbar || sc !== ppLast.sc) {
+      ppTiles.forEach((t, i) => t.classList.toggle('playing', i === bar && ppTiles.length === nb));
+      const pass = sc.loopPass ? sc.loopPass[xbar] : 0;
+      ppBar.textContent = 'Bar ' + (bar + 1) + ' of ' + nb + (pass ? '\nLoop ' + pass + ' of ' + sc.loopTimes[xbar] : '');
       ppLast.bar = bar;
+      ppLast.xbar = xbar;
     }
     if (beat !== ppLast.beat) {
       ppBeatEls.forEach((d, i) => d.classList.toggle('on', i === beat));
@@ -18364,12 +18587,12 @@ self.onmessage = async (e) => {
   const TU_TUNINGS = [
     { id: 'std', name: 'Standard (E A D G B E)', m: [40, 45, 50, 55, 59, 64], n: ['E', 'A', 'D', 'G', 'B', 'E'] },
     { id: 'dropd', name: 'Drop D (D A D G B E)', m: [38, 45, 50, 55, 59, 64], n: ['D', 'A', 'D', 'G', 'B', 'E'] },
-    { id: 'half', name: 'Half step down (E\u266d A\u266d D\u266d G\u266d B\u266d E\u266d)', m: [39, 44, 49, 54, 58, 63], n: ['E\u266d', 'A\u266d', 'D\u266d', 'G\u266d', 'B\u266d', 'E\u266d'] },
+    { id: 'half', name: 'Half step down (E♭ A♭ D♭ G♭ B♭ E♭)', m: [39, 44, 49, 54, 58, 63], n: ['E♭', 'A♭', 'D♭', 'G♭', 'B♭', 'E♭'] },
     { id: 'whole', name: 'Whole step down (D G C F A D)', m: [38, 43, 48, 53, 57, 62], n: ['D', 'G', 'C', 'F', 'A', 'D'] },
     { id: 'dropc', name: 'Drop C (C G C F A D)', m: [36, 43, 48, 53, 57, 62], n: ['C', 'G', 'C', 'F', 'A', 'D'] },
     { id: 'dadgad', name: 'DADGAD', m: [38, 45, 50, 55, 57, 62], n: ['D', 'A', 'D', 'G', 'A', 'D'] },
     { id: 'openg', name: 'Open G (D G D G B D)', m: [38, 43, 50, 55, 59, 62], n: ['D', 'G', 'D', 'G', 'B', 'D'] },
-    { id: 'opend', name: 'Open D (D A D F\u266f A D)', m: [38, 45, 50, 54, 57, 62], n: ['D', 'A', 'D', 'F\u266f', 'A', 'D'] },
+    { id: 'opend', name: 'Open D (D A D F♯ A D)', m: [38, 45, 50, 54, 57, 62], n: ['D', 'A', 'D', 'F♯', 'A', 'D'] },
   ];
   const TU_ORD = ['6th', '5th', '4th', '3rd', '2nd', '1st'];
   // Where each string's peg sits on the drawing (viewBox 300 x 380): bass side on the left with the
@@ -18437,8 +18660,8 @@ self.onmessage = async (e) => {
       s += '<line x1="' + x0.toFixed(1) + '" y1="' + y0.toFixed(1) + '" x2="' + x1.toFixed(1) + '" y2="' + y1.toFixed(1) + '" stroke="rgba(237,226,208,' + (big ? 0.7 : 0.4) + ')" stroke-width="' + (big ? 2 : 1.4) + '"/>';
     }
     const [fx, fy] = pt(-50, R + 4), [sx, sy] = pt(50, R + 4);
-    s += '<text x="' + (fx - 4).toFixed(1) + '" y="' + (fy + 18).toFixed(1) + '" fill="rgba(237,226,208,0.6)" font-size="18" text-anchor="middle" font-family="Georgia, serif">\u266d</text>' +
-      '<text x="' + (sx + 4).toFixed(1) + '" y="' + (sy + 18).toFixed(1) + '" fill="rgba(237,226,208,0.6)" font-size="18" text-anchor="middle" font-family="Georgia, serif">\u266f</text>' +
+    s += '<text x="' + (fx - 4).toFixed(1) + '" y="' + (fy + 18).toFixed(1) + '" fill="rgba(237,226,208,0.6)" font-size="18" text-anchor="middle" font-family="Georgia, serif">♭</text>' +
+      '<text x="' + (sx + 4).toFixed(1) + '" y="' + (sy + 18).toFixed(1) + '" fill="rgba(237,226,208,0.6)" font-size="18" text-anchor="middle" font-family="Georgia, serif">♯</text>' +
       '<g id="tuNeedle" transform="rotate(0 ' + cx + ' ' + cy + ')"><line x1="' + cx + '" y1="' + cy + '" x2="' + cx + '" y2="' + (cy - R + 6) + '" stroke="#e8b45c" stroke-width="3" stroke-linecap="round"/></g>' +
       '<circle cx="' + cx + '" cy="' + cy + '" r="7" fill="#e8b45c"/>';
     $('tuDial').innerHTML = s;
@@ -18462,7 +18685,7 @@ self.onmessage = async (e) => {
     $('tuRepeat').setAttribute('aria-pressed', String(tu.repeat));
     const mb = $('tuMicBtn');
     mb.hidden = !mic;
-    mb.textContent = tu.opening ? 'Opening the microphone\u2026' : tu.mic ? 'Stop listening' : 'Start listening';
+    mb.textContent = tu.opening ? 'Opening the microphone…' : tu.mic ? 'Stop listening' : 'Start listening';
     mb.disabled = tu.opening;
     $('tuHint').textContent = tu.msg || (mic
       ? (tu.lock >= 0
@@ -18625,9 +18848,9 @@ self.onmessage = async (e) => {
     tuNeedle.firstChild.setAttribute('stroke', good ? '#a9cc92' : '#e8b45c');
     tuGauge.classList.toggle('idle', !live);
     tuGauge.classList.toggle('good', good);
-    $('tuNote').textContent = live ? T.n[tu.target] : '\u2013';
+    $('tuNote').textContent = live ? T.n[tu.target] : '–';
     const r = Math.round(c);
-    $('tuCents').textContent = live ? (r > 0 ? '+' : r < 0 ? '\u2212' : '') + Math.abs(r) + ' cents \u00b7 ' + tu.hz.toFixed(1) + ' Hz' : '';
+    $('tuCents').textContent = live ? (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r) + ' cents · ' + tu.hz.toFixed(1) + ' Hz' : '';
     $('tuSay').textContent = !tu.mic ? '' : !live ? 'Play a string' : good ? 'In tune' : c < 0 ? (c < -50 ? 'Far too low, tune up' : 'Too low, tune up') : (c > 50 ? 'Far too high, tune down' : 'Too high, tune down');
     const on = live && tu.lock < 0 ? tu.target : -1;
     if (on !== tuLastOn) { tuLastOn = on; tuHead.querySelectorAll('.tu-peg').forEach((b, k) => b.classList.toggle('on', k === on)); }
@@ -18673,7 +18896,9 @@ self.onmessage = async (e) => {
     if (tu.mic) { tuStopMic(); renderTuner(); } else tuStartMic();
   });
   // Let go of the microphone when the page is put away.
-  document.addEventListener('visibilitychange', () => { if (document.hidden && tu.mic) { tuStopMic(); renderTuner(); } });  /* ---------- Keyboard ---------- */
+  document.addEventListener('visibilitychange', () => { if (document.hidden && tu.mic) { tuStopMic(); renderTuner(); } });
+
+  /* ---------- Keyboard ---------- */
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && pickerSlot !== null) { closePicker(true); return; }
     if (e.key === 'Escape' && lpModalOpen()) { lpCloseModals(); return; }

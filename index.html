@@ -1479,6 +1479,13 @@
   .ptile[data-loop]::after { content: attr(data-loop); position: absolute; bottom: 2px; left: 5px; font: 600 9px/1 var(--sans); color: var(--brass-bright); }
   .ptile.playing[data-loop]::after { color: var(--ink); }
   .pp-bar { white-space: pre; }
+  /* ---------- Loop chords (Build) ---------- */
+  .chords.looping .slot:not(.add) { cursor: pointer; }
+  .slot.inloop:not(.playing) { border-color: var(--brass-bright); background: rgba(232, 180, 92, 0.16); box-shadow: inset 0 0 0 1px rgba(232, 180, 92, 0.5); }
+  .chords.looping .slot.inloop:not(.loopsel):not(.playing) { background: rgba(232, 180, 92, 0.06); border-color: rgba(232, 180, 92, 0.45); box-shadow: none; }
+  .slot[data-loop]::before { content: attr(data-loop); position: absolute; top: 4px; left: 5px; font: 600 9.5px/1 var(--sans); color: var(--brass-bright); white-space: nowrap; }
+  .slot.playing[data-loop]::before { color: var(--ink); }
+  .b-loop { margin: -4px 0 14px; }
 </style>
 </head>
 <body>
@@ -1574,6 +1581,22 @@
     </div>
     <div class="chords" id="chords"></div>
     <div class="picker" id="picker" hidden></div>
+    <div class="pp-loop b-loop">
+      <button type="button" class="toggle" id="bLoopBtn" aria-pressed="false">Loop chords</button>
+      <button type="button" class="toggle" id="bLoopAdd" aria-pressed="false" hidden>+ New loop</button>
+      <div class="pp-loopctl" id="bLoopCtl" hidden>
+        <span class="pp-looplbl" id="bLoopLbl">Loop</span>
+        <div class="seg five small" role="group" aria-labelledby="bLoopLbl" id="bLoopN">
+          <button type="button" data-n="1" aria-pressed="false">1&times;</button>
+          <button type="button" data-n="2" aria-pressed="false">2&times;</button>
+          <button type="button" data-n="3" aria-pressed="false">3&times;</button>
+          <button type="button" data-n="4" aria-pressed="false">4&times;</button>
+          <button type="button" data-n="5" aria-pressed="false">5&times;</button>
+        </div>
+        <button type="button" class="btn" id="bLoopClear">Remove</button>
+      </div>
+      <p class="caption" id="bLoopCap" hidden></p>
+    </div>
 
     <div class="strip">
       <div class="strip-head">
@@ -3543,8 +3566,12 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   // A chord slot is either a chord of the key { d, sev } or a Freestyle chord { r, q }.
   const okKeySlot = (x) => !!x && Number.isInteger(x.d) && x.d >= 0 && x.d < 7;
   const okFreeSlot = (x) => !!x && FREE_ROOTS.includes(x.r) && !!FREE_QUAL[x.q];
-  const keySlot = (x) => ({ d: x.d, sev: !!x.sev, bars: HOLDS.includes(x.bars) ? x.bars : 1, oct: cleanOct(x.oct) });
-  const freeSlot = (x) => ({ r: x.r, q: x.q, bars: HOLDS.includes(x.bars) ? x.bars : 1, oct: cleanOct(x.oct) });
+  // Loop chords (Build): a chord in a loop carries lp (how many more times its loop plays, 1-5), and
+  // the first chord of each loop also carries lps. So a loop stays with its chords when others are
+  // added or taken away.
+  const slotLoop = (x) => (Number.isInteger(x.lp) && x.lp >= 1 && x.lp <= 5 ? (x.lps === true ? { lp: x.lp, lps: true } : { lp: x.lp }) : {});
+  const keySlot = (x) => Object.assign({ d: x.d, sev: !!x.sev, bars: HOLDS.includes(x.bars) ? x.bars : 1, oct: cleanOct(x.oct) }, slotLoop(x));
+  const freeSlot = (x) => Object.assign({ r: x.r, q: x.q, bars: HOLDS.includes(x.bars) ? x.bars : 1, oct: cleanOct(x.oct) }, slotLoop(x));
   // A strumming pattern worth keeping: a real one, not the default, on a beat that takes patterns.
   function cleanStrum(id, presetId) {
     const p = PRESETS.find((x) => x.id === presetId);
@@ -3999,6 +4026,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       b.setAttribute('aria-label', 'Chord ' + (i + 1) + ': ' + ch.name + ', ' + ch.num + ', held ' + holdText(s.bars) +
         (s.oct ? ', ' + OCT_WORDS[s.oct] : '') + '. Edit chord');
       b.addEventListener('click', (e) => {
+        if (bLoopOn) { bLoopTap(i); return; }
         if (pickerSlot === i) closePicker(e.detail === 0);
         else {
           openPicker(i, e.detail === 0);
@@ -4023,8 +4051,114 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       a.addEventListener('click', (e) => addChord(e.detail === 0));
       chordsEl.appendChild(a);
     }
+    renderBuildLoop();
   }
 
+  /* ---------- Loop chords (Build) ----------
+     With "Loop chords" on, a tap on a chord next to the picked loop adds it to that loop, a tap on
+     either end of the picked loop takes that chord off, a tap on another loop picks that loop, and a
+     tap anywhere else (or any tap after "New loop") starts a new loop there. Each loop plays 1-5 more
+     times in a row before the track carries on. */
+  var bLoopOn = false, bLoopNew = false, bLoopSel = -1;
+  var bLoopBtn = $('bLoopBtn'), bLoopAdd = $('bLoopAdd'), bLoopCtl = $('bLoopCtl'), bLoopLbl = $('bLoopLbl');
+  var bLoopCap = $('bLoopCap'), bLoopN = $('bLoopN'), bLoopClear = $('bLoopClear');
+  // The loops in the chord list, in order: [{ a, b, n }] (first chord, last chord, more times).
+  function buildLoops(slots) {
+    const out = [];
+    let cur = null;
+    (slots || state.slots).forEach((s, i) => {
+      if (!s.lp) { cur = null; return; }
+      if (!cur || s.lps) { cur = { a: i, b: i, n: s.lp }; out.push(cur); } else cur.b = i;
+    });
+    return out;
+  }
+  // Writes a list of loops back onto the chords, then saves and redraws.
+  function bLoopKeep(list, sel) {
+    list.sort((x, y) => x.a - y.a);
+    state.slots.forEach((s) => { delete s.lp; delete s.lps; });
+    list.forEach((L) => {
+      for (let i = L.a; i <= L.b; i++) if (state.slots[i]) state.slots[i].lp = L.n;
+      if (state.slots[L.a]) state.slots[L.a].lps = true;
+    });
+    bLoopSel = sel ? list.indexOf(sel) : -1;
+    save();
+    renderBuildLoop();
+  }
+  function bLoopTap(i) {
+    const list = buildLoops(), hit = list.find((L) => i >= L.a && i <= L.b);
+    let sel = list[bLoopSel] || null;
+    if (hit && (!sel || hit.a !== sel.a || bLoopNew)) sel = hit;
+    else if (hit) {
+      if (hit.a === hit.b) { list.splice(list.indexOf(hit), 1); sel = null; }
+      else if (i === hit.a) hit.a++;
+      else if (i === hit.b) hit.b--;
+    } else if (sel && !bLoopNew && i === sel.b + 1) sel.b = i;
+    else if (sel && !bLoopNew && i === sel.a - 1) sel.a = i;
+    else { sel = { a: i, b: i, n: sel ? sel.n : 1 }; list.push(sel); }
+    bLoopNew = false;
+    bLoopKeep(list, sel);
+    const t = slotEls[i];
+    if (t) t.focus({ preventScroll: true });
+  }
+  function bLoopWords(L, cap) {
+    return L.a === L.b ? (cap ? 'Chord ' : 'chord ') + (L.a + 1) + ' plays ' : (cap ? 'Chords ' : 'chords ') + (L.a + 1) + '–' + (L.b + 1) + ' play ';
+  }
+  // The small tag on each loop's first chord: how many more times, or which time round while it plays.
+  function bLoopPass(ev) {
+    buildLoops().forEach((L) => {
+      const t = slotEls[L.a];
+      if (!t) return;
+      const on = playing && ev && ev.pass && ev.slot >= L.a && ev.slot <= L.b;
+      t.dataset.loop = on ? '↻ ' + ev.pass + ' of ' + ev.times : '↻ ' + L.n + '×';
+    });
+  }
+  function renderBuildLoop() {
+    if (!bLoopBtn) return;
+    const list = buildLoops();
+    if (bLoopSel >= list.length) bLoopSel = list.length - 1;
+    if (!bLoopOn) bLoopNew = false;
+    const sel = list[bLoopSel] || null;
+    bLoopBtn.setAttribute('aria-pressed', String(bLoopOn));
+    chordsEl.classList.toggle('looping', bLoopOn);
+    slotEls.forEach((t, i) => {
+      const L = list.find((M) => i >= M.a && i <= M.b);
+      t.classList.toggle('inloop', !!L);
+      t.classList.toggle('loopsel', bLoopOn && !bLoopNew && !!L && !!sel && L.a === sel.a);
+      delete t.dataset.loop;
+      if (bLoopOn) t.setAttribute('aria-pressed', String(!!L));
+      else t.removeAttribute('aria-pressed');
+    });
+    bLoopPass(playing ? currentEv : null);
+    bLoopAdd.hidden = !bLoopOn || !list.length;
+    bLoopAdd.setAttribute('aria-pressed', String(bLoopNew));
+    bLoopCtl.hidden = !bLoopOn || !sel || bLoopNew;
+    if (sel) bLoopLbl.textContent = sel.a === sel.b ? 'Chord ' + (sel.a + 1) : 'Chords ' + (sel.a + 1) + '–' + (sel.b + 1);
+    bLoopN.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(!!sel && Number(b.dataset.n) === sel.n)));
+    bLoopCap.textContent = bLoopNew ? 'Tap a chord to start the new loop, then tap the chords next to it to add them.'
+      : list.length ? list.map((L, i) => bLoopWords(L, i === 0) + (L.n + 1) + ' times (looped ' + L.n + '×)').join(', ') + ', then the track carries on.'
+      : bLoopOn ? 'Tap a chord to start a loop, then tap the chords next to it to add them.' : '';
+    bLoopCap.hidden = !bLoopCap.textContent;
+  }
+  bLoopBtn.addEventListener('click', () => {
+    bLoopOn = !bLoopOn;
+    if (bLoopOn && pickerSlot !== null) closePicker(false);
+    if (bLoopOn && bLoopSel < 0) bLoopSel = buildLoops().length - 1;
+    renderBuildLoop();
+  });
+  bLoopAdd.addEventListener('click', () => { bLoopNew = !bLoopNew; renderBuildLoop(); });
+  bLoopN.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    const list = buildLoops(), sel = list[bLoopSel];
+    if (!sel) return;
+    sel.n = Number(b.dataset.n);
+    bLoopKeep(list, sel);
+  }));
+  bLoopClear.addEventListener('click', () => {
+    const list = buildLoops();
+    if (!list[bLoopSel]) return;
+    list.splice(bLoopSel, 1);
+    bLoopKeep(list, list[list.length - 1] || null);
+    bLoopBtn.focus({ preventScroll: true });
+  });
   function renderChordMode() {
     modeBtns.forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.v === 'free') === state.free)));
     $('modeNote').hidden = !state.free;
@@ -4106,13 +4240,13 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     line.classList.toggle('on', on && !!line._has);
   }
 
-  function renderStrip(i) {
+  function renderStrip(i, nx) {
     const ch = i >= 0 ? chordFor(i) : null;
     const cur = state.guide && ch ? buildGuideAt(i) : null;
     if (cur && cur.g) {
       paintGuide(notesEl, captionEl, guideModeEl, cur);
       const n = state.slots.length;
-      setGuideNext(guideNextEl, cur, playing && n > 1 ? buildGuideAt((i + 1) % n) : null);
+      setGuideNext(guideNextEl, cur, playing && n > 1 ? buildGuideAt(nx != null ? nx : (i + 1) % n) : null);
       return;
     }
     unpaintGuide(notesEl, guideModeEl, guideNextEl);
@@ -4423,7 +4557,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
 
   function choose(d, sev, fromKeyboard) {
     const i = pickerSlot;
-    state.slots[i] = { d, sev, bars: state.slots[i].bars, oct: state.slots[i].oct || 0 };
+    state.slots[i] = Object.assign({ d, sev, bars: state.slots[i].bars, oct: state.slots[i].oct || 0 }, slotLoop(state.slots[i]));
     save();
     renderSlots();
     if (!playing) preview(chordFor(i));
@@ -10030,21 +10164,50 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   }
   /* ---------- Scheduler ---------- */
   // loopPos counts 16th-note steps through the whole progression. Bars restart when the loop does.
-  let loopPos = 0, nextTime = 0, timer = null;
+  let loopPos = 0, nextTime = 0, timer = null, lastTl = null, lastK = -1;
   const uiQueue = [];
   const SUSTAIN = { pad: true, thick: true, soft: true };
 
   function timeline() {
     const spb = stepsPerBar();
-    const starts = [], lens = [];
+    // With loops, chords play more than once: map gives the chord for each place in the track,
+    // pass which time round its loop (0 outside a loop), times how many times that loop plays.
+    const starts = [], lens = [], map = [], pass = [], times = [];
     let s = 0;
-    state.slots.forEach((x) => {
-      const l = Math.max(1, Math.round(x.bars * spb));
+    const put = (i, p, t) => {
+      const l = Math.max(1, Math.round(state.slots[i].bars * spb));
       starts.push(s);
       lens.push(l);
+      map.push(i);
+      pass.push(p);
+      times.push(t);
       s += l;
-    });
-    return { starts, lens, total: s };
+    };
+    const loops = buildLoops();
+    for (let i = 0, k = 0; i < state.slots.length;) {
+      const L = loops[k];
+      if (L && i === L.a) {
+        for (let r = 0; r <= L.n; r++) for (let j = L.a; j <= L.b; j++) put(j, r + 1, L.n + 1);
+        i = L.b + 1;
+        k++;
+      } else { put(i, 0, 0); i++; }
+    }
+    return { starts, lens, total: s, map, pass, times, key: map.join(',') };
+  }
+  // The same spot in the music after the loops change: the same chord (and the same time round
+  // its loop, as far as the new loop goes) and the same step in it.
+  function tlMovePos(old, neu, pos) {
+    pos %= old.total;
+    let k = 0;
+    while (k < old.starts.length - 1 && pos >= old.starts[k + 1]) k++;
+    const slot = old.map[k], off = pos - old.starts[k];
+    let pass = 0;
+    for (let j = 0; j < k; j++) if (old.map[j] === slot) pass++;
+    const at = [];
+    neu.map.forEach((o, j) => { if (o === slot) at.push(j); });
+    if (!at.length) return 0;
+    const j = at[Math.min(pass, at.length - 1)];
+    return neu.starts[j] + Math.min(off, neu.lens[j] - 1);
   }
 
   function hitIn(track, from, to) {
@@ -10089,10 +10252,10 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     const P = pattern();
     const mix = state.mix;
     const step = pos % P.n;
-    let slot = 0;
-    while (slot < tl.starts.length - 1 && pos >= tl.starts[slot + 1]) slot++;
-    const inSlot = pos - tl.starts[slot];
-    const left = tl.lens[slot] - inSlot;
+    let k = 0;
+    while (k < tl.starts.length - 1 && pos >= tl.starts[k + 1]) k++;
+    const slot = tl.map ? tl.map[k] : k, inSlot = pos - tl.starts[k];
+    const left = tl.lens[k] - inSlot;
     const tt = t + swingOffset(preset, step);
     const chord = chordFor(slot);
     if (mix.drums.on) {
@@ -10105,7 +10268,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       const Pc = P.turn && turnBar(pos, tl, P.n) ? P.turn : P;
       // Lets the automated tests see each strum the beat plays.
       if (window.__STRUM_LOG && Pc.vel && Pc.vel[step] != null) window.__STRUM_LOG.push([pos, Pc.tracks.g[step], Pc.vel[step]]);
-      playPart(chord, preset, Pc, step, inSlot, left, tl.lens[slot], tt, partGains.chords, mainInst());
+      playPart(chord, preset, Pc, step, inSlot, left, tl.lens[k], tt, partGains.chords, mainInst());
     }
     if (mix.bass.on) {
       const b = P.tracks.b && P.tracks.b[step];
@@ -10121,9 +10284,9 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
         return;
       }
       const src = presetById(L.src);
-      playPart(chord, src, patternFor(src), step, inSlot, left, tl.lens[slot], tt, partGains.layers, layerInstOf(L));
+      playPart(chord, src, patternFor(src), step, inSlot, left, tl.lens[k], tt, partGains.layers, layerInstOf(L));
     });
-    if (live) uiQueue.push({ t, step, slot, inSlot, len: tl.lens[slot] });
+    if (live) uiQueue.push({ t, step, slot, k, inSlot, len: tl.lens[k], pass: tl.pass ? tl.pass[k] : 0, times: tl.times ? tl.times[k] : 0, nxt: tl.map ? tl.map[(k + 1) % tl.map.length] : null });
   }
 
   function scheduler() {
@@ -10131,6 +10294,9 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     while (nextTime < ctx.currentTime + ahead) {
       if (pl) { preTick(); continue; }
       const tl = timeline();
+      // Loops changed while playing: carry on from the same spot in the music.
+      if (lastTl && lastTl.total && tl.total && tl.key !== lastTl.key) loopPos = tlMovePos(lastTl, tl, loopPos);
+      lastTl = tl;
       if (loopPos >= tl.total) loopPos = 0;
       scheduleStep(loopPos, tl, nextTime);
       nextTime += stepDur();
@@ -10154,12 +10320,14 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       return;
     }
     if (currentEv && currentEv.slot < slotEls.length) {
-      const slot = currentEv.slot, step = currentEv.step;
-      if (slot !== lastSlot) {
+      const slot = currentEv.slot, step = currentEv.step, k = currentEv.k == null ? slot : currentEv.k;
+      if (slot !== lastSlot || k !== lastK) {
         slotEls.forEach((b, i) => b.classList.toggle('playing', i === slot));
         progEls.forEach((p, i) => { if (i !== slot) p.style.width = '0'; });
         lastSlot = slot;
-        renderStrip(slot);
+        lastK = k;
+        renderStrip(slot, currentEv.nxt);
+        bLoopPass(currentEv);
         onTrackSlot();
       }
       progEls[slot].style.width = Math.min(100, ((currentEv.inSlot + 1) / currentEv.len) * 100) + '%';
@@ -10266,6 +10434,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     lastSlot = -1;
     lastCell = -1;
     slotEls.forEach((b) => b.classList.remove('playing'));
+    bLoopPass(null);
     progEls.forEach((p) => { p.style.width = '0'; });
     cells.forEach((c) => c.classList.remove('hit'));
     renderStrip(displaySlot());
@@ -10460,9 +10629,11 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     if (!r) return null;
     if (!wa && (!bgAudio || bgAudio.paused || bgSwapping)) return null;
     const pos = Math.floor(bgPosSec() / r.sd) % r.tl.total;
-    let slot = 0;
-    while (slot < r.tl.starts.length - 1 && pos >= r.tl.starts[slot + 1]) slot++;
-    return { step: pos % r.n, slot, inSlot: pos - r.tl.starts[slot], len: r.tl.lens[slot], pos, sc: r.sc };
+    let k = 0;
+    while (k < r.tl.starts.length - 1 && pos >= r.tl.starts[k + 1]) k++;
+    const m = r.tl.map, slot = m ? m[k] : k;
+    return { step: pos % r.n, slot, k, inSlot: pos - r.tl.starts[k], len: r.tl.lens[k], pos, sc: r.sc,
+      pass: r.tl.pass ? r.tl.pass[k] : 0, times: r.tl.times ? r.tl.times[k] : 0, nxt: m ? m[(k + 1) % m.length] : null };
   }
 
   document.addEventListener('visibilitychange', () => {
@@ -11411,7 +11582,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       b.setAttribute('aria-label', 'Replace track chord ' + (i + 1) + ', ' + cur.name + ', with ' + data.name);
       b.append(el('span', 'sn', String(i + 1)), el('span', 'sc', cur.name));
       b.addEventListener('click', () => {
-        state.slots[i] = toSlot(state.slots[i].bars, state.slots[i].oct || 0);
+        state.slots[i] = Object.assign(toSlot(state.slots[i].bars, state.slots[i].oct || 0), slotLoop(state.slots[i]));
         after();
         toast('Track chord ' + (i + 1) + ' is now ' + data.name);
       });

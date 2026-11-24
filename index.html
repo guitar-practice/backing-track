@@ -2994,7 +2994,7 @@ const PRE_FAMILIES = [
   ['electronic', 'Electronic'],
 ];
 // The parts a preset's mixer controls. A preset can rename the last two (names: { gtr, keys }).
-const PRE_PARTS = [['drums', 'Drums'], ['bass', 'Bass'], ['gtr', 'Guitar'], ['keys', 'Keys/Other']];
+const PRE_PARTS = [['drums', 'Drums'], ['bass', 'Bass'], ['gtr', 'Guitar'], ['gtr2', 'Guitar 2'], ['keys', 'Keys/Other']];
 /* Presets. beats: beats in a measure; sub: steps per beat for the scheduler (events can sit anywhere
    inside a step). sw8(bpm): where a swung 8th lands (0.5 = straight). sw16: how late swung 16ths are,
    in beats. lv: each part's level. trim: overall level in dB, set by rendering and measuring every
@@ -3489,6 +3489,43 @@ const PRE_LIST = [
       },
     },
   },
+  {
+    // First the Mic: the user's score with all five parts (drums, acoustic and clean electric guitars
+    // tuned a whole step down, bass and piano), in G minor at 132 in 3/4 with swung 8ths. Bars 1-3,
+    // the drums alone, play once at the start (intro: 3); the loop is bars 4-77.
+    id: 'firstthemic', fam: 'roots', name: 'First the Mic', tag: 'Band',
+    meter: '3/4', beats: 3, sub: 2, bpm: 132, min: 90, max: 180, wet: 0.16, gen: 'firstthemic', sw8: () => 0.667, intro: 3,
+    parts: ['drums', 'bass', 'gtr', 'gtr2', 'keys'], sets: ['acoustic', 'electric', 'piano', 'bass'],
+    names: { gtr: 'Acoustic', gtr2: 'Electric', keys: 'Piano' },
+    lv: { drums: 0.54, bass: 1.1, gtr: 0.6, gtr2: 0.24, keys: 1.5 }, trim: -1,
+    secs: [[0, 'Lead-in'], [3, 'Intro'], [27, 'Verse'], [59, 'Chorus']],
+    v: {
+      major: {
+        form: [
+          'VI:m', 'VI:m', 'VI:m', 'VI:m', 'VI:m', 'VI:m', 'VI:m', 'VI:m', 'VI:m', 'I:/V', 'IV:', 'I:/III',
+          'II:m', 'I:/III', 'V:7', 'I:*2 I:/VII', 'VI:m', 'I:/V', 'IV:', 'I:/III', 'IV:', 'I:/III', 'V:7', 'I:',
+          'I:/V', 'I:', 'I:', 'VI:m', 'VI:m', 'I:/V', 'I:/V', 'IV:', 'II:7/#IV', 'V:7', 'V:7', 'II:m',
+          'II:m', 'VI:m', 'VI:m', 'VII:7', 'VII:7', 'III:7', 'III:7', 'VI:m', 'VI:m', 'I:/V', 'I:/V', 'IV:',
+          'II:7/#IV', 'V:7', 'V:7', 'II:m', 'II:m', 'VI:m', 'VI:m', 'VII:7', 'VII:7', 'III:7', 'III:7', 'VI:m',
+          'I:', 'IV:', 'I:', 'II:m/IV', 'I:', 'V:7', 'VI:m', 'I:/V', 'IV:', 'I:/III', 'IV:', 'I:/III',
+          'V:7', 'I:', 'I:/V', 'I:', 'I:',
+        ],
+        scales: ['major', 'pentatonic'],
+      },
+      minor: {
+        form: [
+          'I:m', 'I:m', 'I:m', 'I:m', 'I:m', 'I:m', 'I:m', 'I:m', 'I:m', 'bIII:/bVII', 'bVI:', 'bIII:/V',
+          'IV:m', 'bIII:/V', 'bVII:7', 'bIII:*2 bIII:/II', 'I:m', 'bIII:/bVII', 'bVI:', 'bIII:/V', 'bVI:', 'bIII:/V', 'bVII:7', 'bIII:',
+          'bIII:/bVII', 'bIII:', 'bIII:', 'I:m', 'I:m', 'bIII:/bVII', 'bIII:/bVII', 'bVI:', 'IV:7/VI', 'bVII:7', 'bVII:7', 'IV:m',
+          'IV:m', 'I:m', 'I:m', 'II:7', 'II:7', 'V:7', 'V:7', 'I:m', 'I:m', 'bIII:/bVII', 'bIII:/bVII', 'bVI:',
+          'IV:7/VI', 'bVII:7', 'bVII:7', 'IV:m', 'IV:m', 'I:m', 'I:m', 'II:7', 'II:7', 'V:7', 'V:7', 'I:m',
+          'bIII:', 'bVI:', 'bIII:', 'IV:m/bVI', 'bIII:', 'bVII:7', 'I:m', 'bIII:/bVII', 'bVI:', 'bIII:/V', 'bVI:', 'bIII:/V',
+          'bVII:7', 'bIII:', 'bIII:/bVII', 'bIII:', 'bIII:',
+        ],
+        scales: ['natural', 'pentatonic', 'harmonic'],
+      },
+    },
+  },
 ];
 const preById = (id) => PRE_LIST.find((p) => p.id === id);
 </script>
@@ -3618,7 +3655,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     // scale it suggests) and Build's own key waits in build. bpm: each preset's tempo, when changed.
     pre: {
       side: 'build', id: 'slowburn', minor: false, mode: 'dorian', bpm: {}, root: 9, build: null, mixOpen: false, loops: {},
-      mix: { drums: { on: true, vol: 80 }, bass: { on: true, vol: 80 }, gtr: { on: true, vol: 80 }, keys: { on: true, vol: 80 } },
+      mix: { drums: { on: true, vol: 80 }, bass: { on: true, vol: 80 }, gtr: { on: true, vol: 80 }, keys: { on: true, vol: 80 }, gtr2: { on: true, vol: 80 } },
       // Layers on top of a preset (the same ones Build has): which are on, the Drums layer's beat,
       // instrument picks, and their level in the mix.
       layer: [], layerKit: 'rock', layerInst: {}, layers: { on: true, vol: 70 },    },
@@ -9954,6 +9991,416 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     });
   };
 
+  /* First the Mic: the user's score with all five parts, played as written: drums, an acoustic
+     guitar and a clean electric guitar (both tuned down a whole step, so the shapes sound in G minor),
+     electric bass and piano, at 132 in 3/4 with swung 8ths. Bars 1-3 (the drums alone) play once at
+     the start and the loop is bars 4-77, the end of the chorus; the score's bars 78-80 (the start of
+     verse 2) are left out. Everything moves as a whole to other keys. */
+  // The guitars, bar by bar, numbered as in the score: [beat, notes], or [beat, notes, 'up'] for an
+  // upstroke. Beats count quarter notes from 0 (0 is beat 1, 1.5 the "and" of 2). A note is a string
+  // and a fret, with the strings named E A D G B e, low to high, as the tab shows them. A note ending
+  // in h is a hammer-on or pull-off (not picked, so softer). Every note rings to the end of its bar,
+  // or until its string is played again.
+  const FM_AG = {
+    4: [[1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    5: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    6: [[0, 'A0 D2 G2 B1 e0'], [0.5, 'A0 D2 G2 B1 e0', 'up'], [1, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    7: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    8: [[0, 'A0 D2 G2 B1 e0'], [0.5, 'A0 D2 G2 B1 e0', 'up'], [1, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    9: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    10: [[0, 'E3 A3 D2 G0 B1 e0'], [1.5, 'E3 A3 D2 G0 B1 e0', 'up'], [2, 'E3 A3 D2 G0 B1 e0'], [2.5, 'E3 A3 D2 G0 B1 e0', 'up']],
+    11: [[0, 'E1 A3 D3 G2 B1 e1'], [1.5, 'E1 A3 D3 G2 B1 e1', 'up'], [2, 'E1 A3 D3 G2 B1 e1'], [2.5, 'E1 A3 D3 G2 B1 e1', 'up']],
+    12: [[0, 'E0 A3 D2 G0 B1 e0'], [1.5, 'E0 A3 D2 G0 B1 e0', 'up'], [2, 'E0 A3 D2 G0 B1 e0'], [2.5, 'E0 A3 D2 G0 B1 e0', 'up']],
+    13: [[0, 'D0 G2 B3 e1'], [1.5, 'D0 G2 B3 e1', 'up'], [2, 'D0 G2 B3 e1'], [2.5, 'D0 G2 B3 e1', 'up']],
+    14: [[0, 'E0 A3 D2 G0 B1 e0'], [1.5, 'E0 A3 D2 G0 B1 e0', 'up'], [2, 'E0 A3 D2 G0 B1 e0'], [2.5, 'E0 A3 D2 G0 B1 e0', 'up']],
+    15: [[0, 'E3 A2 D0 G0 B0 e1'], [1.5, 'E3 A2 D0 G0 B0 e1', 'up'], [2, 'E3 A2 D0 G0 B0 e1'], [2.5, 'E3 A2 D0 G0 B0 e1', 'up']],
+    16: [[0, 'A3 D2 G0 B1 e0'], [0.5, 'A3 D2 G0 B1 e0', 'up'], [1, 'A3 D2 G0 B1 e0'], [1.5, 'A3 D2 G0 B1 e0', 'up'], [2, 'A2 D0 G0 B1 e0'], [2.5, 'A2 D0 G0 B1 e0', 'up']],
+    17: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    18: [[0, 'E3 A3 D2 G0 B1 e0'], [1.5, 'E3 A3 D2 G0 B1 e0', 'up'], [2, 'E3 A3 D2 G0 B1 e0'], [2.5, 'E3 A3 D2 G0 B1 e0', 'up']],
+    19: [[0, 'E1 A3 D3 G2 B1 e1'], [1.5, 'E1 A3 D3 G2 B1 e1', 'up'], [2, 'E1 A3 D3 G2 B1 e1'], [2.5, 'E1 A3 D3 G2 B1 e1', 'up']],
+    20: [[0, 'E0 A3 D2 G0 B1 e0'], [1.5, 'E0 A3 D2 G0 B1 e0', 'up'], [2, 'E0 A3 D2 G0 B1 e0'], [2.5, 'E0 A3 D2 G0 B1 e0', 'up']],
+    21: [[0, 'E1 A3 D3 G2 B1 e1'], [1.5, 'E1 A3 D3 G2 B1 e1', 'up'], [2, 'E1 A3 D3 G2 B1 e1'], [2.5, 'E1 A3 D3 G2 B1 e1', 'up']],
+    22: [[0, 'E0 A3 D2 G0 B1 e0'], [1.5, 'E0 A3 D2 G0 B1 e0', 'up'], [2, 'E0 A3 D2 G0 B1 e0'], [2.5, 'E0 A3 D2 G0 B1 e0', 'up']],
+    23: [[0, 'E3 A2 D0 G0 B0 e1'], [1.5, 'E3 A2 D0 G0 B0 e1', 'up'], [2, 'E3 A2 D0 G0 B0 e1']],
+    24: [[0, 'A3 D2 G0 B1 e0'], [2.5, 'A3 D2 G0 B1 e0', 'up']],
+    25: [[0, 'E3 A3 D2 G0 B1 e0'], [1.5, 'E3 A3 D2 G0 B1 e0', 'up'], [2, 'E3 A3 D2 G0 B1 e0']],
+    26: [[0, 'A3 D2 G0 B1 e0'], [1.5, 'A3 D2 G0 B1 e0', 'up'], [2, 'A3 D2 G0 B1 e0'], [2.5, 'A3 D2 G0 B1 e0', 'up']],
+    27: [[0, 'A3 D2 G0 B1 e0']],
+    28: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    29: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    30: [[0, 'E3 A3 D2 G0 B1 e0'], [1.5, 'E3 A3 D2 G0 B1 e0', 'up'], [2, 'E3 A3 D2 G0 B1 e0'], [2.5, 'E3 A3 D2 G0 B1 e0', 'up']],
+    31: [[0, 'E3 A3 D2 G0 B1 e0'], [1.5, 'E3 A3 D2 G0 B1 e0', 'up'], [2, 'E3 A3 D2 G0 B1 e0'], [2.5, 'E3 A3 D2 G0 B1 e0', 'up']],
+    32: [[0, 'E1 A3 D3 G2 B1 e1'], [1.5, 'E1 A3 D3 G2 B1 e1', 'up'], [2, 'E1 A3 D3 G2 B1 e1'], [2.5, 'E1 A3 D3 G2 B1 e1', 'up']],
+    33: [[0, 'E2 D0 G2 B1 e2'], [1.5, 'E2 D0 G2 B1 e2', 'up'], [2, 'E2 D0 G2 B1 e2'], [2.5, 'E2 D0 G2 B1 e2', 'up']],
+    34: [[0, 'E3 A2 D0 G0 B0 e1'], [1.5, 'E3 A2 D0 G0 B0 e1', 'up'], [2, 'E3 A2 D0 G0 B0 e1'], [2.5, 'E3 A2 D0 G0 B0 e1', 'up']],
+    35: [[0, 'E3 A2 D0 G0 B0 e1'], [1.5, 'E3 A2 D0 G0 B0 e1', 'up'], [2, 'E3 A2 D0 G0 B0 e1'], [2.5, 'E3 A2 D0 G0 B0 e1', 'up']],
+    36: [[0, 'D0 G2 B3 e1'], [1.5, 'D0 G2 B3 e1', 'up'], [2, 'D0 G2 B3 e1'], [2.5, 'D0 G2 B3 e1', 'up']],
+    37: [[0, 'D0 G2 B3 e1'], [1.5, 'D0 G2 B3 e1', 'up'], [2, 'D0 G2 B3 e1'], [2.5, 'D0 G2 B3 e1', 'up']],
+    38: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    39: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    40: [[0, 'A2 D1 G2 B0 e0'], [1.5, 'A2 D1 G2 B0 e0', 'up'], [2, 'A2 D1 G2 B0 e0'], [2.5, 'A2 D1 G2 B0 e0', 'up']],
+    41: [[0, 'A2 D1 G2 B0 e0'], [1.5, 'A2 D1 G2 B0 e0', 'up'], [2, 'A2 D1 G2 B0 e0'], [2.5, 'A2 D1 G2 B0 e0', 'up']],
+    42: [[0, 'E0 A2 D0 G1 B0 e0'], [0.5, 'E0 A2 D0 G1 B0 e0', 'up'], [1, 'E0 A2 D0 G1 B0 e0'], [1.5, 'E0 A2 D0 G1 B0 e0', 'up'], [2, 'E0 A2 D0 G1 B0 e0'], [2.5, 'E0 A2 D0 G1 B0 e0', 'up']],
+    43: [[0, 'E0 A2 D0 G1 B0 e0'], [0.5, 'E0 A2 D0 G1 B0 e0', 'up'], [1, 'E0 A2 D0 G1 B0 e0'], [1.5, 'E0 A2 D0 G1 B0 e0', 'up'], [2, 'E0 A2 D0 G1 B0 e0'], [2.5, 'E0 A2 D0 G1 B0 e0', 'up']],
+    44: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    45: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    46: [[0, 'E3 A3 D2 G0 B1 e0'], [1.5, 'E3 A3 D2 G0 B1 e0', 'up'], [2, 'E3 A3 D2 G0 B1 e0'], [2.5, 'E3 A3 D2 G0 B1 e0', 'up']],
+    47: [[0, 'E3 A3 D2 G0 B1 e0'], [1.5, 'E3 A3 D2 G0 B1 e0', 'up'], [2, 'E3 A3 D2 G0 B1 e0'], [2.5, 'E3 A3 D2 G0 B1 e0', 'up']],
+    48: [[0, 'E1 A3 D3 G2 B1 e1'], [1.5, 'E1 A3 D3 G2 B1 e1', 'up'], [2, 'E1 A3 D3 G2 B1 e1'], [2.5, 'E1 A3 D3 G2 B1 e1', 'up']],
+    49: [[0, 'E2 D0 G2 B1 e2'], [1.5, 'E2 D0 G2 B1 e2', 'up'], [2, 'E2 D0 G2 B1 e2'], [2.5, 'E2 D0 G2 B1 e2', 'up']],
+    50: [[0, 'E3 A2 D0 G0 B0 e1'], [1.5, 'E3 A2 D0 G0 B0 e1', 'up'], [2, 'E3 A2 D0 G0 B0 e1'], [2.5, 'E3 A2 D0 G0 B0 e1', 'up']],
+    51: [[0, 'E3 A2 D0 G0 B0 e1'], [1.5, 'E3 A2 D0 G0 B0 e1', 'up'], [2, 'E3 A2 D0 G0 B0 e1'], [2.5, 'E3 A2 D0 G0 B0 e1', 'up']],
+    52: [[0, 'D0 G2 B3 e1'], [1.5, 'D0 G2 B3 e1', 'up'], [2, 'D0 G2 B3 e1'], [2.5, 'D0 G2 B3 e1', 'up']],
+    53: [[0, 'D0 G2 B3 e1'], [1.5, 'D0 G2 B3 e1', 'up'], [2, 'D0 G2 B3 e1'], [2.5, 'D0 G2 B3 e1', 'up']],
+    54: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    55: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    56: [[0, 'A2 D1 G2 B0 e0'], [1.5, 'A2 D1 G2 B0 e0', 'up'], [2, 'A2 D1 G2 B0 e0'], [2.5, 'A2 D1 G2 B0 e0', 'up']],
+    57: [[0, 'A2 D1 G2 B0 e0'], [1.5, 'A2 D1 G2 B0 e0', 'up'], [2, 'A2 D1 G2 B0 e0'], [2.5, 'A2 D1 G2 B0 e0', 'up']],
+    58: [[0, 'E0 A2 D0 G1 B0 e0'], [1.5, 'E0 A2 D0 G1 B0 e0', 'up'], [2, 'E0 A2 D0 G1 B0 e0'], [2.5, 'E0 A2 D0 G1 B0 e0', 'up']],
+    59: [[0, 'E0 A2 D0 G1 B0 e0'], [1.5, 'E0 A2 D0 G1 B0 e0', 'up'], [2, 'E0 A2 D0 G1 B0 e0'], [2.5, 'E0 A2 D0 G1 B0 e0', 'up']],
+    60: [[0, 'A0 D2 G2 B1 e0']],
+    67: [[0, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    68: [[0, 'E3 A3 D2 G0 B1 e0'], [1.5, 'E3 A3 D2 G0 B1 e0', 'up'], [2, 'E3 A3 D2 G0 B1 e0'], [2.5, 'E3 A3 D2 G0 B1 e0', 'up']],
+    69: [[0, 'E1 A3 D3 G2 B1 e1'], [1.5, 'E1 A3 D3 G2 B1 e1', 'up'], [2, 'E1 A3 D3 G2 B1 e1'], [2.5, 'E1 A3 D3 G2 B1 e1', 'up']],
+    70: [[0, 'E0 A3 D2 G0 B1 e0'], [1.5, 'E0 A3 D2 G0 B1 e0', 'up'], [2, 'E0 A3 D2 G0 B1 e0'], [2.5, 'E0 A3 D2 G0 B1 e0', 'up']],
+    71: [[0, 'E1 A3 D3 G2 B1 e1'], [1.5, 'E1 A3 D3 G2 B1 e1', 'up'], [2, 'E1 A3 D3 G2 B1 e1'], [2.5, 'E1 A3 D3 G2 B1 e1', 'up']],
+    72: [[0, 'E0 A3 D2 G0 B1 e0'], [1.5, 'E0 A3 D2 G0 B1 e0', 'up'], [2, 'E0 A3 D2 G0 B1 e0'], [2.5, 'E0 A3 D2 G0 B1 e0', 'up']],
+    73: [[0, 'E3 A2 D0 G0 B0 e1'], [0.5, 'E3 A2 D0 G0 B0 e1', 'up'], [1, 'E3 A2 D0 G0 B0 e1'], [1.5, 'E3 A2 D0 G0 B0 e1', 'up'], [2, 'E3 A2 D0 G0 B0 e1'], [2.5, 'E3 A2 D0 G0 B0 e1', 'up']],
+    74: [[0, 'A3 D2 G0 B1 e0'], [2.5, 'A3 D2 G0 B1 e0', 'up']],
+    75: [[0, 'E3 A3 D2 G0 B1 e0'], [1.5, 'E3 A3 D2 G0 B1 e0', 'up'], [2, 'E3 A3 D2 G0 B1 e0'], [2.5, 'E3 A3 D2 G0 B1 e0', 'up']],
+    76: [[0, 'A3 D2 G0 B1 e0'], [1.5, 'A3 D2 G0 B1 e0', 'up'], [2, 'A3 D2 G0 B1 e0'], [2.5, 'A3 D2 G0 B1 e0', 'up']],
+    77: [[0, 'A3 D2 G0 B1 e0']],
+  };
+  const FM_EG = {
+    9: [[0, 'G2'], [2, 'B0'], [2.5, 'B1h']],
+    10: [[0, 'G0'], [1.5, 'G0 B1 e0', 'up'], [2, 'G0 B1 e0'], [2.5, 'G0 B1 e0', 'up']],
+    11: [[0, 'D3'], [1.5, 'D3 G2 B1 e1', 'up'], [2, 'D3 G2 B1 e1'], [2.5, 'D3 G2 B1 e1', 'up']],
+    12: [[0, 'D2'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D2 G0 B1 e0', 'up']],
+    13: [[0, 'D3'], [1, 'D3 G2 B3 e1'], [1.5, 'D3 G2 B3 e1', 'up'], [2, 'G0'], [2.5, 'G2h']],
+    14: [[0, 'D2'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D2 G0 B1 e0', 'up']],
+    15: [[0, 'D0 G0 B0 e1'], [1.5, 'D2'], [2, 'D0h']],
+    16: [[0, 'A3'], [0.5, 'D2 G0 B1 e0', 'up'], [1, 'D2 G0 B1 e0'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'A2']],
+    17: [[0, 'A0 G2'], [1, 'A0'], [1.5, 'G2'], [2, 'B0'], [2.5, 'B1h']],
+    18: [[0, 'E3 G0'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D2 G0 B1 e0', 'up']],
+    19: [[0, 'E1 A3 D3'], [1.5, 'D3 G2 B1 e1', 'up'], [2, 'D3 G2 B1 e1'], [2.5, 'D3 G2 B1 e1', 'up']],
+    20: [[0, 'E0 A3 D2'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D2 G0 B1 e0', 'up']],
+    21: [[0, 'E1 A3 D3'], [1.5, 'D3 G2 B1 e1', 'up'], [2, 'D3 G2 B1 e1'], [2.5, 'D3 G2 B1 e1', 'up']],
+    22: [[0, 'E0 A3 D2'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D2 G0 B1 e0', 'up']],
+    23: [[0, 'E3 A2 D0 G0 B0 e1'], [1.5, 'E3 A2 D0 G0 B0 e1', 'up'], [2, 'E3 A2 D0 G0 B0 e1']],
+    24: [[0, 'A3 D2 G0 B1 e0'], [2.5, 'A3 D2 G0 B1 e0', 'up']],
+    25: [[0, 'E3 D2 G0 B1 e0'], [1.5, 'E3 D2 G0 B1 e0', 'up'], [2, 'E3 D2 G0 B1 e0']],
+    26: [[0, 'A3 D2 G0 B1 e0'], [1.5, 'A3 D2 G0 B1 e0', 'up'], [2, 'A3 D2 G0 B1 e0'], [2.5, 'A3 D2 G0 B1 e0', 'up']],
+    27: [[0, 'A3 D2 G0 B1 e0']],
+    28: [[0, 'A0'], [1, 'A0 D2 G2 B1 e0'], [2, 'A0 D2 G2 B1 e0']],
+    29: [[0, 'E0'], [1, 'A0 D2 G2 B1 e0'], [2, 'A0 D2 G2 B1 e0']],
+    30: [[0, 'A3'], [1, 'D2 G0 B1 e0'], [2, 'D2 G0 B1 e0']],
+    31: [[0, 'E3'], [1, 'A3 D2 G0 B1 e0'], [2, 'E2']],
+    32: [[0, 'E1 A3 D3 G2 B1 e1'], [1.5, 'E1 A3 D3 G2 B1 e1', 'up'], [2, 'E1 A3 D3 G2 B1 e1'], [2.5, 'E1 A3 D3 G2 B1 e1', 'up']],
+    33: [[0, 'E2 D0 G2 B1 e2'], [1.5, 'E2 D0 G2 B1 e2', 'up'], [2, 'E2 D0 G2 B1 e2'], [2.5, 'E2 D0 G2 B1 e2', 'up']],
+    34: [[0, 'E3'], [1, 'A2 D0 G0 B0 e1'], [2, 'A2 D0 G0 B0 e1']],
+    35: [[0, 'E3'], [1, 'A2 D0 G0 B0 e1'], [2, 'A2 D0 G0 B0 e1']],
+    36: [[0, 'D0'], [1, 'D0 G2 B3 e1'], [2, 'D0 G2 B3 e1']],
+    37: [[0, 'A0'], [1, 'D0 G2 B3 e1'], [2, 'D0 G2 B3 e1']],
+    38: [[0, 'A0'], [1, 'D2 G2 B1 e0'], [2, 'D2 G2 B1 e0'], [2.5, 'D2 G2 B1 e0', 'up']],
+    39: [[0, 'E0'], [1, 'A0 D2 G2 B1 e0'], [1.5, 'A0 D2 G2 B1 e0', 'up'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    40: [[0, 'A2 D1 G2 B0 e0'], [2, 'A2 D1 G2 B0 e0'], [2.5, 'A2 D1 G2 B0 e0', 'up']],
+    41: [[0, 'A2 D1 G2 B0 e0'], [2, 'A2 D1 G2 B0 e0'], [2.5, 'A2 D1 G2 B0 e0', 'up']],
+    42: [[0, 'E0 A2 D0 G1 B0 e0'], [0.5, 'E0 A2 D0 G1 B0 e0', 'up'], [1, 'E0 A2 D0 G1 B0 e0'], [1.5, 'E0 A2 D0 G1 B0 e0', 'up'], [2, 'E0 A2 D0 G1 B0 e0'], [2.5, 'E0 A2 D0 G1 B0 e0', 'up']],
+    43: [[0, 'E0 A2 D0 G1 B0 e0'], [0.5, 'E0 A2 D0 G1 B0 e0', 'up'], [1, 'E0 A2 D0 G1 B0 e0'], [1.5, 'E0 A2 D0 G1 B0 e0', 'up'], [2, 'E0 A2 D0 G1 B0 e0'], [2.5, 'E0 A2 D0 G1 B0 e0', 'up']],
+    44: [[0, 'A0'], [1, 'D2 G2 B1 e0'], [2, 'D2 G2 B1 e0']],
+    45: [[0, 'E0'], [1, 'A0 D2 G2 B1 e0'], [2, 'A0 D2 G2 B1 e0']],
+    46: [[0, 'A3'], [1, 'D2 G0 B1 e0'], [2, 'D2 G0 B1 e0']],
+    47: [[0, 'E3'], [1, 'A3 D2 G0 B1 e0'], [2, 'E2']],
+    48: [[0, 'E1 A3 D3 G2 B1 e1'], [1.5, 'E1 A3 D3 G2 B1 e1', 'up'], [2, 'E1 A3 D3 G2 B1 e1'], [2.5, 'E1 A3 D3 G2 B1 e1', 'up']],
+    49: [[0, 'E2 D0 G2 B1 e2'], [1.5, 'E2 D0 G2 B1 e2', 'up'], [2, 'E2 D0 G2 B1 e2'], [2.5, 'E2 D0 G2 B1 e2', 'up']],
+    50: [[0, 'E3'], [1, 'A2 D0 G0 B0 e1'], [2, 'A2 D0 G0 B0 e1']],
+    51: [[0, 'E3'], [1, 'A2 D0 G0 B0 e1'], [2, 'A2 D0 G0 B0 e1']],
+    52: [[0, 'D0'], [1, 'D0 G2 B3 e1'], [2, 'D0 G2 B3 e1']],
+    53: [[0, 'A0'], [1, 'D0 G2 B3 e1'], [2, 'D0 G2 B3 e1']],
+    54: [[0, 'A0'], [1, 'A0 D2 G2 B1 e0'], [2, 'A0 D2 G2 B1 e0'], [2.5, 'A0 D2 G2 B1 e0', 'up']],
+    55: [[0, 'E0'], [1, 'D2 G2 B1 e0'], [1.5, 'D2 G2 B1 e0', 'up'], [2, 'D2 G2 B1 e0'], [2.5, 'D2 G2 B1 e0', 'up']],
+    56: [[0, 'A2 D0 G1 B3'], [1, 'A2 D0 G1 B3'], [1.5, 'A2 D0 G1 B3', 'up'], [2, 'A2 D0 G1 B3'], [2.5, 'A2 D0 G1 B3', 'up']],
+    57: [[0, 'A2 D0 G1 B3'], [1, 'A2 D0 G1 B3'], [1.5, 'A2 D0 G1 B3', 'up'], [2, 'A2 D0 G1 B3'], [2.5, 'A2 D0 G1 B3', 'up']],
+    58: [[0, 'A2 D0 G1 B3'], [1, 'A2 D0 G1 B3'], [1.5, 'A2 D0 G1 B3', 'up'], [2, 'A2 D0 G1 B3'], [2.5, 'A2 D0 G1 B3', 'up']],
+    59: [[0, 'A2 D0 G1 B3'], [1, 'A2 D0 G1 B3'], [1.5, 'A2 D0 G1 B3', 'up'], [2, 'A2 D0 G1 B3'], [2.5, 'A2 D0 G1 B3', 'up']],
+    60: [[0, 'G2'], [1, 'G2 B1 e0'], [1.5, 'G2 B1 e0', 'up'], [2, 'B0'], [2.5, 'B1h']],
+    61: [[0, 'G0'], [1, 'G0 B1 e0'], [1.5, 'G0 B1 e0', 'up'], [2, 'G0 B1 e0'], [2.5, 'G0 B1 e0', 'up']],
+    62: [[0, 'D3'], [1, 'D3 G2 B1 e1'], [1.5, 'D3 G2 B1 e1', 'up'], [2, 'D3 G2 B1 e1'], [2.5, 'D3 G2 B1 e1', 'up']],
+    63: [[0, 'D2'], [1, 'D2 G0 B1 e0'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D2 G0 B1 e0', 'up']],
+    64: [[0, 'D3'], [1, 'D3 G2 B3 e1'], [1.5, 'D3 G2 B3 e1', 'up'], [2, 'G0'], [2.5, 'G2h']],
+    65: [[0, 'D2'], [1, 'D2 G0 B1 e0'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D0']],
+    66: [[0, 'D0 G0 B0 e1'], [0.5, 'G0 B0 e1', 'up'], [1, 'G0 B0 e1'], [1.5, 'D2'], [2, 'D0h']],
+    67: [[0, 'A0 G2'], [1, 'A0'], [1.5, 'G2'], [2, 'B0'], [2.5, 'B1h']],
+    68: [[0, 'E3 G0'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D2 G0 B1 e0', 'up']],
+    69: [[0, 'E1 A3 D3'], [1.5, 'D3 G2 B1 e1', 'up'], [2, 'D3 G2 B1 e1'], [2.5, 'D3 G2 B1 e1', 'up']],
+    70: [[0, 'E0 A3 D2'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D2 G0 B1 e0', 'up']],
+    71: [[0, 'E1 A3 D3'], [1.5, 'D3 G2 B1 e1', 'up'], [2, 'D3 G2 B1 e1'], [2.5, 'D3 G2 B1 e1', 'up']],
+    72: [[0, 'E0 A3 D2'], [1.5, 'D2 G0 B1 e0', 'up'], [2, 'D2 G0 B1 e0'], [2.5, 'D2 G0 B1 e0', 'up']],
+    73: [[0, 'E3 A2 D0 G0 B0 e1'], [1.5, 'E3 A2 D0 G0 B0 e1', 'up'], [2, 'E3 A2 D0 G0 B0 e1']],
+    74: [[0, 'A3 D2 G0 B1 e0'], [2.5, 'A3 D2 G0 B1 e0', 'up']],
+    75: [[0, 'E3 D2 G0 B1 e0'], [1.5, 'E3 D2 G0 B1 e0', 'up'], [2, 'E3 D2 G0 B1 e0']],
+    76: [[0, 'A3 D2 G0 B1 e0'], [1.5, 'A3 D2 G0 B1 e0', 'up'], [2, 'A3 D2 G0 B1 e0'], [2.5, 'A3 D2 G0 B1 e0', 'up']],
+    77: [[0, 'A3 D2 G0 B1 e0']],
+  };
+  // The drums, bar by bar: k kick, s snare, h hi-hat, c crash, r ride, m mid tom, f floor tom, each
+  // with its beat.
+  const FM_DRUMS = {
+    1: 'k0 h0 s1 h1 s2 h2',
+    2: 'k0 h0 s1 h1 s2 h2',
+    3: 'k0 h0 s1 h1 s2 h2',
+    4: 'k0 h0 s1 h1 s2 h2',
+    5: 'k0 h0 s1 h1 s2 h2',
+    6: 'k0 h0 s1 h1 s2 h2',
+    7: 'k0 h0 s1 h1 s2 h2',
+    8: 'k0 h0 s1 h1 s2 h2',
+    9: 'k0 h0 s1 h1 s2 h2',
+    10: 'k0 h0 s1 h1 s2 h2',
+    11: 'k0 h0 s1 h1 s2 h2',
+    12: 'k0 h0 s1 h1 s2 h2',
+    13: 'k0 h0 s1 h1 s2 h2',
+    14: 'k0 h0 s1 h1 s2 h2',
+    15: 'k0 h0 s1 h1 s2 h2',
+    16: 'k0 h0 s1 h1 s2 h2',
+    17: 'k0 r0 s1 h1 s2 h2',
+    18: 'k0 h0 s1 h1 s2 h2',
+    19: 'k0 h0 s1 h1 s2 h2',
+    20: 'k0 h0 s1 h1 s2 h2',
+    21: 'k0 h0 s1 h1 s2 h2',
+    22: 'k0 h0 s1 h1 s2 h2',
+    23: 'k0 h0 s1 h1 s2 h2',
+    24: 'k0 c0 s1 h1 s2 h2',
+    25: 'k0 h0 s1 h1 s2 h2',
+    26: 'k0 h0 s1 h1 s2 h2',
+    27: 'k0 h0 s1.5 s2 s2.5',
+    28: 'k0 h0 s1 h1 s2 h2',
+    29: 'k0 h0 s1 h1 s2 h2',
+    30: 'k0 h0 s1 h1 s2 h2',
+    31: 'k0 h0 s1 h1 s2 h2',
+    32: 'k0 h0 s1 h1 s2 h2',
+    33: 'k0 h0 s1 h1 s2 h2',
+    34: 'k0 h0 s1 h1 s2 h2',
+    35: 'k0 h0 s1 h1 s2 h2',
+    36: 'k0 h0 s1 h1 s2 h2',
+    37: 'k0 h0 s1 h1 s2 h2',
+    38: 'k0 h0 s1 h1 s2 h2',
+    39: 'k0 h0 s1 h1 s2 h2',
+    40: 'k0 h0 s1 h1 s2 h2',
+    41: 'k0 h0 s1 h1 s2 h2',
+    42: 'k0 h0 s1 h1 s2 h2',
+    43: 'k0 h0 s1 h1 s2 h2',
+    44: 'k0 c0 s1 h1 s2 h2',
+    45: 'k0 h0 s1 h1 s2 h2',
+    46: 'k0 h0 s1 h1 s2 h2',
+    47: 'k0 h0 s1 s2 s2.5 s2.75',
+    48: 'k0 h0 h1 s2 h2',
+    49: 'k0 h0 h1 s2 h2',
+    50: 'k0 h0 h1 h1.75 s2 h2',
+    51: 'k0 h0 s1 h1 s2 h2',
+    52: 'k0 h0 s1 h1 s2 h2',
+    53: 'k0 h0 s1 h1 s2 h2',
+    54: 'k0 h0 s1 h1 s2 h2',
+    55: 'k0 h0 s1 h1 s2 h2',
+    56: 'k0 h0 s1 h1 s2 h2',
+    57: 'k0 h0 s1 h1 s2 h2',
+    58: 'k0 h0 s1 h1 s2 h2',
+    59: 'k0 h0 s1 h1 s2 h2',
+    60: 'k0 c0',
+    65: 's2.5',
+    66: 's0 m0.5 f1.5 f2',
+    67: 'k0 c0 s1 s2',
+    68: 'k0 h0 s1 h1 s2 h2',
+    69: 'k0 h0 s1 h1 s2 h2',
+    70: 'k0 h0 s1 h1 s2 h2',
+    71: 'k0 h0 s1 h1 s2 h2',
+    72: 'k0 h0 s1 h1 s2 h2',
+    73: 'k0 h0 s1 h1 s2 h2',
+    74: 'k0 c0 s1 h1 s2 h2',
+    75: 'k0 h0 s1 h1 s2 h2',
+    76: 'k0 h0 s1 h1 s2 h2',
+    77: 'k0 h0 s1.5 s2 s2.5',
+  };
+  // The bass, bar by bar as it sounds: [beat, note, length in beats]. A note starting with _ is tied
+  // over from the one before it.
+  const FM_BASS = {
+    17: [[0, 'G2', 3]],
+    18: [[0, 'F2', 3]],
+    19: [[0, 'Eb2', 3]],
+    20: [[0, 'D2', 3]],
+    21: [[0, 'Eb2', 3]],
+    22: [[0, 'D2', 3]],
+    23: [[0, 'C2', 1.5], [1.5, 'D2', 0.5], [2, 'C2', 1]],
+    24: [[0, 'Bb1', 3]],
+    25: [[0, 'F1', 2], [2, 'A1', 1]],
+    26: [[0, 'Bb1', 3]],
+    27: [[0, '_Bb1', 1], [1.5, 'E1', 0.5], [2, 'F1', 0.5], [2.5, 'F#1', 0.5]],
+    28: [[0, 'G1', 3]],
+    29: [[0, 'D1', 2], [2, 'A1', 1]],
+    30: [[0, 'Bb1', 3]],
+    31: [[0, 'F1', 2], [2, 'E2', 1]],
+    32: [[0, 'Eb2', 3]],
+    33: [[0, 'E2', 3]],
+    34: [[0, 'F2', 3]],
+    35: [[0, 'F1', 3]],
+    36: [[0, 'C2', 3]],
+    37: [[0, 'G1', 2], [2, 'F1', 1]],
+    38: [[0, 'G1', 3]],
+    39: [[0, 'D1', 3]],
+    40: [[0, 'A1', 3]],
+    41: [[0, 'Eb2', 3]],
+    42: [[0, 'D2', 3]],
+    43: [[0, 'A2', 1.5], [2, 'A2', 1]],
+    44: [[0, 'G2', 3]],
+    45: [[0, 'D1', 2], [2, 'A1', 1]],
+    46: [[0, 'Bb1', 3]],
+    47: [[0, 'F1', 2], [2, 'E2', 1]],
+    48: [[0, 'Eb2', 3]],
+    49: [[0, 'E2', 3]],
+    50: [[0, 'F2', 3]],
+    51: [[0, 'F1', 2], [2, 'Bb1', 1]],
+    52: [[0, 'C2', 3]],
+    53: [[0, 'G1', 2], [2, 'F1', 1]],
+    54: [[0, 'G1', 3]],
+    55: [[0, 'D1', 3]],
+    56: [[0, 'A1', 3]],
+    57: [[0, 'C2', 3]],
+    58: [[0, 'D2', 3]],
+    59: [[0, 'F#2', 3]],
+    60: [[0, 'G2', 3]],
+    61: [[0, '_G2', 3]],
+    62: [[0, '_G2', 3]],
+    63: [[0, '_G2', 3]],
+    64: [[0, '_G2', 3]],
+    65: [[0, '_G2', 3]],
+    67: [[0, 'G2', 3]],
+    68: [[0, 'F2', 2], [2, 'Bb1', 1]],
+    69: [[0, 'Eb2', 3]],
+    70: [[0, 'Bb1', 2], [2, 'Bb1', 1]],
+    71: [[0, 'Eb2', 3]],
+    72: [[0, 'D2', 3]],
+    73: [[0, 'C2', 1], [1, 'C2', 0.5], [1.5, 'D2', 0.5], [2, 'C2', 1]],
+    74: [[0, 'Bb1', 3]],
+    75: [[0, 'F1', 2], [2, 'A1', 1]],
+    76: [[0, 'Bb1', 3]],
+    77: [[0, '_Bb1', 1], [1.5, 'E1', 0.5], [2, 'F1', 0.5], [2.5, 'F#1', 0.5]],
+  };
+  // The piano, both hands, bar by bar: [beat, notes, length in beats]; _ ties a note over.
+  const FM_PIANO = {
+    17: [[0, 'G4 G5', 1.5], [1.5, 'G4 G5', 0.5], [2, 'A4 A5', 0.5], [2.5, 'Bb4 Bb5', 0.5]],
+    18: [[0, 'F4 F5', 3]],
+    19: [[0, 'Eb4 Eb5', 3]],
+    20: [[0, 'D4 D5', 3]],
+    21: [[0, 'Eb4 Eb5', 1.5], [1.5, 'Eb4 Eb5', 0.5], [2, 'F4 F5', 0.5], [2.5, 'G4 G5', 0.5]],
+    22: [[0, 'D4 D5', 3]],
+    23: [[1.5, 'D4 D5', 0.5]],
+    24: [[0, 'Bb4 Bb5', 3]],
+    28: [[2, 'G3 G4', 1]],
+    29: [[0, 'Bb4 D5', 3], [0, 'G3 G4', 1.5], [1.5, 'G3 G4', 0.5], [2, 'A3 A4', 1]],
+    30: [[0, 'Bb3 Bb4', 3], [2, 'Eb5', 1]],
+    31: [[0, 'D5', 3], [0, 'Bb3 Bb4', 1], [1, 'F3 F4', 1], [2, 'E3 E4', 1]],
+    32: [[0, 'G4 Bb4', 2], [0, 'Eb3 Eb4', 2], [2, 'G4 Bb4', 1], [2, 'Eb3 Eb4', 1]],
+    33: [[0, 'G4 Bb4 E5', 2], [0, 'E3 E4', 2], [2, 'G4 Bb4 E5', 1], [2, 'E3 E4', 1]],
+    34: [[0, 'A4 Eb5', 1.5], [0, 'F3 F4', 2], [1.5, 'A4 Eb5', 1], [2, 'F3 F4', 1], [2.5, 'A4 Eb5', 0.5]],
+    35: [[0, 'A4 Eb5', 0.5], [0, 'F3 F4', 3], [0.5, 'A5', 1], [1.5, 'A4 Eb5', 1.5]],
+    36: [[0, 'Eb5', 3]],
+    37: [[0, 'G4', 3]],
+    38: [[0, 'A4 D5', 3]],
+    39: [[0, 'G4 Bb4', 3]],
+    40: [[0, 'A4', 3]],
+    41: [[0, 'F#4 A4', 3]],
+    42: [[0, 'F#4 A4', 3]],
+    43: [[1, 'A4 A5', 1], [2, 'A4 A5', 1]],
+    44: [[0, 'G4 G5', 3]],
+    45: [[1.5, 'G4 G5', 0.5], [2, 'A4 A5', 1]],
+    46: [[0, 'Bb4 Bb5', 1.5], [1.5, 'A4 F5', 0.5], [2, 'G4 Eb5', 0.5], [2.5, 'F4 D5', 0.5]],
+    47: [[0, '_F4 _D5', 3], [1, 'F3 F4', 1], [2, 'E3 E4', 1]],
+    48: [[0, 'G4 Bb4', 2], [0, 'Eb3 Eb4', 2], [2, 'G4 Bb4', 1], [2, 'Eb3 Eb4', 1]],
+    49: [[0, 'G4 Bb4 E5', 2], [0, 'E3 E4', 2], [2, 'G4 Bb4 E5', 1], [2, 'E3 E4', 1]],
+    50: [[0, 'A4 Eb5', 1.5], [0, 'F3 F4', 2], [1.5, 'A4 Eb5 A5', 1], [2, 'F3 F4', 1], [2.5, 'A4 Eb5 A5', 0.5]],
+    51: [[0, 'A4 Eb5 A5', 0.5], [0, 'F3 F4', 3], [0.5, 'Eb5 A5', 1], [1.5, 'A4 Eb5 A5', 1.5]],
+    52: [[0, 'Eb5', 3]],
+    53: [[0, 'G4', 3]],
+    54: [[0, 'A4 D5', 3]],
+    55: [[0, 'G4 Bb4', 3]],
+    56: [[0, 'A4', 3]],
+    57: [[0, 'F#4 A4', 3]],
+    58: [[0, 'F#4 A4', 3]],
+    67: [[0, 'G4 G5', 1.5], [1.5, 'G4 G5', 0.5], [2, 'A4 A5', 0.5], [2.5, 'Bb4 Bb5', 0.5]],
+    68: [[0, 'F4 F5', 3]],
+    69: [[0, 'Eb4 Eb5', 3]],
+    70: [[0, 'D4 D5', 3]],
+    71: [[0, 'Eb4 Eb5', 1.5], [1.5, 'Eb4 Eb5', 0.5], [2, 'F4 F5', 0.5], [2.5, 'G4 G5', 0.5]],
+    72: [[0, 'D4 D5', 3]],
+    73: [[1.5, 'D4 D5', 0.5]],
+    74: [[0, 'Bb4 Bb5', 3]],
+  };
+  const FM_BARS = 77;
+  // Both guitars are tuned a whole step down: each string's open note as a MIDI number.
+  const FM_TUNE = { E: 38, A: 43, D: 48, G: 53, B: 57, e: 62 };
+  const FM_NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const fmMidi = (nm) => 12 * (Number(nm.slice(-1)) + 1) + FM_NOTE[nm[0]] + (nm.includes('#') ? 1 : nm.includes('b') ? -1 : 0);
+  // Notes with ties joined up: [{ m, b, d }], b counted in beats from the top.
+  function fmNotes(table) {
+    const out = [];
+    for (let bar = 1; bar <= FM_BARS; bar++) {
+      (table[bar] || []).forEach(([b, names, d]) => names.split(' ').forEach((nm) => {
+        const tie = nm[0] === '_', m = fmMidi(tie ? nm.slice(1) : nm), at = (bar - 1) * 3 + b;
+        const prev = tie && out.find((o) => o.m === m && Math.abs(o.b + o.d - at) < 1e-6);
+        if (prev) prev.d += d;
+        else out.push({ m, b: at, d });
+      }));
+    }
+    return out;
+  }
+  PRE_GEN.firstthemic = (S) => {
+    // The score sounds in G minor: everything moves to the key picked, at most 4 half steps down or
+    // 7 up.
+    const tm = S.vk === 'major' ? (S.root + 9) % 12 : S.root, T = ((tm + 9) % 12) - 4;
+    for (let bar = 1; bar <= FM_BARS; bar++) {
+      const B = (bar - 1) * 3;
+      // The guitars: the acoustic strums, the electric picks and strums.
+      [['gtr', FM_AG, 'acoustic'], ['gtr2', FM_EG, 'clean']].forEach(([p, tab, amp]) => {
+        const H = S.rng(p, bar);
+        (tab[bar] || []).forEach(([b, notes, up]) => {
+          const toks = notes.split(' ').map((tok) => ({ s: 'EADGBe'.indexOf(tok[0]), f: parseInt(tok.slice(1), 10), leg: tok.endsWith('h') }))
+            .sort((x, y) => (up ? y.s - x.s : x.s - y.s)); // an upstroke hits the high strings first
+          const leg = toks.some((t) => t.leg);
+          const v = (up ? 0.8 : b === 0 ? 0.96 : 0.9) * (leg ? 0.65 : 1) * (0.94 + 0.12 * H());
+          S.add({ p, k: 'g', b: B + b, v, n: toks.map((t) => ({ s: t.s, m: FM_TUNE['EADGBe'[t.s]] + t.f + T })), dt: hz(H, 5, 4),
+            x: { amp, hold: 3 - b - 0.05, a: toks.length > 1 ? 0.36 : 0.44, rel: 0.12, gap: up ? 0.008 : 0.011 } });
+        });
+      });
+      // The drums. In the swung fills the second 16th of a pair lands on the last third of the beat.
+      const H = S.rng('fmd', bar), hum = (v) => v * (0.94 + 0.12 * H());
+      (FM_DRUMS[bar] || '').split(' ').forEach((tok) => {
+        if (!tok) return;
+        const c = tok[0], o = parseFloat(tok.slice(1)), b = B + (Math.abs((o % 1) - 0.75) < 1e-6 ? o + 1 / 12 : o);
+        if (c === 'k') S.drum('kickTight', b, hum(0.86), hz(H, 3, 0), H());
+        else if (c === 's') S.drum('snTight', b, hum(o % 1 ? 0.68 : 0.88), hz(H, 3, 2), H());
+        else if (c === 'h') S.drum('hatC', b, hum(o % 1 ? 0.4 : 0.5), hz(H, 3, 0), H());
+        else if (c === 'c') S.drum('crash', b, 0.7, 0, H());
+        else if (c === 'r') S.drum('ride', b, hum(0.6), hz(H, 3, 0), H());
+        else S.drum({ m: 'tomM', f: 'tomF' }[c], b, hum(0.84), hz(H, 3, 2), H());
+      });
+    }
+    // The bass and the piano, as written, ties joined.
+    fmNotes(FM_BASS).forEach((o, i) => {
+      let m = o.m + T;
+      if (m < 23) m += 12; // in the lowest keys, keep the bottom notes in the bass's range
+      const H = S.rng('fmb', i);
+      S.add({ p: 'bass', k: 'b', b: o.b, n: m, d: o.d, v: 0.9 * (0.95 + 0.1 * H()), dt: hz(H, 4, 2) });
+    });
+    const chords = new Map();
+    fmNotes(FM_PIANO).forEach((o) => {
+      const key = o.b + '|' + o.d;
+      if (!chords.has(key)) chords.set(key, { b: o.b, d: o.d, n: [] });
+      chords.get(key).n.push(o.m + T);
+    });
+    chords.forEach((c, key) => {
+      const H = S.rng('fmp', key);
+      S.add({ p: 'keys', k: 'p', b: c.b, d: c.d, n: c.n.sort((x, y) => x - y), v: 0.62 * (0.92 + 0.16 * H()), dt: hz(H, 6, 4), x: { spread: 0.006 } });
+    });
+  };
+
   /* ---------- Compiling a preset for one key ---------- */
   function preCompile(P, vk, root) {
     const V = P.v[vk] || P.v[Object.keys(P.v)[0]];
@@ -10076,6 +10523,12 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     const sc = preLoopScore(base, loops);
     preLoopCache.set(base, { key, sc });
     return sc;
+  }
+  // How many steps at the top of the preset play only once (its lead-in, P.intro bars), before the loop.
+  function preIntroSteps(sc) {
+    const n = sc.P.intro || 0;
+    if (!n || n >= (sc.base || sc).nb) return 0;
+    return (sc.barMap ? sc.barMap.filter((o) => o < n).length : n) * sc.spb;
   }
   // The same spot in the music after the loops change: the same bar (and the same time round its
   // loop, as far as the new loop goes) and the same step in it.
@@ -10485,6 +10938,11 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       bgAudio.setAttribute('webkit-playsinline', '');
       // Paused from outside the page (a call, another app's audio): reflect it here.
       bgAudio.addEventListener('pause', () => { if (playing && bgActive && !bgSwapping) stop(); });
+      // A preset with a lead-in: the file holds it once, then the loop; near the end, jump back one loop.
+      bgAudio.addEventListener('timeupdate', () => {
+        const r = bgRender;
+        if (r && r.jumpAt && !bgSwapping && bgAudio.currentTime > r.jumpAt) try { bgAudio.currentTime -= r.loopSec; } catch (e) { /* plays on */ }
+      });
     }
     return bgAudio;
   }
@@ -10495,7 +10953,9 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
     const pre = preOn(), sc = pre ? prePlayScore() : null;
     const tl = pre ? sc.tl : timeline(), sd = pre ? 60 / preBpmOf(sc.P, sc.vk) / sc.sub : stepDur(), n = pre ? sc.spb : stepsPerBar();
-    const loopSec = tl.total * sd;
+    // A preset with a lead-in (P.intro) plays those bars once, then loops the rest: I steps of lead-in.
+    const I = pre ? preIntroSteps(sc) : 0, body = tl.total - I;
+    const loopSec = body * sd;
     const sr = loopSec > (pre ? 24 : 60) ? 32000 : 44100;
     const L = Math.max(1, Math.round(loopSec * sr));
     // A preset renders the last few seconds of its loop first (further back if a long note rings over
@@ -10503,14 +10963,18 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     // The notes still ringing over the loop point then go through the limiter together with the
     // top of the loop (no folding, which could add up past full scale), and notes that land a hair
     // ahead of the first beat are there at the end. The loop is cut out of the middle.
-    const lead = 0.1, roll = pre ? Math.min(tl.total, Math.max(Math.ceil(4 / sd), sc.ring)) : 0;
-    const cut = pre ? Math.round((lead + roll * sd) * sr) : 0;
+    // With a lead-in, it renders first with the loop's first bar after it (so whatever is still ringing
+    // carries over), then, after a gap for it to die away, the loop as usual from o2 seconds in.
+    const E = I ? Math.min(body, sc.spb) : 0, o2 = I ? 0.1 + (I + E) * sd + 3 : 0;
+    const lead = 0.1, roll = pre ? Math.min(body, Math.max(Math.ceil(4 / sd), sc.ring)) : 0;
+    const cut = pre ? Math.round((o2 + lead + roll * sd) * sr) : 0;
     const len = pre ? cut + L + Math.round((sd * sc.sub + 0.1) * sr) : L + Math.round(3 * sr); // room for the longest ringing note
     // A preset's steps, in order, with when each plays.
     const plan = [];
     if (pre) {
-      for (let j = 0; j < roll; j++) plan.push([tl.total - roll + j, lead + j * sd]);
-      for (let pos = 0; pos < tl.total + sc.sub; pos++) plan.push([pos % tl.total, lead + (roll + pos) * sd]);
+      for (let pos = 0; pos < I + E; pos++) plan.push([pos, lead + pos * sd]);
+      for (let j = 0; j < roll; j++) plan.push([tl.total - roll + j, o2 + lead + j * sd]);
+      for (let pos = 0; pos < body + sc.sub; pos++) plan.push([I + (pos % body), o2 + lead + (roll + pos) * sd]);
     }
     // A sound waiting to start still costs a little on every block the browser renders, so a long
     // loop with everything scheduled at the outset renders slowly. Where the browser can pause an
@@ -10573,14 +11037,42 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     // iPhone's player leaves a tiny gap each time a file restarts, so the file holds about
     // two and a half minutes of back-to-back loops and that restart rarely comes around.
     const reps = Math.max(1, Math.min(Math.ceil(150 / loopSec), Math.floor((200 * sr) / L)));
-    return { blob: encodeWav(one, sr, reps), one, sr, tl, sd, n, loopSec, sc, beatSec: pre ? sd * sc.sub : 0 };
+    if (!I) return { blob: encodeWav(one, sr, reps), one, sr, tl, sd, n, loopSec, sc, beatSec: pre ? sd * sc.sub : 0 };
+    // The lead-in and the loop's first bar after it, as rendered; its last moment fades into the loop's
+    // own copy of the same spot, so the two join exactly.
+    const h0 = Math.round(lead * sr), hn = Math.round((I + E) * sd * sr), ih = Math.round(I * sd * sr);
+    const head = src.slice(h0, h0 + hn), F2 = Math.min(Math.round(0.05 * sr), hn - ih);
+    for (let i = 0; i < F2; i++) { const j = hn - F2 + i, w = (i + 1) / F2; head[j] = (1 - w) * head[j] + w * one[j - ih]; }
+    // The background file: the lead-in once, the loop, and a little more of it to jump back from.
+    const tailN = Math.min(L, hn - ih + Math.round(0.5 * sr)), file = new Float32Array(hn + (L - (hn - ih)) + (reps - 1) * L + tailN);
+    file.set(head, 0);
+    file.set(one.subarray(hn - ih), hn);
+    for (let k = 1; k < reps; k++) file.set(one, ih + k * L);
+    file.set(one.subarray(0, tailN), ih + reps * L);
+    const introSec = ih / sr, headSec = hn / sr;
+    return { blob: encodeWav(file, sr, 1), one, head, sr, tl, sd, n, loopSec, introSec, headSec, sc, beatSec: sd * sc.sub,
+      jumpAt: introSec + reps * loopSec + (hn - ih) / sr + 0.2 };
   }
 
   /* While the page is on screen, the same rendered loop plays through Web Audio, which loops with
      no gap at all. The <audio> copy keeps running muted underneath, so the phone still treats the
      page as playing music. Leaving the page unmutes that copy; coming back hands the sound back. */
-  let wa = null; // { src, gain, t0, r }
-  const waPos = () => (!wa ? 0 : wa.at && ctx.currentTime < wa.at ? 0 : (((ctx.currentTime - wa.t0) % wa.r.loopSec) + wa.r.loopSec) % wa.r.loopSec);
+  let wa = null; // { src, head, gain, t0, r }
+  // Where the music is in seconds, counted from the top of the track (lead-in included), folded into the
+  // loop: a preset with a lead-in plays it once, so its loop starts r.introSec in.
+  function bgFold(r, t) {
+    if (!r.introSec) return ((t % r.loopSec) + r.loopSec) % r.loopSec;
+    return t < r.introSec ? Math.max(0, t) : r.introSec + ((t - r.introSec) % r.loopSec);
+  }
+  // The same spot in the background file, which holds the lead-in once and the loop after it.
+  function bgFileTime(r, t) {
+    if (!r.introSec) return bgFold(r, t);
+    if (t < r.headSec) return Math.max(0, t);
+    const off = (t - r.introSec) % r.loopSec;
+    return r.introSec + off + (off < r.headSec - r.introSec ? r.loopSec : 0);
+  }
+  const waSong = () => (!wa ? 0 : wa.at && ctx.currentTime < wa.at ? wa.at - wa.t0 : ctx.currentTime - wa.t0);
+  const waPos = () => (!wa ? 0 : bgFold(wa.r, waSong()));
   function waFade(w, at) {
     try {
       w.gain.gain.cancelScheduledValues(at);
@@ -10588,6 +11080,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       w.gain.gain.linearRampToValueAtTime(0, at + 0.04);
       w.src.stop(at + 0.06);
     } catch (e) { /* already stopped */ }
+    if (w.head) try { w.head.stop(at + 0.06); } catch (e) { /* already stopped */ }
   }
   // Starts the loop at posSec (a position measured right now), crossfading from any loop already playing.
   // startAt: a set moment to begin (a new preset waits for the old one's next beat).
@@ -10596,8 +11089,12 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
       r.buffer = ctx.createBuffer(1, r.one.length, r.sr);
       r.buffer.getChannelData(0).set(r.one);
     }
+    if (r.head && !r.headBuf) {
+      r.headBuf = ctx.createBuffer(1, r.head.length, r.sr);
+      r.headBuf.getChannelData(0).set(r.head);
+    }
     const at = startAt != null ? startAt : ctx.currentTime + 0.03;
-    const off = ((((startAt != null ? posSec : posSec + 0.03)) % r.loopSec) + r.loopSec) % r.loopSec;
+    const p = bgFold(r, startAt != null ? posSec : posSec + 0.03);
     const src = ctx.createBufferSource();
     src.buffer = r.buffer;
     src.loop = true;
@@ -10607,8 +11104,16 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     if (old) g.gain.linearRampToValueAtTime(1, at + 0.04);
     src.connect(g);
     g.connect(ctx.destination);
-    src.start(at, off);
-    wa = { src, gain: g, t0: at - off, r, at: startAt != null ? at : 0 };
+    let head = null;
+    if (r.head && p < r.headSec) {
+      // Still in the lead-in: play it (and the loop's first bar), then the loop from just after that.
+      head = ctx.createBufferSource();
+      head.buffer = r.headBuf;
+      head.connect(g);
+      head.start(at, p);
+      src.start(at + r.headSec - p, r.headSec - r.introSec);
+    } else src.start(at, r.introSec ? p - r.introSec : p);
+    wa = { src, head, gain: g, t0: at - p, r, at: startAt != null ? at : 0 };
     if (old) waFade(old, at);
   }
   function waStop() {
@@ -10620,7 +11125,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
   // Seconds into the loop, from whichever copy is audible.
   function bgPosSec() {
     if (wa) return waPos();
-    if (bgAudio && bgRender) return bgAudio.currentTime % bgRender.loopSec;
+    if (bgAudio && bgRender) return bgFold(bgRender, bgAudio.currentTime);
     return 0;
   }
 
@@ -10642,14 +11147,14 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     if (document.hidden) {
       if (!wa) return;
       // Line the background copy up with what was just playing, then let it be heard.
-      try { if (!bgSwapping) a.currentTime = waPos(); } catch (e) { /* keeps its own position */ }
+      try { if (!bgSwapping) a.currentTime = bgFileTime(wa.r, waSong()); } catch (e) { /* keeps its own position */ }
       a.muted = false;
       waStop();
     } else if (!a.paused && !ctxDirty) {
       // If the engine might be dead, the recording keeps playing until the next tap rebuilds it.
       const back = () => {
         if (!playing || !bgActive || !canUseWa() || wa) return;
-        waPlay(bgRender, a.currentTime % bgRender.loopSec);
+        waPlay(bgRender, a.currentTime);
         setTimeout(() => { if (wa) a.muted = true; }, 30);
       };
       if (ctx && ctx.state === 'running') back();
@@ -10676,7 +11181,7 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     if (wasLive) {
       start();
     } else if (playing && bgActive && bgRender && bgAudio && !bgAudio.paused && !bgSwapping && !document.hidden) {
-      waPlay(bgRender, bgAudio.currentTime % bgRender.loopSec);
+      waPlay(bgRender, bgAudio.currentTime);
       setTimeout(() => { if (wa && bgAudio) bgAudio.muted = true; }, 30);
     }
   }
@@ -10758,8 +11263,8 @@ const preById = (id) => PRE_LIST.find((p) => p.id === id);
     a.muted = useWa;
     a.addEventListener('loadedmetadata', () => {
       if (token !== bgToken) return;
-      const at = wa ? waPos() : newPos + (performance.now() - t0) / 1000;
-      try { a.currentTime = at % r.loopSec; } catch (e) { /* starts from the top */ }
+      const at = wa ? waSong() : newPos + (performance.now() - t0) / 1000;
+      try { a.currentTime = bgFileTime(r, at); } catch (e) { /* starts from the top */ }
       a.play().then(() => { if (token === bgToken) bgSwapping = false; }).catch(() => { if (token === bgToken) bgFail(); });
     }, { once: true });
     a.src = url;
@@ -18166,7 +18671,7 @@ self.onmessage = async (e) => {
       partGains = makeParts(ctx, bus);
       return;
     }
-    ['bass', 'gtr', 'keys', 'layers'].forEach((p) => {
+    ['bass', 'gtr', 'gtr2', 'keys', 'layers'].forEach((p) => {
       const old = partGains[p];
       fadeOut(old, preGain(p));
       const g = ctx.createGain();
@@ -18199,7 +18704,7 @@ self.onmessage = async (e) => {
       }
     }
     const sc = pl.sc;
-    if (loopPos >= sc.total) loopPos = 0;
+    if (loopPos >= sc.total) loopPos = preIntroSteps(sc); // a lead-in plays only the first time
     preStep(sc, loopPos, nextTime, true, partGains);
     nextTime += 60 / preBpmOf(sc.P, sc.vk) / sc.sub;
     loopPos++;
@@ -18450,6 +18955,7 @@ self.onmessage = async (e) => {
     const P = prePreset();
     PRE_PARTS.forEach(([p, name0], idx) => {
       const m = state.pre.mix[p], has = prePart(P, 'parts').includes(p), name = (P.names && P.names[p]) || name0;
+      if (p === 'gtr2' && !has) return; // a second guitar shows only in the presets that have one
       const row = el('div', 'mixrow' + (has ? '' : ' none') + (m.on ? '' : ' off'));
       const lab = el('button', 'toggle', name);
       lab.type = 'button';
@@ -18457,11 +18963,12 @@ self.onmessage = async (e) => {
       lab.setAttribute('aria-pressed', String(has && m.on));
       lab.setAttribute('aria-label', has ? name + (m.on ? ', on' : ', muted') : name + ', not in this track');
       lab.addEventListener('click', () => {
+        const pos = [...ppMixRows.children].indexOf(row);
         m.on = !m.on;
         save();
         applyPreGain(p);
         renderPreMix();
-        const again = ppMixRows.children[idx];
+        const again = ppMixRows.children[pos];
         if (again) again.querySelector('button').focus({ preventScroll: true });
       });
       const r = document.createElement('input');
